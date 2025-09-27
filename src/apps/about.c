@@ -3,7 +3,7 @@
 #include "apps.h"
 
 void ABOUT_Render() {
-  PrintMediumEx(LCD_XCENTER, LCD_YCENTER - 8, POS_C, C_FILL, "s0v4");
+  PrintMediumEx(LCD_XCENTER, LCD_YCENTER - 8, POS_C, C_FILL, "h4wk5");
   PrintSmallEx(LCD_XCENTER, LCD_YCENTER, POS_C, C_FILL, "by FAGCI");
   PrintSmallEx(LCD_XCENTER, LCD_YCENTER + 8, POS_C, C_FILL, TIME_STAMP);
   PrintSmallEx(LCD_XCENTER, LCD_YCENTER + 24, POS_C, C_FILL,

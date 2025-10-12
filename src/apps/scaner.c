@@ -18,8 +18,6 @@
 
 static VMinMax minMaxRssi;
 
-static bool selStart = true;
-
 static uint32_t cursorRangeTimeout = 0;
 
 static bool isAnalyserMode = false;
@@ -30,8 +28,7 @@ static uint8_t scanAFC;
 static void setRange(uint32_t fs, uint32_t fe) {
   // radio.fixedBoundsMode = false;
   BANDS_RangeClear();
-  SCAN_setStartF(fs);
-  SCAN_setEndF(fe);
+  SCAN_setRange(fs, fe);
   BANDS_RangePush(gCurrentBand);
 }
 
@@ -62,9 +59,6 @@ void SCANER_init(void) {
 
   BANDS_RangePush(gCurrentBand);
 
-  LogC(LOG_C_BRIGHT_YELLOW, "[SCANER] Bounds: %u .. %u", gCurrentBand.rxF,
-       gCurrentBand.txF);
-
   SCAN_Init(false);
 }
 
@@ -89,9 +83,6 @@ bool SCANER_key(KEY_Code_t key, Key_State_t state) {
         SCAN_setBand(*BANDS_RangePeek());
         CUR_Reset();
       }
-      return true;
-    case KEY_5:
-      selStart = !selStart;
       return true;
     case KEY_0:
       gChListFilter = TYPE_FILTER_BAND;
@@ -118,7 +109,8 @@ bool SCANER_key(KEY_Code_t key, Key_State_t state) {
     switch (key) {
     case KEY_1:
     case KEY_7:
-      // delay = AdjustU(delay, 0, 10000, key == KEY_1 ? 100 : -100);
+      SCAN_SetDelay(
+          AdjustU(SCAN_GetDelay(), 0, 10000, key == KEY_1 ? 100 : -100));
       return true;
     case KEY_3:
     case KEY_9:
@@ -223,7 +215,7 @@ void SCANER_render(void) {
     UI_DrawLoot(gLastActiveLoot, LCD_XCENTER, 14, POS_C);
   }
 
-  // PrintSmallEx(0, 12, POS_L, C_FILL, "%uus", delay);
+  PrintSmallEx(0, 12, POS_L, C_FILL, "%uus", SCAN_GetDelay());
 
   PrintSmallEx(LCD_WIDTH, 12, POS_R, C_FILL, "%u.%02uk", step / 100,
                step % 100);
@@ -247,8 +239,6 @@ void SCANER_render(void) {
                       : RADIO_GetParam(ctx, PARAM_FREQUENCY));
   FSmall(LCD_WIDTH - 1, LCD_HEIGHT - 2, POS_R,
          showCurRange ? r.txF : gCurrentBand.txF);
-
-  FillRect(selStart ? 0 : LCD_WIDTH - 42, LCD_HEIGHT - 7, 42, 7, C_INVERT);
 
   CUR_Render();
 

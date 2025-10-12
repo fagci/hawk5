@@ -575,7 +575,7 @@ bool RADIO_IsParamValid(VFOContext *ctx, ParamType param, uint32_t value) {
     return value < ARRAY_SIZE(band->available_bandwidths);
   case PARAM_GAIN:
     if (ctx->radio_type == RADIO_BK4819) {
-      return value < ARRAY_SIZE(gainTable);
+      return value < ARRAY_SIZE(GAIN_TABLE);
     }
     if (ctx->radio_type == RADIO_SI4732) {
       return value <= 27; // 0..26 + auto
@@ -782,7 +782,7 @@ bool RADIO_AdjustParam(VFOContext *ctx, ParamType param, uint32_t inc,
     break;
   case PARAM_GAIN:
     if (ctx->radio_type == RADIO_BK4819) {
-      ma = ARRAY_SIZE(gainTable);
+      ma = ARRAY_SIZE(GAIN_TABLE);
     } else if (ctx->radio_type == RADIO_SI4732) {
       ma = 28;
     } else {
@@ -1508,7 +1508,7 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
   case PARAM_GAIN:
     if (ctx->radio_type == RADIO_BK4819) {
       snprintf(buf, 15, ctx->gain == AUTO_GAIN_INDEX ? "Auto" : "%+ddB",
-               -gainTable[ctx->gain].gainDb + 33);
+               -GAIN_TABLE[ctx->gain].gainDb + 33);
       break;
     } else if (ctx->radio_type == RADIO_SI4732) {
       snprintf(buf, 15, ctx->gain == 0 ? "Auto" : "%u", ctx->gain - 1);

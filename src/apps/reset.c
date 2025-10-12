@@ -149,7 +149,7 @@ VFO vfos[9] = {
     (VFO){
         .rxF = 25220000,
         .meta.type = TYPE_CH,
-        .gainIndex = ARRAY_SIZE(gainTable) - 1,
+        .gainIndex = ARRAY_SIZE(GAIN_TABLE) - 1,
         .radio = RADIO_BK4819,
         .name = "Test CH",
     },

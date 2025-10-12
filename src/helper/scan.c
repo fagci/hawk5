@@ -3,6 +3,7 @@
 #include "../driver/st7565.h"
 #include "../driver/system.h"
 #include "../driver/systick.h"
+#include "../driver/uart.h"
 #include "../radio.h"
 #include "../scheduler.h"
 #include "../ui/spectrum.h"
@@ -26,7 +27,7 @@ typedef struct {
 } ScanState;
 
 static ScanState scan = {
-    .scanDelayUs = 1200,
+    .scanDelayUs = 1500,
     .squelchLevel = 0,
     .thinking = false,
     .wasThinkingEarlier = false,
@@ -56,6 +57,8 @@ static void ApplyBandSettings() {
   RADIO_SetParam(ctx, PARAM_STEP, gCurrentBand.step, false);
   RADIO_ApplySettings(ctx);
   SP_Init(&gCurrentBand);
+  LogC(LOG_C_BRIGHT_YELLOW, "[SCANER] Bounds: %u .. %u", gCurrentBand.rxF,
+       gCurrentBand.txF);
 }
 
 static void NextFrequency() {
@@ -123,6 +126,12 @@ void SCAN_setStartF(uint32_t f) {
 
 void SCAN_setEndF(uint32_t f) {
   gCurrentBand.txF = f;
+  ApplyBandSettings();
+}
+
+void SCAN_setRange(uint32_t fs, uint32_t fe) {
+  gCurrentBand.rxF = fs;
+  gCurrentBand.txF = fe;
   ApplyBandSettings();
 }
 
@@ -230,3 +239,6 @@ void SCAN_Check(bool isAnalyserMode) {
 
   NextWithTimeout();
 }
+
+void SCAN_SetDelay(uint32_t delay) { scan.scanDelayUs = delay; }
+uint32_t SCAN_GetDelay() { return scan.scanDelayUs; }

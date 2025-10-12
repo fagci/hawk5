@@ -51,7 +51,7 @@ static const AgcConfig AGC_FAST = {0, 20, 50};
 // ============================================================================
 
 static uint16_t gGpioOutState = 0x9000;
-static Filter gSelectedFilter = FILTER_OFF;
+static uint8_t gSelectedFilter = 255;
 static uint32_t gLastFrequency = 0;
 static ModulationType gLastModulation = 255;
 
@@ -254,6 +254,11 @@ void BK4819_SetAGC(bool useDefault, uint8_t gainIndex) {
 // ============================================================================
 
 void BK4819_SelectFilterEx(Filter filter) {
+  if (gSelectedFilter == filter) {
+    return;
+  }
+  gSelectedFilter = filter;
+  Log("flt=%u", filter);
   const uint16_t PIN_BIT_VHF = 0x40U >> BK4819_GPIO4_PIN32_VHF_LNA;
   const uint16_t PIN_BIT_UHF = 0x40U >> BK4819_GPIO3_PIN31_UHF_LNA;
 
@@ -276,10 +281,7 @@ void BK4819_SelectFilter(uint32_t frequency) {
   Filter filter =
       (frequency < SETTINGS_GetFilterBound()) ? FILTER_VHF : FILTER_UHF;
 
-  if (gSelectedFilter != filter) {
-    gSelectedFilter = filter;
-    BK4819_SelectFilterEx(filter);
-  }
+  BK4819_SelectFilterEx(filter);
 }
 
 void BK4819_SetFilterBandwidth(BK4819_FilterBandwidth_t bw) {
@@ -318,7 +320,6 @@ void BK4819_TuneTo(uint32_t freq, bool precise) {
     return;
   }
 
-  BK4819_SelectFilter(freq);
   BK4819_SetFrequency(freq);
   gLastFrequency = freq;
 

@@ -37,10 +37,11 @@ const char *RADIO_NAMES[3] = {
     [RADIO_SI4732] = "SI4732",
 };
 
-const char *FILTER_NAMES[3] = {
+const char *FILTER_NAMES[4] = {
     [FILTER_VHF] = "VHF",
     [FILTER_UHF] = "UHF",
     [FILTER_OFF] = "Off",
+    [FILTER_AUTO] = "Auto",
 };
 
 const char *PARAM_NAMES[] = {
@@ -439,6 +440,11 @@ static bool setParamBK4819(VFOContext *ctx, ParamType p) {
     BK4819_SetModulation(ctx->modulation);
     return true;
   case PARAM_FREQUENCY:
+    if (ctx->filter == FILTER_AUTO) {
+      Filter filter = (ctx->frequency < SETTINGS_GetFilterBound()) ? FILTER_VHF
+                                                                   : FILTER_UHF;
+      BK4819_SelectFilterEx(filter);
+    }
     BK4819_TuneTo(ctx->frequency,
                   ctx->preciseFChange); // TODO: check if SetFreq needed
     return true;
@@ -796,7 +802,7 @@ bool RADIO_AdjustParam(VFOContext *ctx, ParamType param, uint32_t inc,
     ma = XTAL_3_38_4M + 1;
     break;
   case PARAM_FILTER:
-    ma = FILTER_OFF + 1;
+    ma = FILTER_AUTO + 1;
     break;
   case PARAM_GAIN:
     if (ctx->radio_type == RADIO_BK4819) {
@@ -1093,7 +1099,7 @@ void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
   RADIO_SetParam(ctx, PARAM_MIC, gSettings.mic, false);
   RADIO_SetParam(ctx, PARAM_DEV, gSettings.deviation * 10, false);
   RADIO_SetParam(ctx, PARAM_XTAL, XTAL_2_26M, false);
-  RADIO_SetParam(ctx, PARAM_FILTER, FILTER_OFF, false);
+  RADIO_SetParam(ctx, PARAM_FILTER, FILTER_AUTO, false);
 
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
   RADIO_SetParam(ctx, PARAM_VOLUME, 100, false);
@@ -1181,7 +1187,7 @@ void RADIO_LoadChannelToVFO(RadioState *state, uint8_t vfo_index,
   RADIO_SetParam(ctx, PARAM_STEP, channel.step, false);
 
   RADIO_SetParam(ctx, PARAM_XTAL, XTAL_2_26M, false);
-  RADIO_SetParam(ctx, PARAM_FILTER, FILTER_OFF, false);
+  RADIO_SetParam(ctx, PARAM_FILTER, FILTER_AUTO, false);
 
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
   RADIO_SetParam(ctx, PARAM_VOLUME, 100, false);

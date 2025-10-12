@@ -16,6 +16,7 @@ typedef enum {
   FILTER_VHF,
   FILTER_UHF,
   FILTER_OFF,
+  FILTER_AUTO,
 } Filter;
 
 enum BK4819_AF_Type_t {

@@ -49,6 +49,7 @@ typedef const enum {
   PARAM_DEV,
   PARAM_MIC,
   PARAM_XTAL,
+  PARAM_FILTER,
 
   PARAM_RSSI,
   PARAM_NOISE,
@@ -117,6 +118,8 @@ typedef struct {
   uint8_t afc;
   uint8_t mic;
   XtalMode xtal;
+
+  Filter filter;
 
   bool preciseFChange;
 

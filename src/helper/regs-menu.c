@@ -44,6 +44,7 @@ static const ParamType paramsBK4819[] = {
     PARAM_DEV,           //
     PARAM_MIC,           //
     PARAM_XTAL,          //
+    PARAM_FILTER,          //
     PARAM_POWER,         //
 };
 static const ParamType paramsSI[] = {

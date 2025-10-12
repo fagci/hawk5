@@ -37,6 +37,12 @@ const char *RADIO_NAMES[3] = {
     [RADIO_SI4732] = "SI4732",
 };
 
+const char *FILTER_NAMES[3] = {
+    [FILTER_VHF] = "VHF",
+    [FILTER_UHF] = "UHF",
+    [FILTER_OFF] = "Off",
+};
+
 const char *PARAM_NAMES[] = {
     [PARAM_FREQUENCY] = "f",                //
     [PARAM_STEP] = "Step",                  //
@@ -58,10 +64,11 @@ const char *PARAM_NAMES[] = {
     [PARAM_SNR] = "SNR",                    //
     [PARAM_PRECISE_F_CHANGE] = "Precise f", //
 
-    [PARAM_AFC] = "AFC",   //
-    [PARAM_DEV] = "DEV",   //
-    [PARAM_MIC] = "MIC",   //
-    [PARAM_XTAL] = "XTAL", //
+    [PARAM_AFC] = "AFC",       //
+    [PARAM_DEV] = "DEV",       //
+    [PARAM_MIC] = "MIC",       //
+    [PARAM_XTAL] = "XTAL",     //
+    [PARAM_FILTER] = "Filter", //
 };
 
 const char *TX_STATE_NAMES[7] = {
@@ -441,6 +448,9 @@ static bool setParamBK4819(VFOContext *ctx, ParamType p) {
   case PARAM_XTAL:
     BK4819_XtalSet(ctx->xtal);
     return true;
+  case PARAM_FILTER:
+    BK4819_SelectFilterEx(ctx->filter);
+    return true;
   case PARAM_MIC:
     BK4819_SetRegValue(RS_MIC, ctx->mic);
     return true;
@@ -651,6 +661,9 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
   case PARAM_XTAL:
     ctx->xtal = (XtalMode)value;
     break;
+  case PARAM_FILTER:
+    ctx->filter = (Filter)value;
+    break;
   case PARAM_SQUELCH_VALUE:
     ctx->squelch.value = value;
     break;
@@ -729,6 +742,8 @@ uint32_t RADIO_GetParam(const VFOContext *ctx, ParamType param) {
     return ctx->afc;
   case PARAM_XTAL:
     return ctx->xtal;
+  case PARAM_FILTER:
+    return ctx->filter;
   case PARAM_MIC:
     return ctx->mic;
   case PARAM_DEV:
@@ -779,6 +794,9 @@ bool RADIO_AdjustParam(VFOContext *ctx, ParamType param, uint32_t inc,
     break;
   case PARAM_XTAL:
     ma = XTAL_3_38_4M + 1;
+    break;
+  case PARAM_FILTER:
+    ma = FILTER_OFF + 1;
     break;
   case PARAM_GAIN:
     if (ctx->radio_type == RADIO_BK4819) {
@@ -1075,6 +1093,7 @@ void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
   RADIO_SetParam(ctx, PARAM_MIC, gSettings.mic, false);
   RADIO_SetParam(ctx, PARAM_DEV, gSettings.deviation * 10, false);
   RADIO_SetParam(ctx, PARAM_XTAL, XTAL_2_26M, false);
+  RADIO_SetParam(ctx, PARAM_FILTER, FILTER_OFF, false);
 
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
   RADIO_SetParam(ctx, PARAM_VOLUME, 100, false);
@@ -1162,6 +1181,7 @@ void RADIO_LoadChannelToVFO(RadioState *state, uint8_t vfo_index,
   RADIO_SetParam(ctx, PARAM_STEP, channel.step, false);
 
   RADIO_SetParam(ctx, PARAM_XTAL, XTAL_2_26M, false);
+  RADIO_SetParam(ctx, PARAM_FILTER, FILTER_OFF, false);
 
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
   RADIO_SetParam(ctx, PARAM_VOLUME, 100, false);
@@ -1527,6 +1547,8 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
 
   case PARAM_POWER:
     return TX_POWER_NAMES[ctx->power];
+  case PARAM_FILTER:
+    return FILTER_NAMES[ctx->filter];
   case PARAM_AFC:
   case PARAM_DEV:
   case PARAM_MIC:

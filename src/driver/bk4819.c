@@ -316,9 +316,9 @@ uint32_t BK4819_GetFrequency(void) {
 }
 
 void BK4819_TuneTo(uint32_t freq, bool precise) {
-  if (gLastFrequency == freq) {
+  /* if (gLastFrequency == freq) {
     return;
-  }
+  } */
 
   BK4819_SetFrequency(freq);
   gLastFrequency = freq;

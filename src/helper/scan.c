@@ -143,6 +143,7 @@ void SCAN_Init(bool multiband) {
   scan.lastCpsTime = Now();
   scan.scanCycles = 0;
   ApplyBandSettings();
+  BK4819_WriteRegister(BK4819_REG_3F, 0);
 }
 
 // =============================
@@ -160,11 +161,11 @@ static void HandleAnalyserMode() {
 
 static void UpdateSquelchAndRssi(bool isAnalyserMode) {
   if (gSettings.skipGarbageFrequencies &&
-      (RADIO_GetParam(&vfo->context, PARAM_FREQUENCY) % GARBAGE_FREQUENCY_MOD ==
-       0)) {
+      (vfo->msm.f % GARBAGE_FREQUENCY_MOD == 0)) {
     vfo->msm.open = false;
     vfo->msm.rssi = 0;
     SP_AddPoint(&vfo->msm);
+    NextFrequency();
     return;
   }
   vfo->msm.rssi = MeasureSignal(vfo->msm.f, !isAnalyserMode);
@@ -186,6 +187,20 @@ static void UpdateSquelchAndRssi(bool isAnalyserMode) {
 }
 
 void SCAN_Check(bool isAnalyserMode) {
+  static uint32_t lastFreqChangeTime = 0;
+  static uint32_t stuckCounter = 0;
+
+  // Проверка на зависание на одной частоте
+  if (Now() - lastFreqChangeTime > 5000) { // 5 секунд без смены частоты
+    stuckCounter++;
+    if (stuckCounter > 3) {
+      scan.squelchLevel = 0; // Сброс squelch
+      NextFrequency();
+      stuckCounter = 0;
+    }
+    lastFreqChangeTime = Now();
+  }
+
   RADIO_UpdateMultiwatch(&gRadioState);
   RADIO_CheckAndSaveVFO(&gRadioState);
 
@@ -230,7 +245,7 @@ void SCAN_Check(bool isAnalyserMode) {
     if (stepsPassed++ > 64) {
       stepsPassed = 0;
       gRedrawScreen = true;
-      if (!scan.wasThinkingEarlier) {
+      if (!scan.wasThinkingEarlier && scan.squelchLevel > 0) {
         scan.squelchLevel--;
       }
       scan.wasThinkingEarlier = false;

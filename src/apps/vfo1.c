@@ -280,8 +280,10 @@ void VFO1_render(void) {
   int32_t khz_x10 = (afc_to_deviation_hz(BK4819_ReadRegister(0x6D)) + 50) /
                     100; // округление до 0.1kHz
 
-  PrintSmallEx(0, 18, POS_L, C_FILL, "%+d.%dkHz\n", khz_x10 / 10,
+  PrintSmallEx(0, 19, POS_L, C_FILL, "%+d.%dkHz", khz_x10 / 10,
                (khz_x10 > 0 ? 1 : -1) * khz_x10 % 10);
+  /* PrintSmallEx(0, 24, POS_L, C_FILL, "POW %u",
+               (BK4819_ReadRegister(0x7E) >> 6) & 0b111111); */
 
   // Шаг, полоса, уровень SQL, мощность, субтоны, названия каналов.
 

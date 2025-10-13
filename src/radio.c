@@ -455,7 +455,12 @@ static bool setParamBK4819(VFOContext *ctx, ParamType p) {
     BK4819_XtalSet(ctx->xtal);
     return true;
   case PARAM_FILTER:
-    BK4819_SelectFilterEx(ctx->filter);
+    Filter filter = ctx->filter;
+    if (ctx->filter == FILTER_AUTO) {
+      filter = (ctx->frequency < SETTINGS_GetFilterBound()) ? FILTER_VHF
+                                                            : FILTER_UHF;
+    }
+    BK4819_SelectFilterEx(filter);
     return true;
   case PARAM_MIC:
     BK4819_SetRegValue(RS_MIC, ctx->mic);

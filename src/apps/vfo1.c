@@ -139,6 +139,11 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
       return true;
     case KEY_STAR:
       // APPS_run(APP_SCANER);
+      Log("------- REGS DUMP START -------");
+      for (uint8_t i = 0; i < 128; ++i) {
+        Log("%x, %u", i, BK4819_ReadRegister(i));
+      }
+      Log("------- REGS DUMP END -------");
       return true;
     case KEY_SIDE1:
     case KEY_SIDE2:
@@ -225,6 +230,22 @@ static void renderProModeInfo(uint8_t y) {
   }
 }
 
+#define AFC_COEFF_NUM 171 // 3.42 * 50 (упрощенный коэффициент)
+#define AFC_COEFF_DEN 50 // Знаменатель
+#define AFC_MODULO 65536
+
+int32_t afc_to_deviation_hz(uint16_t afc_raw) {
+  int32_t afc_signed = (int32_t)afc_raw;
+
+  // Быстрое преобразование знака через маску
+  if (afc_signed & 0x8000) { // Если старший бит установлен
+    afc_signed |= 0xFFFF0000; // Расширяем знак (эквивалент вычитания 65536)
+  }
+
+  // Fixed-point умножение: (afc_signed * 171) / 50
+  return (afc_signed * AFC_COEFF_NUM) / AFC_COEFF_DEN;
+}
+
 void VFO1_render(void) {
   const uint8_t BASE = 40;
 
@@ -255,6 +276,12 @@ void VFO1_render(void) {
                    CHANNELS_GetChannel(&gCurrentBand, ctx->frequency) + 1);
     }
   }
+
+  int32_t khz_x10 = (afc_to_deviation_hz(BK4819_ReadRegister(0x6D)) + 50) /
+                    100; // округление до 0.1kHz
+
+  PrintSmallEx(0, 18, POS_L, C_FILL, "%+d.%dkHz\n", khz_x10 / 10,
+               (khz_x10 > 0 ? 1 : -1) * khz_x10 % 10);
 
   // Шаг, полоса, уровень SQL, мощность, субтоны, названия каналов.
 

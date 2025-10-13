@@ -1066,6 +1066,7 @@ static void configure_receiver(void) {
 }
 
 void BK4819_Init(void) {
+  gSelectedFilter = 255;
   initialize_gpio_pins();
   initialize_registers();
   initialize_dtmf_coefficients();

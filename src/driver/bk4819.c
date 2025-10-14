@@ -1065,8 +1065,15 @@ static void configure_receiver(void) {
   );
 }
 
+static bool isInitialized = false;
+
 void BK4819_Init(void) {
+  if (isInitialized) {
+    return;
+  }
   gSelectedFilter = 255;
+  gLastFrequency = 0;
+  gLastModulation = 255;
   initialize_gpio_pins();
   initialize_registers();
   initialize_dtmf_coefficients();
@@ -1080,4 +1087,5 @@ void BK4819_Init(void) {
   // Set deviation
   BK4819_WriteRegister(0x40, (BK4819_ReadRegister(0x40) & ~(0x7FF)) |
                                  (gSettings.deviation * 10) | (1 << 12));
+  isInitialized = true;
 }

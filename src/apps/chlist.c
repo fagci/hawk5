@@ -60,19 +60,30 @@ static const Symbol typeIcons[] = {
 };
 
 static inline uint16_t getChannelNumber(uint16_t menuIndex) {
+  if (menuIndex >= gScanlistSize) {
+    Log("ERROR: menuIndex %u >= gScanlistSize %u", menuIndex, gScanlistSize);
+    return 0; // или другое безопасное значение
+  }
   return gScanlist[menuIndex];
 }
 
 static void renderItem(uint16_t index, uint8_t i, bool isCurrent) {
-  index = getChannelNumber(index);
-  CHANNELS_Load(index, &ch);
+  if (index >= gScanlistSize) {
+    PrintMediumEx(13, MENU_Y + i * MENU_ITEM_H + 8, POS_L, C_INVERT, "ERROR");
+    return;
+  }
+
+  uint16_t chNum = getChannelNumber(index); // <- Новая переменная!
+  CHANNELS_Load(chNum, &ch);
   uint8_t y = MENU_Y + i * MENU_ITEM_H;
+
   if (ch.meta.type) {
     PrintSymbolsEx(2, y + 8, POS_L, C_INVERT, "%c", typeIcons[ch.meta.type]);
     PrintMediumEx(13, y + 8, POS_L, C_INVERT, "%s", ch.name);
   } else {
-    PrintMediumEx(13, y + 8, POS_L, C_INVERT, "CH-%u", index);
+    PrintMediumEx(13, y + 8, POS_L, C_INVERT, "CH-%u", chNum); // <- И здесь!
   }
+
   switch (viewMode) {
   case MODE_INFO:
     if (CHANNELS_IsFreqable(ch.meta.type)) {
@@ -140,6 +151,12 @@ static bool action(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
 
 void CHLIST_init() {
   CHANNELS_LoadScanlist(gChListFilter, gSettings.currentScanlist);
+  Log("Scanlist loaded: size=%u", gScanlistSize);
+
+  for (uint16_t i = 0; i < gScanlistSize; i++) {
+    Log("gScanlist[%u] = %u", i, gScanlist[i]);
+  }
+
   chListMenu.num_items = gScanlistSize;
   MENU_Init(&chListMenu);
   // TODO: set menu index

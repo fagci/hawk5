@@ -28,6 +28,7 @@ static void setChannel(uint16_t v) {
 
 static void tuneTo(uint32_t f, uint32_t _) {
   RADIO_SetParam(ctx, PARAM_FREQUENCY, f, true);
+  RADIO_ApplySettings(ctx);
 }
 
 void VFO1_init(void) { gLastActiveLoot = NULL; }

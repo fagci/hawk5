@@ -110,6 +110,23 @@ bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
   if (!active_menu) {
     return false;
   }
+
+  if (!active_menu->items) {
+    // Для меню без items (как chListMenu) используем упрощённую логику
+    if (state == KEY_RELEASED || state == KEY_LONG_PRESSED_CONT) {
+      switch (key) {
+      case KEY_UP:
+      case KEY_DOWN:
+        current_index =
+            IncDecU(current_index, 0, active_menu->num_items, key == KEY_DOWN);
+        return true;
+      default:
+        break;
+      }
+    }
+    return false; // <- Меню без items не обрабатывает другие действия
+  }
+
   const MenuItem *item = &active_menu->items[current_index];
 
   if (state == KEY_RELEASED || state == KEY_LONG_PRESSED_CONT) {

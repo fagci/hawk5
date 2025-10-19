@@ -68,20 +68,28 @@ static inline uint16_t getChannelNumber(uint16_t menuIndex) {
 }
 
 static void renderItem(uint16_t index, uint8_t i, bool isCurrent) {
+  Log("renderItem: index=%u, i=%u, isCurrent=%d", index, i, isCurrent);
+
   if (index >= gScanlistSize) {
+    Log("ERROR: index >= gScanlistSize");
     PrintMediumEx(13, MENU_Y + i * MENU_ITEM_H + 8, POS_L, C_INVERT, "ERROR");
     return;
   }
 
-  uint16_t chNum = getChannelNumber(index); // <- Новая переменная!
+  uint16_t chNum = getChannelNumber(index);
+  Log("Loading channel %u", chNum);
+
   CHANNELS_Load(chNum, &ch);
+
+  Log("Channel loaded: name=%s, type=%d", ch.name, ch.meta.type);
+
   uint8_t y = MENU_Y + i * MENU_ITEM_H;
 
   if (ch.meta.type) {
     PrintSymbolsEx(2, y + 8, POS_L, C_INVERT, "%c", typeIcons[ch.meta.type]);
     PrintMediumEx(13, y + 8, POS_L, C_INVERT, "%s", ch.name);
   } else {
-    PrintMediumEx(13, y + 8, POS_L, C_INVERT, "CH-%u", chNum); // <- И здесь!
+    PrintMediumEx(13, y + 8, POS_L, C_INVERT, "CH-%u", chNum);
   }
 
   switch (viewMode) {

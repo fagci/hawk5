@@ -114,8 +114,6 @@ void APPS_init(AppType_t app) {
 void APPS_update(void) {
   if (apps[gCurrentApp].update) {
     apps[gCurrentApp].update();
-  } else {
-    gRedrawScreen = true;
   }
 }
 

@@ -68,8 +68,6 @@ static inline uint16_t getChannelNumber(uint16_t menuIndex) {
 }
 
 static void renderItem(uint16_t index, uint8_t i, bool isCurrent) {
-  Log("renderItem: index=%u, i=%u, isCurrent=%d", index, i, isCurrent);
-
   if (index >= gScanlistSize) {
     Log("ERROR: index >= gScanlistSize");
     PrintMediumEx(13, MENU_Y + i * MENU_ITEM_H + 8, POS_L, C_INVERT, "ERROR");
@@ -77,11 +75,8 @@ static void renderItem(uint16_t index, uint8_t i, bool isCurrent) {
   }
 
   uint16_t chNum = getChannelNumber(index);
-  Log("Loading channel %u", chNum);
 
   CHANNELS_Load(chNum, &ch);
-
-  Log("Channel loaded: name=%s, type=%d", ch.name, ch.meta.type);
 
   uint8_t y = MENU_Y + i * MENU_ITEM_H;
 
@@ -118,7 +113,8 @@ static void save() {
   gChEd.scanlists = 0;
   CHANNELS_Save(getChannelNumber(channelIndex), &gChEd);
   // RADIO_LoadCurrentVFO();
-  LogC(LOG_C_YELLOW, "Chlist Save");
+  LogC(LOG_C_YELLOW, "Chlist Save CH %u(%u)", getChannelNumber(channelIndex),
+       channelIndex);
   APPS_exit();
   APPS_exit();
 }
@@ -128,9 +124,7 @@ static void saveNamed() {
   save();
 }
 
-static Menu chListMenu = {.render_item = renderItem, .itemHeight = MENU_ITEM_H};
-
-static bool action(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
+static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
   if (state == KEY_RELEASED && key == KEY_MENU) {
     if (gChSaveMode) {
       CHANNELS_LoadScanlist(gChListFilter, gSettings.currentScanlist);
@@ -140,7 +134,7 @@ static bool action(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
         snprintf(gTextinputText, 9, "%lu.%05lu", gChEd.rxF / MHZ,
                  gChEd.rxF % MHZ);
         gTextInputSize = 9;
-        // channelIndex = item->setting;
+        channelIndex = index;
         gTextInputCallback = saveNamed;
         APPS_run(APP_TEXTINPUT);
       } else {
@@ -157,13 +151,16 @@ static bool action(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
   return false;
 }
 
+static Menu chListMenu = {
+    .render_item = renderItem, .itemHeight = MENU_ITEM_H, .action = action};
+
 void CHLIST_init() {
   CHANNELS_LoadScanlist(gChListFilter, gSettings.currentScanlist);
   Log("Scanlist loaded: size=%u", gScanlistSize);
 
-  for (uint16_t i = 0; i < gScanlistSize; i++) {
+  /* for (uint16_t i = 0; i < gScanlistSize; i++) {
     Log("gScanlist[%u] = %u", i, gScanlist[i]);
-  }
+  } */
 
   chListMenu.num_items = gScanlistSize;
   MENU_Init(&chListMenu);

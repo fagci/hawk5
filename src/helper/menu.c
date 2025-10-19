@@ -124,6 +124,9 @@ bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
         break;
       }
     }
+    if (active_menu->action) {
+      return active_menu->action(current_index, key, state);
+    }
     return false; // <- Меню без items не обрабатывает другие действия
   }
 

@@ -54,6 +54,8 @@ static uint16_t MeasureSignal(uint32_t frequency, bool precise) {
 
 static void ApplyBandSettings() {
   vfo->msm.f = gCurrentBand.rxF;
+
+  RADIO_SetParam(ctx, PARAM_FREQUENCY, vfo->msm.f, false);
   RADIO_SetParam(ctx, PARAM_STEP, gCurrentBand.step, false);
   RADIO_ApplySettings(ctx);
   SP_Init(&gCurrentBand);
@@ -76,6 +78,15 @@ static void NextFrequency() {
       ApplyBandSettings();
     }
     vfo->msm.f = gCurrentBand.rxF;
+    gRedrawScreen = true;
+  }
+
+  if (vfo->msm.f < gCurrentBand.rxF) {
+    if (scan.isMultiband) {
+      BANDS_SelectBandRelativeByScanlist(true);
+      ApplyBandSettings();
+    }
+    vfo->msm.f = gCurrentBand.txF;
     gRedrawScreen = true;
   }
 

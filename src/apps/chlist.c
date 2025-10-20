@@ -143,6 +143,7 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
       return true;
     }
     LogC(LOG_C_YELLOW, "BAND Selected by user");
+    BANDS_Select(getChannelNumber(index), true);
     // RADIO_TuneToMR(chNum);
     // Log("Tuned to band, exit app");
     APPS_exit();
@@ -262,6 +263,9 @@ bool CHLIST_key(KEY_Code_t key, Key_State_t state) {
         break;
       }
       CHANNELS_LoadScanlist(gChListFilter, gSettings.currentScanlist);
+      chListMenu.num_items = gScanlistSize;
+      MENU_Init(&chListMenu);
+
       return true;
     case KEY_STAR:
       viewMode = IncDecU(viewMode, 0, ARRAY_SIZE(VIEW_MODE_NAMES), true);

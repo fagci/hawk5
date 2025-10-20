@@ -52,8 +52,21 @@ uint32_t SP_X2F(uint8_t x) {
 }
 
 void SP_AddPoint(const Measurement *msm) {
-  const uint32_t xs = SP_F2X(msm->f);
-  const uint32_t xe = SP_F2X(msm->f + step);
+  uint32_t xs = SP_F2X(msm->f);
+  uint32_t xe = SP_F2X(msm->f + step);
+
+  // Обрезаем индексы по диапазону допустимых значений
+  if (xs >= MAX_POINTS)
+    xs = MAX_POINTS - 1;
+  if (xe >= MAX_POINTS)
+    xe = MAX_POINTS - 1;
+
+  // Если xs > xe, меняем местами
+  if (xs > xe) {
+    uint32_t temp = xs;
+    xs = xe;
+    xe = temp;
+  }
 
   // TODO: debug this range
   for (x = xs; x < MAX_POINTS && x <= xe; ++x) {

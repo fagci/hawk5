@@ -11,7 +11,7 @@ static uint8_t power = 26;
 static bool paEnabled = false;
 static uint8_t bkPower = 0;
 
-static void setTone1Freq(uint32_t f, uint32_t _) { tone1Freq = f / 100; }
+static void setTone1Freq(uint32_t f, uint32_t _) { tone1Freq = f; }
 
 static void setFreq(uint32_t f, uint32_t _) {
   RADIO_SetParam(ctx, PARAM_FREQUENCY, f, false);
@@ -65,7 +65,7 @@ bool GENERATOR_key(KEY_Code_t key, Key_State_t state) {
       return true;
     case KEY_SIDE1:
       gFInputCallback = setTone1Freq;
-      FINPUT_setup(0, 3 * KHZ, UNIT_HZ, false);
+      FINPUT_setup(0, 3000, UNIT_HZ, false);
       APPS_run(APP_FINPUT);
       return true;
     case KEY_EXIT:

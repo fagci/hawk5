@@ -11,6 +11,7 @@
 #include "chscan.h"
 #include "fc.h"
 #include "finput.h"
+#include "generator.h"
 #include "lootlist.h"
 #include "reset.h"
 #include "scaner.h"
@@ -61,6 +62,7 @@ const AppType_t appsAvailableToRun[RUN_APPS_COUNT] = {
     APP_LOOT_LIST, //
     APP_CH_SCAN,   //
     APP_BAND_SCAN, //
+    APP_GENERATOR, //
     APP_ABOUT,     //
 };
 
@@ -91,6 +93,8 @@ const App apps[APPS_COUNT] = {
     [APP_FC] = {"FC", FC_init, FC_update, FC_render, FC_key, FC_deinit, true},
     [APP_VFO1] = {"1 VFO", VFO1_init, VFO1_update, VFO1_render, VFO1_key, NULL,
                   true, true},
+    [APP_GENERATOR] = {"Generator", GENERATOR_init, GENERATOR_update,
+                       GENERATOR_render, GENERATOR_key, NULL, true, true},
     [APP_ABOUT] = {"ABOUT", NULL, NULL, ABOUT_Render, ABOUT_key, NULL},
 };
 

@@ -414,61 +414,118 @@ static void updVal(const MenuItem *item, bool inc) {
     menu = v == TYPE_BAND ? &bandMenu : &chMenu;
     MENU_Init(menu);
     break;
-  case MEM_START:
-    break;
-  case MEM_END:
-    break;
-  case MEM_NAME:
-    break;
   case MEM_BW:
+    if (gChEd.radio == RADIO_BK4819) {
+      v = IncDecU(v, 0, 10, inc);
+    } else if (gChEd.radio == RADIO_SI4732) {
+      uint8_t max =
+          (gChEd.modulation == MOD_LSB || gChEd.modulation == MOD_USB) ? 6 : 7;
+      v = IncDecU(v, 0, max, inc);
+    }
+    setValue(item->setting, v);
     break;
   case MEM_SQ_TYPE:
+    v = IncDecU(v, 0, 4, inc);
+    setValue(item->setting, v);
     break;
   case MEM_PPM:
+    v = IncDecU(v, 0, 31, inc);
+    setValue(item->setting, v);
     break;
   case MEM_SQ:
+    v = IncDecU(v, 0, 10, inc);
+    setValue(item->setting, v);
     break;
   case MEM_SCRAMBLER:
+    v = IncDecU(v, 0, 11, inc);
+    setValue(item->setting, v);
     break;
   case MEM_BANK:
+    v = IncDecU(v, 0, 8, inc);
+    setValue(item->setting, v);
     break;
   case MEM_P_CAL_L:
-    break;
   case MEM_P_CAL_M:
-    break;
   case MEM_P_CAL_H:
+    v = IncDecU(v, 0, 256, inc);
+    setValue(item->setting, v);
     break;
   case MEM_GAIN:
+    if (gChEd.radio == RADIO_BK4819) {
+      v = IncDecU(v, 0, ARRAY_SIZE(GAIN_TABLE), inc);
+    } else if (gChEd.radio == RADIO_SI4732) {
+      v = IncDecU(v, 0, 28, inc);
+    }
+    setValue(item->setting, v);
     break;
   case MEM_MODULATION:
+    if (gChEd.radio == RADIO_BK4819) {
+      v = IncDecU(v, 0, 7, inc);
+    } else if (gChEd.radio == RADIO_SI4732) {
+      v = IncDecU(v, 0, 4, inc);
+    } else {
+      v = 0;
+    }
+    setValue(item->setting, v);
     break;
   case MEM_STEP:
+    v = IncDecU(v, 0, STEP_COUNT, inc);
+    setValue(item->setting, v);
     break;
   case MEM_TX:
-    break;
-  case MEM_F_RX:
-    break;
-  case MEM_F_TX:
-    break;
-  case MEM_LAST_F:
+    v = IncDecU(v, 0, 2, inc);
+    setValue(item->setting, v);
     break;
   case MEM_RX_CODE_TYPE:
+    v = IncDecU(v, 0, 4, inc);
+    setValue(item->setting, v);
     break;
   case MEM_RX_CODE:
+    if (gChEd.code.rx.type == CODE_TYPE_CONTINUOUS_TONE) {
+      v = IncDecU(v, 0, ARRAY_SIZE(CTCSS_Options), inc);
+    } else if (gChEd.code.rx.type == CODE_TYPE_DIGITAL ||
+               gChEd.code.rx.type == CODE_TYPE_REVERSE_DIGITAL) {
+      v = IncDecU(v, 0, ARRAY_SIZE(DCS_Options), inc);
+    }
+    setValue(item->setting, v);
     break;
   case MEM_TX_CODE_TYPE:
+    v = IncDecU(v, 0, 4, inc);
+    setValue(item->setting, v);
     break;
   case MEM_TX_CODE:
-    break;
-  case MEM_TX_OFFSET:
+    if (gChEd.code.tx.type == CODE_TYPE_CONTINUOUS_TONE) {
+      v = IncDecU(v, 0, ARRAY_SIZE(CTCSS_Options), inc);
+    } else if (gChEd.code.tx.type == CODE_TYPE_DIGITAL ||
+               gChEd.code.tx.type == CODE_TYPE_REVERSE_DIGITAL) {
+      v = IncDecU(v, 0, ARRAY_SIZE(DCS_Options), inc);
+    }
+    setValue(item->setting, v);
     break;
   case MEM_TX_OFFSET_DIR:
+    v = IncDecU(v, 0, 3, inc);
+    setValue(item->setting, v);
     break;
   case MEM_F_TXP:
+    v = IncDecU(v, 0, 4, inc);
+    setValue(item->setting, v);
     break;
   case MEM_READONLY:
+    v = IncDecU(v, 0, 2, inc);
+    setValue(item->setting, v);
     break;
   case MEM_RADIO:
+    v = IncDecU(v, 0, 3, inc);
+    setValue(item->setting, v);
+    break;
+  case MEM_START:
+  case MEM_END:
+  case MEM_NAME:
+  case MEM_F_RX:
+  case MEM_F_TX:
+  case MEM_LAST_F:
+  case MEM_TX_OFFSET:
+    // Эти параметры устанавливаются через FINPUT или другие специальные методы
     break;
   default:
     break;

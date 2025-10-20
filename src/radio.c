@@ -10,6 +10,7 @@
 #include "driver/system.h"
 #include "driver/uart.h"
 #include "external/printf/printf.h"
+#include "helper/bands.h"
 #include "helper/battery.h"
 #include "helper/channels.h"
 #include "helper/lootlist.h"
@@ -64,6 +65,10 @@ const char *PARAM_NAMES[] = {
     [PARAM_NOISE] = "Noise",                //
     [PARAM_SNR] = "SNR",                    //
     [PARAM_PRECISE_F_CHANGE] = "Precise f", //
+
+    [PARAM_TX_POWER] = "TX Power",
+    [PARAM_TX_POWER_AMPLIFIER] = "TX PA",
+    [PARAM_TX_FREQUENCY] = "TX f",
 
     [PARAM_AFC] = "AFC",       //
     [PARAM_DEV] = "DEV",       //
@@ -448,19 +453,28 @@ static bool setParamBK4819(VFOContext *ctx, ParamType p) {
     BK4819_TuneTo(ctx->frequency,
                   ctx->preciseFChange); // TODO: check if SetFreq needed
     return true;
+  /* case PARAM_TX_POWER_AMPLIFIER:
+    BK4819_ToggleGpioOut(BK4819_GPIO1_PIN29_PA_ENABLE,
+                         ctx->tx_state.pa_enabled);
+    return true;
+  case PARAM_TX_POWER:
+    BK4819_SetupPowerAmplifier(ctx->tx_state.power_level,
+                               ctx->tx_state.frequency);
+    return true; */
   case PARAM_AFC:
     BK4819_SetAFC(ctx->afc);
     return true;
   case PARAM_XTAL:
     BK4819_XtalSet(ctx->xtal);
     return true;
-  case PARAM_FILTER:
+  case PARAM_FILTER: {
     Filter filter = ctx->filter;
     if (ctx->filter == FILTER_AUTO) {
       filter = (ctx->frequency < SETTINGS_GetFilterBound()) ? FILTER_VHF
                                                             : FILTER_UHF;
     }
     BK4819_SelectFilterEx(filter);
+  }
     return true;
   case PARAM_MIC:
     BK4819_SetRegValue(RS_MIC, ctx->mic);
@@ -589,6 +603,7 @@ bool RADIO_IsParamValid(VFOContext *ctx, ParamType param, uint32_t value) {
 
   switch (param) {
   case PARAM_FREQUENCY:
+  case PARAM_TX_FREQUENCY:
     return (value >= band->min_freq && value <= band->max_freq);
   case PARAM_MODULATION:
     return value < ARRAY_SIZE(band->available_mods);
@@ -602,6 +617,10 @@ bool RADIO_IsParamValid(VFOContext *ctx, ParamType param, uint32_t value) {
       return value <= 27; // 0..26 + auto
     }
     return false;
+    /* case PARAM_TX_POWER:
+      return value <= 0xC0; */
+  case PARAM_POWER:
+    return value <= TX_POW_HIGH;
   default:
     return true; // Остальные параметры не зависят от диапазона
   }
@@ -641,12 +660,44 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
   case PARAM_TX_OFFSET:
     ctx->tx_state.frequency = value;
     break;
-  case PARAM_POWER:
+  case PARAM_POWER: {
     ctx->power = value;
+    PowerCalibration cal = BANDS_GetPowerCalib(ctx->tx_state.frequency);
+    uint8_t pow = cal.s;
+    switch (ctx->power) {
+    case TX_POW_LOW:
+      pow = cal.s;
+      break;
+    case TX_POW_MID:
+      pow = cal.m;
+      break;
+    case TX_POW_HIGH:
+      pow = cal.e;
+      break;
+    case TX_POW_ULOW:
+      if (pow > 10) {
+        pow -= 10;
+      }
+      break;
+    }
+
+    ctx->tx_state.power_level = pow;
+    ctx->tx_state.pa_enabled = true;
+    ctx->dirty[PARAM_TX_POWER] = true;
+    ctx->dirty[PARAM_TX_POWER_AMPLIFIER] = true;
+  } break;
+  case PARAM_TX_POWER:
+    ctx->tx_state.power_level = value;
+    break;
+  case PARAM_TX_POWER_AMPLIFIER:
+    ctx->tx_state.pa_enabled = value;
     break;
 
   case PARAM_FREQUENCY:
     ctx->frequency = value;
+    break;
+  case PARAM_TX_FREQUENCY:
+    ctx->tx_state.frequency = value;
     break;
   case PARAM_MODULATION:
     ctx->modulation = (ModulationType)value;
@@ -712,13 +763,18 @@ uint32_t RADIO_GetParam(const VFOContext *ctx, ParamType param) {
   switch (param) {
   case PARAM_RX_CODE:
     return ctx->code.value;
-    break;
   case PARAM_TX_CODE:
     return ctx->tx_state.code.value;
-    break;
   case PARAM_TX_OFFSET:
     return ctx->tx_state.frequency;
-    break;
+  case PARAM_TX_FREQUENCY:
+    return ctx->tx_state.frequency;
+  case PARAM_TX_POWER_AMPLIFIER:
+    return ctx->tx_state.pa_enabled;
+  case PARAM_TX_POWER:
+    return ctx->tx_state.power_level;
+  case PARAM_TX_STATE:
+    return ctx->tx_state.is_active;
   case PARAM_RSSI:
     return vfo->msm.rssi;
   case PARAM_NOISE:
@@ -748,7 +804,7 @@ uint32_t RADIO_GetParam(const VFOContext *ctx, ParamType param) {
   case PARAM_RADIO:
     return ctx->radio_type;
   case PARAM_POWER:
-    return ctx->tx_state.power_level;
+    return ctx->power;
   case PARAM_AFC:
     return ctx->afc;
   case PARAM_XTAL:
@@ -778,6 +834,19 @@ bool RADIO_AdjustParam(VFOContext *ctx, ParamType param, uint32_t inc,
   case PARAM_FREQUENCY:
     mi = band->min_freq;
     ma = band->max_freq;
+    break;
+  case PARAM_TX_FREQUENCY:
+    mi = band->min_freq;
+    ma = band->max_freq;
+    break;
+  case PARAM_POWER:
+    ma = 4;
+    break;
+  case PARAM_TX_POWER:
+    ma = 255;
+    break;
+  case PARAM_TX_POWER_AMPLIFIER:
+    ma = 2;
     break;
   case PARAM_MODULATION:
     ma = ARRAY_SIZE(band->available_mods);
@@ -868,6 +937,7 @@ void RADIO_ApplySettings(VFOContext *ctx) {
     switch (p) {
     case PARAM_STEP:
     case PARAM_POWER:
+    case PARAM_TX_FREQUENCY:
     case PARAM_TX_OFFSET:
     case PARAM_TX_STATE:
     case PARAM_TX_CODE:
@@ -1112,6 +1182,13 @@ void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
   vfo->context.code = storage->code.rx;
   vfo->context.tx_state.code = storage->code.tx;
 
+  // Initialize TX state
+  vfo->context.tx_state.frequency = storage->rxF; // Default to RX frequency
+  vfo->context.power = storage->power;
+  vfo->context.tx_state.pa_enabled = false;
+  vfo->context.tx_state.is_active = false;
+  vfo->context.tx_state.last_error = TX_UNKNOWN;
+
   // Handle channel mode
   if (vfo->mode == MODE_CHANNEL) {
     vfo->channel_index = storage->channel;
@@ -1199,6 +1276,13 @@ void RADIO_LoadChannelToVFO(RadioState *state, uint8_t vfo_index,
 
   ctx->code = channel.code.rx;
   ctx->tx_state.code = channel.code.tx;
+
+  // Initialize TX state
+  vfo->context.tx_state.frequency = ctx->frequency; // Default to RX frequency
+  vfo->context.tx_state.power_level = 0;
+  vfo->context.tx_state.pa_enabled = false;
+  vfo->context.tx_state.is_active = false;
+  vfo->context.tx_state.last_error = TX_UNKNOWN;
 
   // RADIO_ApplySettings(&vfo->context);
 }
@@ -1505,11 +1589,6 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
   case PARAM_RSSI:
     snprintf(buf, 15, "%+ddB", Rssi2DBm(v));
     break;
-  case PARAM_NOISE:
-  case PARAM_GLITCH:
-  case PARAM_SNR:
-    snprintf(buf, 15, "%u", v);
-    break;
 
   case PARAM_MODULATION:
     return RADIO_GetModulationName(ctx);
@@ -1531,6 +1610,7 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
              StepFrequencyTable[ctx->step] % KHZ);
     break;
   case PARAM_FREQUENCY:
+  case PARAM_TX_FREQUENCY:
     mhzToS(buf, ctx->frequency);
     break;
   case PARAM_RADIO:
@@ -1560,6 +1640,11 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
     return TX_POWER_NAMES[ctx->power];
   case PARAM_FILTER:
     return FILTER_NAMES[ctx->filter];
+  case PARAM_NOISE:
+  case PARAM_GLITCH:
+  case PARAM_SNR:
+  case PARAM_TX_POWER:
+  case PARAM_TX_POWER_AMPLIFIER:
   case PARAM_AFC:
   case PARAM_DEV:
   case PARAM_MIC:

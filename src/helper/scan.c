@@ -79,13 +79,7 @@ static void NextFrequency() {
     }
     vfo->msm.f = gCurrentBand.rxF;
     gRedrawScreen = true;
-  }
-
-  if (vfo->msm.f < gCurrentBand.rxF) {
-    if (scan.isMultiband) {
-      BANDS_SelectBandRelativeByScanlist(true);
-      ApplyBandSettings();
-    }
+  } else if (vfo->msm.f < gCurrentBand.rxF) {
     vfo->msm.f = gCurrentBand.txF;
     gRedrawScreen = true;
   }

@@ -101,7 +101,7 @@ static uint16_t ReadStableGpioData() {
   uint8_t ii;
 
   for (ii = 0, reg = 0; ii < 3; ii++) {
-    SYSTICK_DelayUs(1);
+    SYSTICK_Delay250ns(1);
     reg2 = (uint16_t)GPIOA->DATA;
     if (reg != reg2) {
       reg = reg2;

@@ -47,7 +47,7 @@ void VFO1_update(void) {
     lastSqCheck = Now();
   }
 
-  if (Now() - lastRender >= 1000) {
+  if (Now() - lastRender >= 500) {
     lastRender = Now();
     gRedrawScreen = true;
   }
@@ -204,9 +204,15 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
 }
 
 static void renderTxRxState(uint8_t y, bool isTx) {
-  if (isTx && ctx->tx_state.is_active) {
-    PrintMediumBoldEx(LCD_XCENTER, y, POS_C, C_FILL, "%s",
-                      RADIO_GetParamValueString(ctx, PARAM_TX_STATE));
+  if (isTx) {
+    if (ctx->tx_state.is_active) {
+      PrintMediumEx(0, 21, POS_L, C_FILL, "TX");
+    } else {
+      PrintMediumBoldEx(LCD_XCENTER, y, POS_C, C_FILL, "%s",
+                        RADIO_GetParamValueString(ctx, PARAM_TX_STATE));
+    }
+  } else if (vfo->msm.open) {
+    PrintMediumEx(0, 21, POS_L, C_FILL, "RX");
   }
 }
 
@@ -278,25 +284,19 @@ void VFO1_render(void) {
     }
   }
 
-  int32_t khz_x10 = (afc_to_deviation_hz(BK4819_ReadRegister(0x6D)) + 50) /
-                    100; // округление до 0.1kHz
-
-  PrintSmallEx(0, 19, POS_L, C_FILL, "%+d.%dkHz", khz_x10 / 10,
-               (khz_x10 > 0 ? 1 : -1) * khz_x10 % 10);
   /* PrintSmallEx(0, 24, POS_L, C_FILL, "POW %u",
                (BK4819_ReadRegister(0x7E) >> 6) & 0b111111); */
 
   // Шаг, полоса, уровень SQL, мощность, субтоны, названия каналов.
 
-  renderTxRxState(BASE, ctx->tx_state.is_active);
-  UI_BigFrequency(BASE, f);
+  renderTxRxState(BASE - 4,
+                  ctx->tx_state.is_active || ctx->tx_state.last_error);
+  if (!ctx->tx_state.last_error) {
+    UI_BigFrequency(BASE, f);
+  }
   PrintMediumEx(LCD_WIDTH - 1, BASE - 12, POS_R, C_FILL, mod);
   renderChannelName(21, vfo->channel_index);
   const uint32_t step = StepFrequencyTable[ctx->step];
-  /* if (potentialTxState == TX_ON) {
-    PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "%s",
-                 TX_POWER_NAMES[radio.power]);
-  } */
   PrintSmallEx(LCD_WIDTH, BASE + 6, POS_R, C_FILL, "%d.%02d", step / KHZ,
                step % KHZ);
 
@@ -310,8 +310,17 @@ void VFO1_render(void) {
   }
 
   if (gSettings.iAmPro) {
+    int32_t khz_x10 = (afc_to_deviation_hz(BK4819_ReadRegister(0x6D)) + 50) /
+                      100; // округление до 0.1kHz
+
+    if (khz_x10 != 0) {
+      PrintSmallEx(LCD_WIDTH - 22, BASE - 15, POS_R, C_FILL, "%+d.%dk",
+                   khz_x10 / 10, (khz_x10 > 0 ? 1 : -1) * khz_x10 % 10);
+    }
+
     uint32_t lambda = 29979246 / (ctx->frequency / 100);
-    PrintSmallEx(0, BASE - 14, POS_L, C_FILL, "L=%u/%ucm", lambda, lambda / 4);
+    PrintSmallEx(LCD_XCENTER, BASE - 15, POS_C, C_FILL, "L=%u/%ucm", lambda,
+                 lambda / 4);
   }
 
   if (gMonitorMode) {
@@ -352,7 +361,7 @@ void VFO1_render(void) {
       UI_RSSIBar(BASE + 1);
     }
   } else {
-    if (vfo->is_active || gSettings.iAmPro) {
+    if (vfo->msm.open || gSettings.iAmPro) {
       UI_RSSIBar(BASE + 1);
     }
     if (ctx->tx_state.is_active) {
@@ -366,10 +375,10 @@ void VFO1_render(void) {
   if (gLastActiveLoot) {
     const uint32_t ago = (Now() - gLastActiveLoot->lastTimeOpen) / 1000;
     if (gLastActiveLoot->ct != 255) {
-      // PrintRTXCode(String, CODE_TYPE_CONTINUOUS_TONE, gLastActiveLoot->ct);
+      PrintRTXCode(String, CODE_TYPE_CONTINUOUS_TONE, gLastActiveLoot->ct);
       PrintSmallEx(0, LCD_HEIGHT - 1, POS_L, C_FILL, "%s", String);
     } else if (gLastActiveLoot->cd != 255) {
-      // PrintRTXCode(String, CODE_TYPE_DIGITAL, gLastActiveLoot->cd);
+      PrintRTXCode(String, CODE_TYPE_DIGITAL, gLastActiveLoot->cd);
       PrintSmallEx(0, LCD_HEIGHT - 1, POS_L, C_FILL, "%s", String);
     }
     UI_DrawLoot(gLastActiveLoot, LCD_XCENTER, LCD_HEIGHT - 1, POS_C);

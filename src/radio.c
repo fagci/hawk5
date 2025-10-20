@@ -978,8 +978,10 @@ bool RADIO_StartTX(VFOContext *ctx) {
     ctx->tx_state.last_error = status;
     return false;
   }
-  if (ctx->tx_state.is_active)
+  ctx->tx_state.last_error = TX_UNKNOWN;
+  if (ctx->tx_state.is_active) {
     return true;
+  }
 
   uint8_t power = ctx->tx_state.power_level;
 
@@ -1003,8 +1005,10 @@ bool RADIO_StartTX(VFOContext *ctx) {
 
 // Завершить передачу
 void RADIO_StopTX(VFOContext *ctx) {
-  if (!ctx->tx_state.is_active)
+  ctx->tx_state.last_error = TX_UNKNOWN;
+  if (!ctx->tx_state.is_active) {
     return;
+  }
 
   BK4819_ExitDTMF_TX(true); // also prepares to tx ste
 
@@ -1569,19 +1573,6 @@ static const char *RADIO_GetModulationName(const VFOContext *ctx) {
   return "WFM";
 }
 
-static void printRTXCode(char *Output, uint8_t codeType, uint8_t code) {
-  if (codeType == CODE_TYPE_CONTINUOUS_TONE) {
-    sprintf(Output, "CT:%u.%u", CTCSS_Options[code] / 10,
-            CTCSS_Options[code] % 10);
-  } else if (codeType == CODE_TYPE_DIGITAL) {
-    sprintf(Output, "DCS:D%03oN", DCS_Options[code]);
-  } else if (codeType == CODE_TYPE_REVERSE_DIGITAL) {
-    sprintf(Output, "DCS:D%03oI", DCS_Options[code]);
-  } else {
-    sprintf(Output, "No code");
-  }
-}
-
 const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
   static char buf[16] = "unk";
   uint32_t v = RADIO_GetParam(ctx, param);
@@ -1629,11 +1620,11 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
     break;
 
   case PARAM_RX_CODE:
-    printRTXCode(buf, ctx->code.type, ctx->code.value);
+    PrintRTXCode(buf, ctx->code.type, ctx->code.value);
     break;
 
   case PARAM_TX_CODE:
-    printRTXCode(buf, ctx->tx_state.code.type, ctx->tx_state.code.value);
+    PrintRTXCode(buf, ctx->tx_state.code.type, ctx->tx_state.code.value);
     break;
 
   case PARAM_POWER:

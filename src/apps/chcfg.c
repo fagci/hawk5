@@ -68,19 +68,6 @@ static bool save(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
   return false;
 }
 
-static void PrintRTXCode(char *Output, uint8_t codeType, uint8_t code) {
-  if (codeType == CODE_TYPE_CONTINUOUS_TONE) {
-    sprintf(Output, "CT:%u.%uHz", CTCSS_Options[code] / 10,
-            CTCSS_Options[code] % 10);
-  } else if (codeType == CODE_TYPE_DIGITAL) {
-    sprintf(Output, "DCS:D%03oN", DCS_Options[code]);
-  } else if (codeType == CODE_TYPE_REVERSE_DIGITAL) {
-    sprintf(Output, "DCS:D%03oI", DCS_Options[code]);
-  } else {
-    sprintf(Output, "No code");
-  }
-}
-
 static uint32_t getValue(MemProp p) {
   switch (p) {
   case MEM_COUNT:

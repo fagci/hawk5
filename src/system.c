@@ -161,7 +161,7 @@ void SYS_Main() {
     SETTINGS_UpdateSave();
     APPS_update();
 
-    if (Now() - appsKeyboardTimer > 12) {
+    if (Now() - appsKeyboardTimer >= 10) {
       processKeyboard();
       appsKeyboardTimer = Now();
     }

@@ -15,6 +15,7 @@
  */
 
 #include "dcs.h"
+#include "external/printf/printf.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 
@@ -97,4 +98,17 @@ uint8_t DCS_GetCtcssCode(uint16_t Code) {
   }
 
   return Result;
+}
+
+void PrintRTXCode(char *Output, uint8_t codeType, uint8_t code) {
+  if (codeType == CODE_TYPE_CONTINUOUS_TONE) {
+    sprintf(Output, "CT:%u.%u", CTCSS_Options[code] / 10,
+            CTCSS_Options[code] % 10);
+  } else if (codeType == CODE_TYPE_DIGITAL) {
+    sprintf(Output, "DCS:D%03oN", DCS_Options[code]);
+  } else if (codeType == CODE_TYPE_REVERSE_DIGITAL) {
+    sprintf(Output, "DCS:D%03oI", DCS_Options[code]);
+  } else {
+    sprintf(Output, "No code");
+  }
 }

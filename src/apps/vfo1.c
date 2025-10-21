@@ -310,12 +310,14 @@ void VFO1_render(void) {
   }
 
   if (gSettings.iAmPro) {
-    int32_t khz_x10 = (afc_to_deviation_hz(BK4819_ReadRegister(0x6D)) + 50) /
-                      100; // округление до 0.1kHz
+    if (vfo->msm.open) {
+      int32_t khz_x10 = (afc_to_deviation_hz(BK4819_ReadRegister(0x6D)) + 50) /
+                        100; // округление до 0.1kHz
 
-    if (khz_x10 != 0) {
-      PrintSmallEx(LCD_WIDTH - 22, BASE - 15, POS_R, C_FILL, "%+d.%dk",
-                   khz_x10 / 10, (khz_x10 > 0 ? 1 : -1) * khz_x10 % 10);
+      if (khz_x10 != 0) {
+        PrintSmallEx(LCD_WIDTH - 22, BASE - 15, POS_R, C_FILL, "%+d.%dk",
+                     khz_x10 / 10, (khz_x10 > 0 ? 1 : -1) * khz_x10 % 10);
+      }
     }
 
     uint32_t lambda = 29979246 / (ctx->frequency / 100);

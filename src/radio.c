@@ -1178,6 +1178,7 @@ void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
   RADIO_SetParam(ctx, PARAM_MIC, gSettings.mic, false);
   RADIO_SetParam(ctx, PARAM_DEV, gSettings.deviation * 10, false);
   RADIO_SetParam(ctx, PARAM_XTAL, XTAL_2_26M, false);
+  RADIO_SetParam(ctx, PARAM_AFC, 7, false);
   RADIO_SetParam(ctx, PARAM_FILTER, FILTER_AUTO, false);
 
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
@@ -1189,7 +1190,6 @@ void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
   // Initialize TX state
   vfo->context.tx_state.frequency = storage->rxF; // Default to RX frequency
   vfo->context.power = storage->power;
-  vfo->context.tx_state.pa_enabled = false;
   vfo->context.tx_state.is_active = false;
   vfo->context.tx_state.last_error = TX_UNKNOWN;
 
@@ -1273,6 +1273,7 @@ void RADIO_LoadChannelToVFO(RadioState *state, uint8_t vfo_index,
   RADIO_SetParam(ctx, PARAM_STEP, channel.step, false);
 
   RADIO_SetParam(ctx, PARAM_XTAL, XTAL_2_26M, false);
+  RADIO_SetParam(ctx, PARAM_AFC, 7, false);
   RADIO_SetParam(ctx, PARAM_FILTER, FILTER_AUTO, false);
 
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
@@ -1285,6 +1286,7 @@ void RADIO_LoadChannelToVFO(RadioState *state, uint8_t vfo_index,
   vfo->context.tx_state.frequency = ctx->frequency; // Default to RX frequency
   vfo->context.tx_state.power_level = 0;
   vfo->context.tx_state.pa_enabled = false;
+  RADIO_SetParam(ctx, PARAM_AFC, 7, false);
   vfo->context.tx_state.is_active = false;
   vfo->context.tx_state.last_error = TX_UNKNOWN;
 

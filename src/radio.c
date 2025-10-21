@@ -1377,6 +1377,7 @@ static void RADIO_UpdateMeasurement(ExtendedVFOContext *vfo) {
 void RADIO_UpdateSquelch(RadioState *state) {
   RADIO_UpdateMeasurement(&state->vfos[state->active_vfo_index]);
   if (vfo->msm.open != vfo->is_open) {
+    gRedrawScreen = true; // TODO: mv
     vfo->is_open = vfo->msm.open;
     RADIO_SwitchAudioToVFO(state, state->active_vfo_index);
   }

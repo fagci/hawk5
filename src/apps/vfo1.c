@@ -231,8 +231,6 @@ static void renderChannelName(uint8_t y, uint16_t channel) {
   }
 }
 
-static void renderProModeInfo(uint8_t y) {}
-
 #define AFC_COEFF_NUM 171 // 3.42 * 50 (упрощенный коэффициент)
 #define AFC_COEFF_DEN 50 // Знаменатель
 #define AFC_MODULO 65536
@@ -256,8 +254,7 @@ void VFO1_render(void) {
 
   if (gIsNumNavInput) {
     STATUSLINE_SetText("Select: %s", gNumNavInput);
-  } else if (gSettings.iAmPro &&
-             (!gSettings.mWatch || vfo->is_open)) { // NOTE mwatch is temporary
+  } else if ((!gSettings.mWatch || vfo->is_open)) { // NOTE mwatch is temporary
     STATUSLINE_RenderRadioSettings();
   } else {
     STATUSLINE_SetText("Radio: %s",
@@ -359,14 +356,11 @@ void VFO1_render(void) {
       UI_RSSIBar(BASE + 1);
     }
   } else {
-    if (vfo->msm.open || gSettings.iAmPro) {
+    if (vfo->msm.open) {
       UI_RSSIBar(BASE + 1);
     }
     if (ctx->tx_state.is_active) {
       UI_TxBar(BASE + 1);
-    }
-    if (gSettings.iAmPro) {
-      renderProModeInfo(BASE);
     }
   }
 

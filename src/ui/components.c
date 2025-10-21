@@ -37,7 +37,7 @@ void UI_RSSIBar(uint8_t y) {
   }
 
   const uint8_t BAR_LEFT_MARGIN = 0;
-  const uint8_t BAR_WIDTH = LCD_WIDTH - BAR_LEFT_MARGIN - 22;
+  const uint8_t BAR_WIDTH = 80;
   const uint8_t BAR_BASE = y + 7;
 
   FillRect(0, y, LCD_WIDTH, 8, C_CLEAR);
@@ -45,22 +45,23 @@ void UI_RSSIBar(uint8_t y) {
   const uint16_t SNR_MIN = 0;
   const uint16_t SNR_MAX = 30;
 
+  const uint16_t RSSI_MIN = DBm2Rssi(-121); // -121
+  const uint16_t RSSI_MAX =
+      ctx->frequency < 30 * MHZ ? DBm2Rssi(-33) : DBm2Rssi(-53); // -33 / -53
+
   uint8_t rssiW = ConvertDomain(rssi, RSSI_MIN, RSSI_MAX, 0, BAR_WIDTH);
-  uint8_t snrW = ConvertDomain(vfo->msm.snr, SNR_MIN, SNR_MAX, 0, BAR_WIDTH);
 
-  FillRect(BAR_LEFT_MARGIN, y + 2, rssiW, 4, C_FILL);
-  FillRect(BAR_LEFT_MARGIN, y + 7, snrW, 1, C_FILL);
+  FillRect(BAR_LEFT_MARGIN, y + 2, rssiW, 6, C_FILL);
 
-  DrawHLine(0, y + 5, BAR_WIDTH - 2, C_FILL);
-  for (int16_t r = Rssi2DBm(RSSI_MIN); r < Rssi2DBm(RSSI_MAX); r++) {
-    if (r % 10 == 0) {
-      FillRect(ConvertDomain(r, Rssi2DBm(RSSI_MIN), Rssi2DBm(RSSI_MAX), 0,
-                             BAR_WIDTH),
-               y + 5 - (r % 50 == 0 ? 2 : 1), 1, r % 50 == 0 ? 2 : 1, C_INVERT);
-    }
+  DrawHLine(0, y + 7, BAR_WIDTH - 2, C_FILL);
+  for (uint8_t r = 17; r < BAR_WIDTH; r += 17) {
+    bool isExtra = r == 17 * 3;
+    FillRect(r, y + 7 - (isExtra ? 4 : 2), 1, (isExtra ? 4 : 2), C_INVERT);
   }
 
-  PrintMediumEx(LCD_WIDTH - 1, BAR_BASE, 2, true, "%d", Rssi2DBm(rssi));
+  PrintMediumEx(BAR_WIDTH + 2 + 20, BAR_BASE, POS_R, true, "%+3d",
+                Rssi2DBm(rssi));
+  PrintSmallEx(LCD_WIDTH, BAR_BASE, POS_R, true, "%2d", vfo->msm.snr);
 }
 
 void drawTicks(uint8_t y, uint32_t fs, uint32_t fe, uint32_t div, uint8_t h) {

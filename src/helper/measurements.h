@@ -31,6 +31,7 @@ uint32_t ConvertDomainF(uint32_t aValue, uint32_t aMin, uint32_t aMax,
 uint8_t Rssi2PX(uint16_t rssi, uint8_t pxMin, uint8_t pxMax);
 uint8_t DBm2S(int dbm, bool isVHF);
 int Rssi2DBm(uint16_t rssi);
+uint16_t DBm2Rssi(int16_t dbm);
 uint16_t Mid(const uint16_t *array, size_t n);
 uint16_t Min(const uint16_t *array, size_t n);
 uint16_t Max(const uint16_t *array, size_t n);

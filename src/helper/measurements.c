@@ -45,6 +45,7 @@ uint8_t DBm2S(int dbm, bool isVHF) {
 }
 
 int Rssi2DBm(uint16_t rssi) { return (rssi >> 1) - 160; }
+uint16_t DBm2Rssi(int16_t dbm) { return (dbm + 160) << 1; }
 
 // applied x2 to prevent initial rounding
 uint8_t Rssi2PX(uint16_t rssi, uint8_t pxMin, uint8_t pxMax) {

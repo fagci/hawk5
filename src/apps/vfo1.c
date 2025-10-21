@@ -228,13 +228,6 @@ static void renderChannelName(uint8_t y, uint16_t channel) {
 }
 
 static void renderProModeInfo(uint8_t y) {
-  if (ctx->radio_type == RADIO_BK4819) {
-    PrintSmall(0, LCD_HEIGHT - 10, "R %+3u N %+3u G %+3u SNR %+2u",
-               vfo->msm.rssi, vfo->msm.noise, vfo->msm.glitch, vfo->msm.snr);
-  } else {
-    PrintSmall(0, LCD_HEIGHT - 10, "R %+3u SNR %+2u", vfo->msm.rssi,
-               vfo->msm.snr);
-  }
 }
 
 #define AFC_COEFF_NUM 171 // 3.42 * 50 (упрощенный коэффициент)

@@ -8,6 +8,7 @@
 #include "../scheduler.h"
 #include "../ui/spectrum.h"
 #include "bands.h"
+#include "lootlist.h"
 
 // =============================
 // Состояние сканирования
@@ -61,6 +62,9 @@ static void ApplyBandSettings() {
   SP_Init(&gCurrentBand);
   LogC(LOG_C_BRIGHT_YELLOW, "[SCANER] Bounds: %u .. %u", gCurrentBand.rxF,
        gCurrentBand.txF);
+  if (gLastActiveLoot && !BANDS_InRange(gLastActiveLoot->f, gCurrentBand)) {
+    gLastActiveLoot = NULL;
+  }
 }
 
 static void NextFrequency() {
@@ -165,8 +169,10 @@ static void HandleAnalyserMode() {
 }
 
 static void UpdateSquelchAndRssi(bool isAnalyserMode) {
-  if (gSettings.skipGarbageFrequencies &&
-      (vfo->msm.f % GARBAGE_FREQUENCY_MOD == 0)) {
+  Loot *msm = LOOT_Get(vfo->msm.f);
+  if ((gSettings.skipGarbageFrequencies &&
+       (vfo->msm.f % GARBAGE_FREQUENCY_MOD == 0)) ||
+      (msm && msm->blacklist)) {
     vfo->msm.open = false;
     vfo->msm.rssi = 0;
     SP_AddPoint(&vfo->msm);

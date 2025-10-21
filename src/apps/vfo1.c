@@ -190,6 +190,10 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
       GPIO_FlipBit(&GPIOC->DATA, GPIOC_PIN_FLASHLIGHT);
       break;
     case KEY_EXIT:
+      if (gMonitorMode) {
+        gMonitorMode = false;
+        return true;
+      }
       if (!APPS_exit()) {
         RADIO_SaveCurrentVFO(&gRadioState);
         RADIO_SwitchVFO(&gRadioState,
@@ -227,8 +231,7 @@ static void renderChannelName(uint8_t y, uint16_t channel) {
   }
 }
 
-static void renderProModeInfo(uint8_t y) {
-}
+static void renderProModeInfo(uint8_t y) {}
 
 #define AFC_COEFF_NUM 171 // 3.42 * 50 (упрощенный коэффициент)
 #define AFC_COEFF_DEN 50 // Знаменатель

@@ -243,7 +243,7 @@ void SCANER_render(void) {
   CUR_Render();
 
   if (vfo->is_open) {
-    UI_RSSIBar(16);
+    UI_RSSIBar(17);
   }
 
   REGSMENU_Draw();

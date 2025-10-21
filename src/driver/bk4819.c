@@ -143,14 +143,16 @@ static void spi_write_word(uint16_t data) {
 uint16_t BK4819_ReadRegister(BK4819_REGISTER_t reg) {
   gpio_set_scn(true);
   gpio_set_scl(false);
-  SYSTICK_Delay250ns(1);
+  // SYSTICK_Delay250ns(1);
+  __asm volatile("nop \n"
+                 "nop \n");
   gpio_set_scn(false);
 
   spi_write_byte(reg | 0x80);
   uint16_t value = spi_read_word();
 
   gpio_set_scn(true);
-  SYSTICK_Delay250ns(1);
+  // SYSTICK_Delay250ns(1);
   gpio_set_scl(true);
   gpio_set_sda(true);
 
@@ -160,14 +162,16 @@ uint16_t BK4819_ReadRegister(BK4819_REGISTER_t reg) {
 void BK4819_WriteRegister(BK4819_REGISTER_t reg, uint16_t data) {
   gpio_set_scn(true);
   gpio_set_scl(false);
-  SYSTICK_Delay250ns(1);
+  // SYSTICK_Delay250ns(1);
+  __asm volatile("nop \n"
+                 "nop \n");
   gpio_set_scn(false);
 
   spi_write_byte(reg);
   spi_write_word(data);
 
   gpio_set_scn(true);
-  SYSTICK_Delay250ns(1);
+  // SYSTICK_Delay250ns(1);
   gpio_set_scl(true);
   gpio_set_sda(true);
 }

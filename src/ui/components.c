@@ -37,31 +37,35 @@ void UI_RSSIBar(uint8_t y) {
   }
 
   const uint8_t BAR_LEFT_MARGIN = 0;
-  const uint8_t BAR_WIDTH = 80;
+  const uint8_t BAR_WIDTH = LCD_WIDTH - 24;
   const uint8_t BAR_BASE = y + 7;
+
+  const bool isVhf = ctx->frequency < 30 * MHZ;
+  const uint16_t RSSI_MIN = DBm2Rssi(-121);                        // -121
+  const uint16_t RSSI_MAX = isVhf ? DBm2Rssi(-33) : DBm2Rssi(-53); // -33 / -53
+  const uint8_t numTicks = ARRAY_SIZE(rssi2s[isVhf]);
+
+  int16_t rssiDbm = Rssi2DBm(rssi);
+  uint8_t rssiW = ConvertDomain(rssi, RSSI_MIN, RSSI_MAX, 0, BAR_WIDTH);
+
+  uint8_t barH = ConvertDomain(vfo->msm.snr, 0, 30, 1, 6);
 
   FillRect(0, y, LCD_WIDTH, 8, C_CLEAR);
 
-  const uint16_t SNR_MIN = 0;
-  const uint16_t SNR_MAX = 30;
+  FillRect(BAR_LEFT_MARGIN, y + 7 - barH, rssiW, barH, C_FILL);
 
-  const uint16_t RSSI_MIN = DBm2Rssi(-121); // -121
-  const uint16_t RSSI_MAX =
-      ctx->frequency < 30 * MHZ ? DBm2Rssi(-33) : DBm2Rssi(-53); // -33 / -53
+  DrawHLine(0, y + 7, BAR_WIDTH, C_FILL);
 
-  uint8_t rssiW = ConvertDomain(rssi, RSSI_MIN, RSSI_MAX, 0, BAR_WIDTH);
+  for (uint8_t i = 0; i < numTicks; i += 3) {
+    uint16_t tickRssi = rssi2s[isVhf][i];
+    uint8_t tickPos = ConvertDomain(i, 0, numTicks, BAR_WIDTH, 0);
 
-  FillRect(BAR_LEFT_MARGIN, y + 2, rssiW, 6, C_FILL);
-
-  DrawHLine(0, y + 7, BAR_WIDTH - 2, C_FILL);
-  for (uint8_t r = 17; r < BAR_WIDTH; r += 17) {
-    bool isExtra = r == 17 * 3;
-    FillRect(r, y + 7 - (isExtra ? 4 : 2), 1, (isExtra ? 4 : 2), C_INVERT);
+    bool isExtra = (i == numTicks - 9); // Акцент на S9
+    uint8_t height = isExtra ? 4 : 2;
+    FillRect(tickPos, y + 7 - height, 1, height, C_INVERT);
   }
 
-  PrintMediumEx(BAR_WIDTH + 2 + 20, BAR_BASE, POS_R, true, "%+3d",
-                Rssi2DBm(rssi));
-  PrintSmallEx(LCD_WIDTH, BAR_BASE, POS_R, true, "%2d", vfo->msm.snr);
+  PrintMediumEx(LCD_WIDTH - 1, BAR_BASE, POS_R, true, "%+3d", rssiDbm);
 }
 
 void drawTicks(uint8_t y, uint32_t fs, uint32_t fe, uint32_t div, uint8_t h) {

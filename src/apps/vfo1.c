@@ -308,13 +308,13 @@ void VFO1_render(void) {
                         100; // округление до 0.1kHz
 
       if (khz_x10 != 0) {
-        PrintSmallEx(LCD_WIDTH - 22, BASE - 15, POS_R, C_FILL, "%+d.%dk",
-                     khz_x10 / 10, (khz_x10 > 0 ? 1 : -1) * khz_x10 % 10);
+        PrintSmallEx(30, 21, POS_R, C_FILL, "%+d.%dk", khz_x10 / 10,
+                     (khz_x10 > 0 ? 1 : -1) * khz_x10 % 10);
       }
     }
 
     uint32_t lambda = 29979246 / (ctx->frequency / 100);
-    PrintSmallEx(LCD_XCENTER, BASE - 15, POS_C, C_FILL, "L=%u/%ucm", lambda,
+    PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "L=%u/%ucm", lambda,
                  lambda / 4);
   }
 

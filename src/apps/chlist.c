@@ -125,29 +125,71 @@ static void saveNamed() {
 }
 
 static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
-  if (state == KEY_RELEASED && key == KEY_MENU) {
-    if (gChSaveMode) {
-      CHANNELS_LoadScanlist(gChListFilter, gSettings.currentScanlist);
-
-      if (gChEd.name[0] == '\0') {
-        gTextinputText = tempName;
-        snprintf(gTextinputText, 9, "%lu.%05lu", gChEd.rxF / MHZ,
-                 gChEd.rxF % MHZ);
-        gTextInputSize = 9;
-        channelIndex = index;
-        gTextInputCallback = saveNamed;
-        APPS_run(APP_TEXTINPUT);
+  uint16_t chNum = getChannelNumber(index);
+  if (viewMode == MODE_SCANLIST || viewMode == MODE_SCANLIST_SELECT) {
+    if ((state == KEY_LONG_PRESSED || state == KEY_RELEASED) &&
+        (key > KEY_0 && key < KEY_9)) {
+      if (viewMode == MODE_SCANLIST_SELECT) {
+        gSettings.currentScanlist = CHANNELS_ScanlistByKey(
+            gSettings.currentScanlist, key, state == KEY_LONG_PRESSED);
+        SETTINGS_DelayedSave();
+        CHLIST_init();
       } else {
-        // save();
+        CHANNELS_Load(chNum, &ch);
+        ch.scanlists = CHANNELS_ScanlistByKey(ch.scanlists, key,
+                                              state == KEY_LONG_PRESSED);
+        CHANNELS_Save(chNum, &ch);
       }
       return true;
     }
-    LogC(LOG_C_YELLOW, "BAND Selected by user");
-    BANDS_Select(getChannelNumber(index), true);
-    // RADIO_TuneToMR(chNum);
-    // Log("Tuned to band, exit app");
-    APPS_exit();
-    return true;
+  }
+  if (state == KEY_RELEASED) {
+    if (viewMode == MODE_DELETE && key == KEY_1) {
+      CHANNELS_Delete(chNum);
+      return true;
+    }
+
+    if (viewMode == MODE_TX && key == KEY_1) {
+      CHANNELS_Load(chNum, &ch);
+      ch.allowTx = !ch.allowTx;
+      CHANNELS_Save(chNum, &ch);
+      return true;
+    }
+    switch (key) {
+    case KEY_PTT:
+      RADIO_LoadChannelToVFO(&gRadioState,
+                             RADIO_GetCurrentVFONumber(&gRadioState), chNum);
+      APPS_run(APP_VFO1);
+      return true;
+    case KEY_F:
+      gChNum = chNum;
+      CHANNELS_Load(gChNum, &gChEd);
+      APPS_run(APP_CH_CFG);
+      return true;
+    case KEY_MENU:
+      if (gChSaveMode) {
+        CHANNELS_LoadScanlist(gChListFilter, gSettings.currentScanlist);
+
+        if (gChEd.name[0] == '\0') {
+          gTextinputText = tempName;
+          snprintf(gTextinputText, 9, "%lu.%05lu", gChEd.rxF / MHZ,
+                   gChEd.rxF % MHZ);
+          gTextInputSize = 9;
+          channelIndex = index;
+          gTextInputCallback = saveNamed;
+          APPS_run(APP_TEXTINPUT);
+        } else {
+          // save();
+        }
+        return true;
+      }
+      LogC(LOG_C_YELLOW, "BAND Selected by user");
+      BANDS_Select(chNum, true);
+      APPS_exit();
+      return true;
+    default:
+      return false;
+    }
   }
   return false;
 }
@@ -194,33 +236,6 @@ bool CHLIST_key(KEY_Code_t key, Key_State_t state) {
       return true;
     }
   } */
-
-  if (viewMode == MODE_SCANLIST || viewMode == MODE_SCANLIST_SELECT) {
-    if ((longHeld || simpleKeypress) && (key > KEY_0 && key < KEY_9)) {
-      if (viewMode == MODE_SCANLIST_SELECT) {
-        gSettings.currentScanlist = CHANNELS_ScanlistByKey(
-            gSettings.currentScanlist, key, longHeld && !simpleKeypress);
-        SETTINGS_DelayedSave();
-        CHLIST_init();
-      } else {
-        /* CHANNELS_Load(chNum, &ch);
-        ch.scanlists = CHANNELS_ScanlistByKey(ch.scanlists, key, longHeld);
-        CHANNELS_Save(chNum, &ch); */
-      }
-      return true;
-    }
-  }
-
-  if (viewMode == MODE_DELETE && simpleKeypress && key == KEY_1) {
-    // CHANNELS_Delete(chNum);
-    return true;
-  }
-  if (viewMode == MODE_TX && simpleKeypress && key == KEY_1) {
-    /* CHANNELS_Load(chNum, &ch);
-    ch.allowTx = !ch.allowTx;
-    CHANNELS_Save(chNum, &ch); */
-    return true;
-  }
 
   if (state == KEY_LONG_PRESSED) {
     switch (key) {
@@ -272,15 +287,6 @@ bool CHLIST_key(KEY_Code_t key, Key_State_t state) {
       return true;
     case KEY_MENU:
       return true;
-    /* case KEY_PTT:
-      RADIO_TuneToMR(chNum);
-      APPS_run(APP_VFO1);
-      return true;
-    case KEY_F:
-      gChNum = chNum;
-      CHANNELS_Load(gChNum, &gChEd);
-      APPS_run(APP_CH_CFG);
-      return true; */
     case KEY_EXIT:
       /* if (gIsNumNavInput) {
         NUMNAV_Deinit();

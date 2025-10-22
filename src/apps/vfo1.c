@@ -125,6 +125,7 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
       gShowAllRSSI = !gShowAllRSSI;
       return true;
     case KEY_5:
+      RADIO_ToggleMultiwatch(&gRadioState, !gRadioState.multiwatch_enabled);
       return true;
     case KEY_6:
       RADIO_IncDecParam(ctx, PARAM_POWER, true, true);

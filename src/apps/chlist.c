@@ -234,11 +234,6 @@ bool CHLIST_key(KEY_Code_t key, Key_State_t state) {
       break;
     }
   }
-
-  if (MENU_HandleInput(key, state)) {
-    return true;
-  }
-
   if (state == KEY_RELEASED) {
     switch (key) {
     case KEY_0:
@@ -279,6 +274,11 @@ bool CHLIST_key(KEY_Code_t key, Key_State_t state) {
       break;
     }
   }
+
+  if (MENU_HandleInput(key, state)) {
+    return true;
+  }
+
   return false;
 }
 

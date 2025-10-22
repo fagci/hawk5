@@ -130,6 +130,8 @@ static bool handleNumNav(KEY_Code_t key, Key_State_t state) {
   return false;
 }
 
+bool MENU_IsActive() { return active_menu; }
+
 bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
   if (!active_menu) {
     return false;
@@ -151,8 +153,11 @@ bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
     if (active_menu->action && active_menu->action(current_index, key, state)) {
       return true;
     }
+    if (handleNumNav(key, state)) {
+      return true;
+    }
     // Меню без items не обрабатывает другие действия
-    return handleNumNav(key, state);
+    return false;
   }
 
   const MenuItem *item = &active_menu->items[current_index];
@@ -197,10 +202,13 @@ bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
       break;
     }
   }
-  if (item->action) {
-    return item->action(item, key, state);
+  if (item->action && item->action(item, key, state)) {
+    return true;
   }
-  return handleNumNav(key, state);
+  if (handleNumNav(key, state)) {
+    return true;
+  }
+  return false;
 }
 
 bool MENU_Back() {

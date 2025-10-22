@@ -9,6 +9,7 @@
 #include "external/CMSIS_5/Device/ARM/ARMCM0/Include/ARMCM0.h"
 #include "helper/bands.h"
 #include "helper/battery.h"
+#include "helper/menu.h"
 #include "misc.h"
 #include "radio.h"
 #include "scheduler.h"
@@ -110,7 +111,7 @@ static void processKeyboard() {
       return;
     }
 
-    if (APPS_key(n.key, n.state)) {
+    if (APPS_key(n.key, n.state) || MENU_IsActive()) {
       gRedrawScreen = true;
     } else {
       // Log("Process keys external");

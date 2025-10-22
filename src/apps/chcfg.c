@@ -68,6 +68,30 @@ static bool save(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
   return false;
 }
 
+static void applyBounds(uint32_t fs, uint32_t fe) {
+  gChEd.rxF = fs;
+  gChEd.txF = fe;
+}
+
+static bool setBounds(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
+  if (state == KEY_RELEASED && key == KEY_MENU) {
+    FINPUT_setup(0, BK4819_F_MAX, UNIT_MHZ, true);
+    gFInputCallback = applyBounds;
+    APPS_run(APP_FINPUT);
+    return true;
+  }
+  return false;
+}
+
+static bool setName(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
+  if (state == KEY_RELEASED && key == KEY_MENU) {
+    gTextinputText = gChEd.name;
+    APPS_run(APP_TEXTINPUT);
+    return true;
+  }
+  return false;
+}
+
 static uint32_t getValue(MemProp p) {
   switch (p) {
   case MEM_COUNT:
@@ -343,7 +367,7 @@ static Menu radioMenu = {"Radio", radioMenuItems, ARRAY_SIZE(radioMenuItems)};
 
 static MenuItem menuChVfo[] = {
     {"Type", MEM_TYPE, getValS, updVal},
-    {"Name", MEM_NAME, getValS, updVal},
+    {"Name", MEM_NAME, getValS, .action = setName},
 
     {"RX f", MEM_F_RX, getValS, updVal},
     {"TX f / offset", MEM_F_TX, getValS, updVal},
@@ -354,30 +378,6 @@ static MenuItem menuChVfo[] = {
     {"Readonly", MEM_READONLY, getValS, updVal},
     {"Save CH", .action = save},
 };
-
-static void applyBounds(uint32_t fs, uint32_t fe) {
-  gChEd.rxF = fs;
-  gChEd.txF = fe;
-}
-
-static bool setBounds(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
-  if (state == KEY_RELEASED && key == KEY_MENU) {
-    FINPUT_setup(0, BK4819_F_MAX, UNIT_MHZ, true);
-    gFInputCallback = applyBounds;
-    APPS_run(APP_FINPUT);
-    return true;
-  }
-  return false;
-}
-
-static bool setName(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
-  if (state == KEY_RELEASED && key == KEY_MENU) {
-    gTextinputText = gChEd.name;
-    APPS_run(APP_TEXTINPUT);
-    return true;
-  }
-  return false;
-}
 
 static MenuItem menuBand[] = {
     {"Type", MEM_TYPE, getValS, updVal},

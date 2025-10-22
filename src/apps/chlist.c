@@ -170,16 +170,16 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
       if (gChSaveMode) {
         CHANNELS_LoadScanlist(gChListFilter, gSettings.currentScanlist);
 
+        channelIndex = index;
         if (gChEd.name[0] == '\0') {
           gTextinputText = tempName;
           snprintf(gTextinputText, 9, "%lu.%05lu", gChEd.rxF / MHZ,
                    gChEd.rxF % MHZ);
           gTextInputSize = 9;
-          channelIndex = index;
           gTextInputCallback = saveNamed;
           APPS_run(APP_TEXTINPUT);
         } else {
-          // save();
+          save();
         }
         return true;
       }

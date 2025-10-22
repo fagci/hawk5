@@ -370,9 +370,18 @@ static bool setBounds(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
   return false;
 }
 
+static bool setName(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
+  if (state == KEY_RELEASED && key == KEY_MENU) {
+    gTextinputText = gChEd.name;
+    APPS_run(APP_TEXTINPUT);
+    return true;
+  }
+  return false;
+}
+
 static MenuItem menuBand[] = {
     {"Type", MEM_TYPE, getValS, updVal},
-    {"Name", MEM_NAME, getValS, updVal},
+    {"Name", MEM_NAME, getValS, .action = setName},
 
     (MenuItem){"Bounds", MEM_BOUNDS, getValS, .action = setBounds},
 

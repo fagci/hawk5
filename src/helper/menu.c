@@ -3,6 +3,7 @@
 #include "../ui/graphics.h"
 #include "../ui/statusline.h"
 #include "measurements.h"
+#include "numnav.h"
 #include <stdbool.h>
 #include <string.h>
 
@@ -106,6 +107,29 @@ void MENU_Render(void) {
   FillRect(ex - 3, y, 3, 3, C_FILL);
 }
 
+static void setMenuIndex(uint16_t i) { current_index = i - 1; }
+
+static bool handleNumNav(KEY_Code_t key, Key_State_t state) {
+  if (gIsNumNavInput && key == KEY_EXIT) {
+    NUMNAV_Deinit();
+    return true;
+  }
+  if (!gIsNumNavInput &&
+      ((state == KEY_LONG_PRESSED && key == KEY_STAR) ||
+       (state == KEY_RELEASED && key >= KEY_0 && key <= KEY_9))) {
+    NUMNAV_Init(current_index, 0, active_menu->num_items - 1);
+    gNumNavCallback = setMenuIndex;
+    return true;
+  }
+  if (state == KEY_RELEASED) {
+    if (gIsNumNavInput) {
+      current_index = NUMNAV_Input(key) - 1;
+      return true;
+    }
+  }
+  return false;
+}
+
 bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
   if (!active_menu) {
     return false;
@@ -124,10 +148,11 @@ bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
         break;
       }
     }
-    if (active_menu->action) {
-      return active_menu->action(current_index, key, state);
+    if (active_menu->action && active_menu->action(current_index, key, state)) {
+      return true;
     }
-    return false; // <- Меню без items не обрабатывает другие действия
+    // Меню без items не обрабатывает другие действия
+    return handleNumNav(key, state);
   }
 
   const MenuItem *item = &active_menu->items[current_index];
@@ -175,7 +200,7 @@ bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
   if (item->action) {
     return item->action(item, key, state);
   }
-  return false;
+  return handleNumNav(key, state);
 }
 
 bool MENU_Back() {

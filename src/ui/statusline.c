@@ -130,8 +130,12 @@ void STATUSLINE_render(void) {
 
   PrintSymbolsEx(LCD_WIDTH - 1 - 22, BASE_Y, POS_R, C_FILL, "%s", icons);
 
-  PrintSmall(0, BASE_Y,
-             statuslineTicker[0] == '\0' ? statuslineText : statuslineTicker);
+  if (gIsNumNavInput) {
+    PrintSmall(0, BASE_Y, "Select: %s", gNumNavInput);
+  } else {
+    PrintSmall(0, BASE_Y,
+               statuslineTicker[0] == '\0' ? statuslineText : statuslineTicker);
+  }
 }
 
 void STATUSLINE_RenderRadioSettings() {

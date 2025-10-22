@@ -288,10 +288,6 @@ bool CHLIST_key(KEY_Code_t key, Key_State_t state) {
     case KEY_MENU:
       return true;
     case KEY_EXIT:
-      /* if (gIsNumNavInput) {
-        NUMNAV_Deinit();
-        return true;
-      } */
       APPS_exit();
       return true;
     default:

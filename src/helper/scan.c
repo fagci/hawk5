@@ -263,6 +263,8 @@ void SCAN_Check(bool isAnalyserMode) {
       }
       scan.wasThinkingEarlier = false;
     }
+  } else {
+    stepsPassed = 0;
   }
 
   NextWithTimeout();

@@ -222,21 +222,6 @@ void CHLIST_init() {
 void CHLIST_deinit() { gChSaveMode = false; }
 
 bool CHLIST_key(KEY_Code_t key, Key_State_t state) {
-  // uint16_t chNum = getChannelNumber(channelIndex);
-  bool longHeld = state == KEY_LONG_PRESSED;
-  bool simpleKeypress = state == KEY_RELEASED;
-  /* if (!gIsNumNavInput && longHeld && key == KEY_STAR) {
-    NUMNAV_Init(channelIndex, 0, gScanlistSize - 1);
-    gNumNavCallback = setMenuIndex;
-    return true;
-  }
-  if (state == KEY_RELEASED) {
-    if (gIsNumNavInput) {
-      channelIndex = NUMNAV_Input(key) - 1;
-      return true;
-    }
-  } */
-
   if (state == KEY_LONG_PRESSED) {
     switch (key) {
     case KEY_0:

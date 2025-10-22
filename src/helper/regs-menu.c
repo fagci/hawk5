@@ -98,21 +98,23 @@ bool REGSMENU_Key(KEY_Code_t key, Key_State_t state) {
   if (inMenu && MENU_HandleInput(key, state)) {
     return true;
   }
-  switch (key) {
-  case KEY_0:
-    inMenu = !inMenu;
-    if (inMenu) {
-      initMenu();
-    }
-    return true;
-  case KEY_EXIT:
-    if (inMenu) {
-      inMenu = false;
+  if (state == KEY_RELEASED) {
+    switch (key) {
+    case KEY_0:
+      inMenu = !inMenu;
+      if (inMenu) {
+        initMenu();
+      }
       return true;
+    case KEY_EXIT:
+      if (inMenu) {
+        inMenu = false;
+        return true;
+      }
+      break;
+    default:
+      break;
     }
-    break;
-  default:
-    break;
   }
 
   return inMenu;

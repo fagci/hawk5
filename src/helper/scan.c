@@ -49,7 +49,9 @@ static uint16_t MeasureSignal(uint32_t frequency, bool precise) {
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, precise, false);
   RADIO_SetParam(ctx, PARAM_FREQUENCY, frequency, false);
   RADIO_ApplySettings(ctx);
-  SYSTICK_DelayUs(precise ? scan.scanDelayUs : 0);
+  if (precise) {
+    SYSTICK_DelayUs(scan.scanDelayUs);
+  }
   return RADIO_GetRSSI(ctx);
 }
 

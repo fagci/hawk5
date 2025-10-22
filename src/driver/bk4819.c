@@ -160,6 +160,7 @@ uint16_t BK4819_ReadRegister(BK4819_REGISTER_t reg) {
 }
 
 void BK4819_WriteRegister(BK4819_REGISTER_t reg, uint16_t data) {
+  // Log("BK W 0x%02x %u", reg, data);
   gpio_set_scn(true);
   gpio_set_scl(false);
   // SYSTICK_Delay250ns(1);
@@ -173,7 +174,7 @@ void BK4819_WriteRegister(BK4819_REGISTER_t reg, uint16_t data) {
   gpio_set_scn(true);
   // SYSTICK_Delay250ns(1);
   gpio_set_scl(true);
-  gpio_set_sda(true);
+  // gpio_set_sda(true);
 }
 
 uint16_t BK4819_GetRegValue(RegisterSpec spec) {
@@ -309,9 +310,27 @@ void BK4819_SetFilterBandwidth(BK4819_FilterBandwidth_t bw) {
 // Frequency Management
 // ============================================================================
 
-void BK4819_SetFrequency(uint32_t freq) {
+/* void BK4819_SetFrequency(uint32_t freq) {
   BK4819_WriteRegister(BK4819_REG_38, freq & 0xFFFF);
   BK4819_WriteRegister(BK4819_REG_39, (freq >> 16) & 0xFFFF);
+} */
+
+void BK4819_SetFrequency(uint32_t freq) {
+  static uint16_t prev_low = 0;
+  static uint16_t prev_high = 0;
+
+  uint16_t low = freq & 0xFFFF;
+  uint16_t high = (freq >> 16) & 0xFFFF;
+
+  if (low != prev_low) {
+    BK4819_WriteRegister(BK4819_REG_38, low);
+    prev_low = low;
+  }
+
+  if (high != prev_high) {
+    BK4819_WriteRegister(BK4819_REG_39, high);
+    prev_high = high;
+  }
 }
 
 uint32_t BK4819_GetFrequency(void) {

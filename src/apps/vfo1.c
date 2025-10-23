@@ -106,8 +106,8 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
   if (state == KEY_LONG_PRESSED) {
     switch (key) {
     case KEY_1:
-      // gChListFilter = TYPE_FILTER_BAND;
-      // APPS_run(APP_CH_LIST);
+      gChListFilter = TYPE_FILTER_BAND;
+      APPS_run(APP_CH_LIST);
       return true;
     case KEY_2:
       if (gCurrentApp == APP_VFO1) {

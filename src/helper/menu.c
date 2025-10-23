@@ -61,7 +61,7 @@ static void init() {
 }
 
 void MENU_Init(Menu *main_menu) {
-  Log("[MENU] Init");
+  // Log("[MENU] Init");
   active_menu = main_menu;
   current_index = 0;
   menu_stack_top = 0;
@@ -140,7 +140,7 @@ bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
     return false;
   }
 
-  Log("[MENU] Key");
+  // Log("[MENU] Key");
 
   if (!active_menu->items) {
     // Для меню без items (как chListMenu) используем упрощённую логику

@@ -26,9 +26,9 @@ static void ST7565_Configure_GPIO_B11(void) {
   GPIO_SetBit(&GPIOB->DATA, GPIOB_PIN_ST7565_RES);
   SYSTICK_Delay250ns(1); // 1
   GPIO_ClearBit(&GPIOB->DATA, GPIOB_PIN_ST7565_RES);
-  SYS_DelayMs(5); // 20
+  SYS_DelayMs(1); // 20
   GPIO_SetBit(&GPIOB->DATA, GPIOB_PIN_ST7565_RES);
-  SYS_DelayMs(10); // 120
+  SYS_DelayMs(5); // 120
 }
 
 static void ST7565_SelectColumnAndLine(uint8_t Column, uint8_t Line) {
@@ -117,7 +117,7 @@ void ST7565_Init(bool full) {
     for (uint8_t i = 0; i < 4; ++i) {
       ST7565_WriteByte(0x2F);
     }
-    SYS_DelayMs(40);
+    SYS_DelayMs(10); // 40
   }
 
   ST7565_WriteByte(0x40);

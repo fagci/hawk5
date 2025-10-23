@@ -92,7 +92,7 @@ void ST7565_Init(bool full) {
     ST7565_Configure_GPIO_B11();
     SPI_ToggleMasterMode(&SPI0->CR, false);
     ST7565_WriteByte(0xE2);
-    SYS_DelayMs(120);
+    SYS_DelayMs(5); // 120
   } else {
     SPI_ToggleMasterMode(&SPI0->CR, false);
   }

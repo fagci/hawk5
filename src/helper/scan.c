@@ -186,7 +186,7 @@ static void UpdateSquelchAndRssi(bool isAnalyserMode) {
   Loot *msm = LOOT_Get(vfo->msm.f);
   if ((gSettings.skipGarbageFrequencies &&
        (vfo->msm.f % GARBAGE_FREQUENCY_MOD == 0)) ||
-      (msm && msm->blacklist)) {
+      (msm && (msm->blacklist || msm->whitelist))) {
     vfo->msm.open = false;
     vfo->msm.rssi = 0;
     SP_AddPoint(&vfo->msm);

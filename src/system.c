@@ -119,7 +119,7 @@ static void processKeyboard() {
       return;
     }
 
-    if (APPS_key(n.key, n.state) || MENU_IsActive()) {
+    if (APPS_key(n.key, n.state) || (MENU_IsActive() && n.key != KEY_EXIT)) {
       // LogC(LOG_C_BRIGHT_WHITE, "[SYS] Apps key");
       gRedrawScreen = true;
       appsRenderTimer = 0;

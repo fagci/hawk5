@@ -139,14 +139,6 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
     case KEY_0:
       RADIO_IncDecParam(ctx, PARAM_MODULATION, true, true);
       return true;
-    case KEY_STAR:
-      // APPS_run(APP_SCANER);
-      Log("------- REGS DUMP START -------");
-      for (uint8_t i = 0; i < 128; ++i) {
-        Log("%x, %u", i, BK4819_ReadRegister(i));
-      }
-      Log("------- REGS DUMP END -------");
-      return true;
     case KEY_SIDE1:
     case KEY_SIDE2:
       SP_NextGraphUnit(key == KEY_SIDE1);

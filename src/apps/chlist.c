@@ -113,8 +113,9 @@ static void save() {
   gChEd.scanlists = 0;
   CHANNELS_Save(getChannelNumber(channelIndex), &gChEd);
   // RADIO_LoadCurrentVFO();
-  LogC(LOG_C_YELLOW, "Chlist Save CH %u(%u)", getChannelNumber(channelIndex),
-       channelIndex);
+  /* LogC(LOG_C_YELLOW, "Save CH %u(%u)", getChannelNumber(channelIndex),
+       channelIndex); */
+  memset(gChEd.name, 0, sizeof(gChEd.name));
   APPS_exit();
   APPS_exit();
 }

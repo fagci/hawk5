@@ -578,6 +578,7 @@ void RADIO_Init(VFOContext *ctx, Radio radio_type) {
   case RADIO_BK4819:
     ctx->current_band = &bk4819_bands[0];
     ctx->frequency = 145500000; // 145.5 МГц (диапазон FM)
+    ctx->gain = AUTO_GAIN_INDEX;
 
     /* ctx->xtal = BK4819_GetRegValue(RS_XTAL_MODE);
     ctx->afc = BK4819_GetAFC();
@@ -662,26 +663,9 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
     break;
   case PARAM_POWER: {
     ctx->power = value;
-    PowerCalibration cal = BANDS_GetPowerCalib(ctx->tx_state.frequency);
-    uint8_t pow = cal.s;
-    switch (ctx->power) {
-    case TX_POW_LOW:
-      pow = cal.s;
-      break;
-    case TX_POW_MID:
-      pow = cal.m;
-      break;
-    case TX_POW_HIGH:
-      pow = cal.e;
-      break;
-    case TX_POW_ULOW:
-      if (pow > 10) {
-        pow -= 10;
-      }
-      break;
-    }
+    ctx->tx_state.power_level =
+        BANDS_CalculateOutputPower(ctx->power, ctx->tx_state.frequency);
 
-    ctx->tx_state.power_level = pow;
     ctx->tx_state.pa_enabled = true;
     ctx->dirty[PARAM_TX_POWER] = true;
     ctx->dirty[PARAM_TX_POWER_AMPLIFIER] = true;

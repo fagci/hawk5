@@ -183,6 +183,15 @@ void BANDS_Select(int16_t num, bool copyToVfo) {
       break;
     }
   }
+  if (!BANDS_InRange(ctx->frequency, gCurrentBand)) {
+    Log("[BAND] !in range");
+    uint32_t f = gCurrentBand.misc.lastUsedFreq;
+    if (!f) {
+      f = gCurrentBand.rxF;
+      gCurrentBand.misc.lastUsedFreq = f;
+    }
+    RADIO_SetParam(ctx, PARAM_FREQUENCY, f, true);
+  }
   // radio.allowTx = gCurrentBand.allowTx;
   if (copyToVfo) {
     BANDS_SetRadioParamsFromCurrentBand();

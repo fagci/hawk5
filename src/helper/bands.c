@@ -169,6 +169,14 @@ void BANDS_SetRadioParamsFromCurrentBand() {
   radio.modulation = gCurrentBand.modulation;
   radio.squelch = gCurrentBand.squelch;
   radio.radio = gCurrentBand.radio; */
+  RADIO_SetParam(ctx, PARAM_STEP, gCurrentBand.step, true);
+  RADIO_SetParam(ctx, PARAM_BANDWIDTH, gCurrentBand.bw, true);
+  RADIO_SetParam(ctx, PARAM_GAIN, gCurrentBand.gainIndex, true);
+  RADIO_SetParam(ctx, PARAM_MODULATION, gCurrentBand.modulation, true);
+  RADIO_SetParam(ctx, PARAM_SQUELCH_TYPE, gCurrentBand.squelch.type, true);
+  RADIO_SetParam(ctx, PARAM_SQUELCH_VALUE, gCurrentBand.squelch.value, true);
+  RADIO_SetParam(ctx, PARAM_RADIO, gCurrentBand.radio, true);
+  RADIO_ApplySettings(ctx);
 }
 
 // Set gCurrentBand, sets internal cursor in SL
@@ -179,12 +187,12 @@ void BANDS_Select(int16_t num, bool copyToVfo) {
     if (gScanlist[i] == num) {
       scanlistBandIndex = i;
       allBandIndex = bandIndexByFreq(gCurrentBand.rxF, true);
-      Log("SL band index %u", i);
+      // Log("SL band index %u", i);
       break;
     }
   }
   if (!BANDS_InRange(ctx->frequency, gCurrentBand)) {
-    Log("[BAND] !in range");
+    // Log("[BAND] !in range");
     uint32_t f = gCurrentBand.misc.lastUsedFreq;
     if (!f) {
       f = gCurrentBand.rxF;
@@ -247,7 +255,7 @@ bool BANDS_SelectBandRelativeByScanlist(bool next) {
 }
 
 void BANDS_SaveCurrent(void) {
-  Log("BAND save i=%u, mr=%u", allBandIndex, allBands[allBandIndex].mr);
+  // Log("BAND save i=%u, mr=%u", allBandIndex, allBands[allBandIndex].mr);
   if (allBandIndex >= 0 && gCurrentBand.meta.type == TYPE_BAND) {
     CHANNELS_Save(allBands[allBandIndex].mr, &gCurrentBand);
   }
@@ -274,7 +282,7 @@ int8_t BANDS_RangeIndex() { return rangesStackIndex; }
 
 bool BANDS_RangePush(Band r) {
   if (rangesStackIndex < RANGES_STACK_SIZE - 1) {
-    Log("range +");
+    // Log("range +");
     rangesStack[++rangesStackIndex] = r;
   }
   return true;
@@ -282,7 +290,7 @@ bool BANDS_RangePush(Band r) {
 
 Band BANDS_RangePop(void) {
   if (rangesStackIndex > 0) {
-    Log("range -");
+    // Log("range -");
     return rangesStack[rangesStackIndex--];
   }
   return rangesStack[rangesStackIndex];
@@ -290,10 +298,10 @@ Band BANDS_RangePop(void) {
 
 Band *BANDS_RangePeek(void) {
   if (rangesStackIndex >= 0) {
-    Log("range peek ok");
+    // Log("range peek ok");
     return &rangesStack[rangesStackIndex];
   }
-  Log("range peek NULL!!!11");
+  Log("NUL");
   return NULL;
 }
 

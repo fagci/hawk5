@@ -174,7 +174,7 @@ t; } smoothed[i] = vals[1];  // Median
   }
 } */
 
-void SP_Render(const Band *p, VMinMax v) {
+/* void SP_Render(const Band *p, VMinMax v) {
   if (p) {
     UI_DrawTicks(S_BOTTOM, p);
   }
@@ -190,6 +190,47 @@ void SP_Render(const Band *p, VMinMax v) {
       DrawLine(i - 1, S_BOTTOM - oY, i, S_BOTTOM - yVal, C_FILL);
       oY = yVal;
     }
+  }
+} */
+
+void SP_Render(const Band *p, VMinMax v) {
+  if (p) {
+    UI_DrawTicks(S_BOTTOM, p);
+  }
+
+  // Очистка и базовые линии (грид для красоты)
+  FillRect(0, SPECTRUM_Y, MAX_POINTS, SPECTRUM_H, C_CLEAR);  // Полная очистка для свежести
+  DrawHLine(0, S_BOTTOM, MAX_POINTS, C_FILL);  // Нижняя линия
+  
+
+  // Адаптивное сглаживание (только если шаг широкий)
+  bool smooth = (step > ((range->txF - range->rxF) / (MAX_POINTS - 1)) * 2);
+  uint16_t values[MAX_POINTS];
+  if (smooth) {
+    // Median filter для сохранения пиков
+    for (uint8_t i = 0; i < filledPoints; ++i) {
+      if (i == 0 || i == filledPoints - 1) {
+        values[i] = rssiHistory[i];
+      } else {
+        uint16_t vals[3] = {rssiHistory[i-1], rssiHistory[i], rssiHistory[i+1]};
+        // Простая сортировка для median
+        if (vals[0] > vals[1]) { uint16_t t = vals[0]; vals[0] = vals[1]; vals[1] = t; }
+        if (vals[1] > vals[2]) { uint16_t t = vals[1]; vals[1] = vals[2]; vals[2] = t; }
+        if (vals[0] > vals[1]) { uint16_t t = vals[0]; vals[0] = vals[1]; vals[1] = t; }
+        values[i] = vals[1];
+      }
+    }
+  } else {
+    // Без сглаживания для узких пиков
+    for (uint8_t i = 0; i < filledPoints; ++i) {
+      values[i] = rssiHistory[i];
+    }
+  }
+
+  // Рисуй бары (VLine)
+  for (uint8_t i = 0; i < filledPoints; ++i) {
+    uint8_t yVal = ConvertDomain(values[i], v.vMin, v.vMax, 0, SPECTRUM_H);
+    DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
   }
 }
 

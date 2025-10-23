@@ -158,7 +158,7 @@ VFO vfos[9] = {
 static bool resetFull() {
   if (stats.settings < total.settings) {
     SETTINGS_Save();
-    Log("[i] settings saved!");
+    // Log("[i] settings saved!");
     stats.settings++;
     stats.bytes += SETTINGS_SIZE;
     return false;

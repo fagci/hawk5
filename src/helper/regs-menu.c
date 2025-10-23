@@ -101,11 +101,14 @@ bool REGSMENU_Key(KEY_Code_t key, Key_State_t state) {
       inMenu = !inMenu;
       if (inMenu) {
         initMenu();
+      } else {
+        MENU_Deinit();
       }
       return true;
     case KEY_EXIT:
       if (inMenu) {
         inMenu = false;
+        MENU_Deinit();
         return true;
       }
       break;

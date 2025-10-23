@@ -81,6 +81,7 @@ bool GENERATOR_key(KEY_Code_t key, Key_State_t state) {
     case KEY_UP:
     case KEY_DOWN:
       RADIO_IncDecParam(ctx, PARAM_FREQUENCY, key == KEY_UP, false);
+      RADIO_ApplySettings(ctx);
       return true;
     case KEY_2:
     case KEY_8:
@@ -100,7 +101,4 @@ void GENERATOR_render() {
   PrintMediumEx(LCD_XCENTER, 15 + 12, POS_C, C_FILL, "F: %uHz", tone1Freq);
   PrintMediumEx(LCD_XCENTER, 15 + 28, POS_C, C_FILL, "Pow: %u%s", power,
                 (bkPower >= 0x91 && paEnabled) ? "!!!" : "");
-  PrintMediumEx(LCD_XCENTER, 15 + 36, POS_C, C_FILL, "Pow real: %u, PA=%u",
-                RADIO_GetParam(ctx, PARAM_TX_POWER),
-                RADIO_GetParam(ctx, PARAM_TX_POWER_AMPLIFIER));
 }

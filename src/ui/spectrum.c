@@ -100,14 +100,34 @@ static uint16_t MinRSSI(const uint16_t *array, size_t n) {
   return min;
 }
 
-VMinMax SP_GetMinMax() {
+/* VMinMax SP_GetMinMax() {
   const uint16_t rssiMin = MinRSSI(rssiHistory, filledPoints);
   const uint16_t rssiMax = Max(rssiHistory, filledPoints);
   const uint16_t rssiDiff = rssiMax - rssiMin;
   return (VMinMax){
       .vMin = rssiMin,
-      .vMax = rssiMax + Clamp(rssiDiff, 20, rssiDiff),
+      .vMax = rssiMax + Clamp(rssiDiff, 40, rssiDiff),
   };
+} */
+#define _MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define _MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+VMinMax SP_GetMinMax() {
+  const uint16_t rssiMin = MinRSSI(rssiHistory, filledPoints);
+  const uint16_t rssiMax = Max(rssiHistory, filledPoints);
+  const uint16_t noiseFloor = SP_GetNoiseFloor();
+  const uint16_t rssiDiff = rssiMax - rssiMin;
+
+  uint16_t vMin =
+      _MAX(noiseFloor - 10, rssiMin - 5); // Немного ниже шума для видимости
+  uint16_t vMax = rssiMax + _MAX(20, rssiDiff / 5); // Запас 20+ дБ сверху
+
+  if (rssiDiff < 20) { // Фикс для слабых сигналов
+    vMin = noiseFloor;
+    vMax = noiseFloor + 40;
+  }
+
+  return (VMinMax){.vMin = vMin, .vMax = vMax};
 }
 
 /* void SP_Render(const Band *p, VMinMax v) {
@@ -118,7 +138,38 @@ VMinMax SP_GetMinMax() {
   DrawHLine(0, S_BOTTOM, MAX_POINTS, C_FILL);
 
   for (uint8_t i = 0; i < filledPoints; ++i) {
-    uint8_t yVal = ConvertDomainF(rssiHistory[i], v.vMin, v.vMax, 0, SPECTRUM_H);
+    uint8_t yVal = ConvertDomainF(rssiHistory[i], v.vMin, v.vMax, 0,
+SPECTRUM_H); DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
+  }
+} */
+
+/* void SP_Render(const Band *p, VMinMax v) {
+  if (p) {
+    UI_DrawTicks(S_BOTTOM, p);
+  }
+
+  DrawHLine(0, S_BOTTOM, MAX_POINTS, C_FILL);
+
+
+
+    // Median filter для 3 точек (сохраняет пики лучше)
+uint16_t smoothed[MAX_POINTS];
+for (uint8_t i = 0; i < filledPoints; ++i) {
+  if (i == 0 || i == filledPoints - 1) {
+    smoothed[i] = rssiHistory[i];  // Края без изменений
+  } else {
+    uint16_t vals[3] = {rssiHistory[i-1], rssiHistory[i], rssiHistory[i+1]};
+    // Сортировка для median (простая для 3 элементов)
+    if (vals[0] > vals[1]) { uint16_t t = vals[0]; vals[0] = vals[1]; vals[1] =
+t; } if (vals[1] > vals[2]) { uint16_t t = vals[1]; vals[1] = vals[2]; vals[2] =
+t; } if (vals[0] > vals[1]) { uint16_t t = vals[0]; vals[0] = vals[1]; vals[1] =
+t; } smoothed[i] = vals[1];  // Median
+  }
+}
+
+
+  for (uint8_t i = 0; i < filledPoints; ++i) {
+    uint8_t yVal = ConvertDomain(smoothed[i], v.vMin, v.vMax, 0, SPECTRUM_H);
     DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
   }
 } */
@@ -128,25 +179,17 @@ void SP_Render(const Band *p, VMinMax v) {
     UI_DrawTicks(S_BOTTOM, p);
   }
 
+  FillRect(0, SPECTRUM_Y, MAX_POINTS, SPECTRUM_H, C_CLEAR);
   DrawHLine(0, S_BOTTOM, MAX_POINTS, C_FILL);
 
-  uint16_t smoothed[MAX_POINTS];
-  
-  smoothed[0] = rssiHistory[0];
-  
-  for (uint8_t i = 1; i < filledPoints - 1; ++i) {
-    smoothed[i] = ((uint32_t)rssiHistory[i - 1] + 
-                   (uint32_t)rssiHistory[i] * 2 + 
-                   (uint32_t)rssiHistory[i + 1]) / 4;
-  }
-  
-  if (filledPoints > 1) {
-    smoothed[filledPoints - 1] = rssiHistory[filledPoints - 1];
-  }
-
-  for (uint8_t i = 0; i < filledPoints; ++i) {
-    uint8_t yVal = ConvertDomain(smoothed[i], v.vMin, v.vMax, 0, SPECTRUM_H);
-    DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
+  if (filledPoints > 0) {
+    uint8_t oY = ConvertDomain(rssiHistory[0], v.vMin, v.vMax, 0, SPECTRUM_H);
+    for (uint8_t i = 1; i < filledPoints; ++i) {
+      uint8_t yVal =
+          ConvertDomain(rssiHistory[i], v.vMin, v.vMax, 0, SPECTRUM_H);
+      DrawLine(i - 1, S_BOTTOM - oY, i, S_BOTTOM - yVal, C_FILL);
+      oY = yVal;
+    }
   }
 }
 

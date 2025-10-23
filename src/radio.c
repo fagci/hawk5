@@ -2,6 +2,7 @@
 #include "board.h"
 #include "dcs.h"
 #include "driver/audio.h"
+#include "driver/backlight.h"
 #include "driver/bk1080.h"
 #include "driver/bk4819-regs.h"
 #include "driver/bk4819.h"
@@ -421,6 +422,15 @@ void RADIO_SwitchAudioToVFO(RadioState *state, uint8_t vfo_index) {
     break;
   }
   BOARD_ToggleGreen(vfo->is_open);
+  if (vfo->is_open) {
+    if (gSettings.backlightOnSquelch != BL_SQL_OFF) {
+      BACKLIGHT_On();
+    }
+  } else {
+    if (gSettings.backlightOnSquelch == BL_SQL_OPEN) {
+      BACKLIGHT_Toggle(false);
+    }
+  }
 
   // Устанавливаем громкость для выбранного VFO
   // AUDIO_SetVolume(vfo->context.volume);

@@ -42,6 +42,7 @@ typedef struct Menu {
 } Menu;
 
 void MENU_Init(Menu *main_menu);
+void MENU_Deinit();
 void MENU_Render(void);
 bool MENU_HandleInput(KEY_Code_t key, Key_State_t state);
 bool MENU_Back(void);

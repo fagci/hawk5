@@ -546,32 +546,7 @@ static void setTXF(uint32_t f) { gChEd.txF = f; }
 
 static void setLastF(uint32_t f) { gChEd.misc.lastUsedFreq = f; }
 
-/* static void updateTxCodeListSize() {
-  for (uint8_t i = 0; i < menuSize; ++i) {
-    MenuItem *item = &menu[i];
-    uint8_t type = CODE_TYPE_OFF;
-    bool isCodeTypeMenu = false;
-
-    if (item->type == M_TX_CODE) {
-      type = gChEd.code.tx.type;
-      isCodeTypeMenu = true;
-    } else if (item->type == M_RX_CODE) {
-      type = gChEd.code.rx.type;
-      isCodeTypeMenu = true;
-    }
-    if (type == CODE_TYPE_CONTINUOUS_TONE) {
-      item->size = ARRAY_SIZE(CTCSS_Options);
-    } else if (type != CODE_TYPE_OFF) {
-      item->size = ARRAY_SIZE(DCS_Options);
-    } else if (isCodeTypeMenu) {
-      item->size = 1;
-    }
-  }
-} */
-
 void CHCFG_init(void) {
-  // updateTxCodeListSize();
-
   if (gChEd.meta.type == TYPE_BAND) {
     gChEd.meta.type = TYPE_BAND;
     menu = &bandMenu;

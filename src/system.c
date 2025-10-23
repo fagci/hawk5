@@ -37,21 +37,29 @@ static bool isUartWaiting() {
 }
 
 static void appRender() {
-  if (gRedrawScreen) {
-    UI_ClearScreen();
-
-    APPS_render();
-
-    if (notificationMessage[0]) {
-      FillRect(0, 32 - 5, 128, 9, C_FILL);
-      PrintMediumEx(64, 32 + 2, POS_C, C_CLEAR, notificationMessage);
-    }
-
-    STATUSLINE_render(); // coz of APPS_render calls STATUSLINE_SetText
-
-    ST7565_Blit();
-    gRedrawScreen = false;
+  if (!gRedrawScreen) {
+    return;
   }
+
+  if (Now() - appsRenderTimer < 40) {
+    return;
+  }
+
+  appsRenderTimer = Now();
+  gRedrawScreen = false;
+
+  UI_ClearScreen();
+
+  APPS_render();
+
+  if (notificationMessage[0]) {
+    FillRect(0, 32 - 5, 128, 9, C_FILL);
+    PrintMediumEx(64, 32 + 2, POS_C, C_CLEAR, notificationMessage);
+  }
+
+  STATUSLINE_render(); // coz of APPS_render calls STATUSLINE_SetText
+
+  ST7565_Blit();
 }
 
 static void systemUpdate() {
@@ -112,9 +120,11 @@ static void processKeyboard() {
     }
 
     if (APPS_key(n.key, n.state)) {
+      // LogC(LOG_C_BRIGHT_WHITE, "[SYS] Apps key");
       gRedrawScreen = true;
+      appsRenderTimer = 0;
     } else {
-      // Log("Process keys external");
+      // LogC(LOG_C_BRIGHT_WHITE, "[SYS] Global key");
       if (n.key == KEY_MENU) {
         if (n.state == KEY_LONG_PRESSED) {
           APPS_run(APP_SETTINGS);
@@ -173,10 +183,7 @@ void SYS_Main() {
       secondTimer = Now();
     }
 
-    if (Now() - appsRenderTimer > 40) {
-      appRender();
-      appsRenderTimer = Now();
-    }
+    appRender();
 
     while (gCurrentApp != APP_SCANER && UART_IsCommandAvailable()) {
       UART_HandleCommand();

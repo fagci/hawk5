@@ -61,12 +61,15 @@ static void init() {
 }
 
 void MENU_Init(Menu *main_menu) {
+  Log("[MENU] Init");
   active_menu = main_menu;
   current_index = 0;
   menu_stack_top = 0;
 
   init();
 }
+
+void MENU_Deinit() { active_menu = NULL; }
 
 void MENU_Render(void) {
   if (!active_menu)
@@ -136,6 +139,8 @@ bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
   if (!active_menu) {
     return false;
   }
+
+  Log("[MENU] Key");
 
   if (!active_menu->items) {
     // Для меню без items (как chListMenu) используем упрощённую логику

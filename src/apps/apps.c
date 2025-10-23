@@ -110,6 +110,7 @@ void APPS_init(AppType_t app) {
   STATUSLINE_SetText("%s", apps[gCurrentApp].name);
   gRedrawScreen = true;
 
+  LogC(LOG_C_YELLOW, "[APP] Init %s", apps[gCurrentApp].name);
   if (apps[gCurrentApp].init) {
     apps[gCurrentApp].init();
   }
@@ -129,6 +130,7 @@ void APPS_render(void) {
 }
 
 void APPS_deinit(void) {
+  LogC(LOG_C_YELLOW, "[APP] Deinit %s", apps[gCurrentApp].name);
   if (apps[gCurrentApp].deinit) {
     apps[gCurrentApp].deinit();
   }
@@ -138,9 +140,7 @@ void APPS_run(AppType_t app) {
   if (appsStack[stackIndex] == app) {
     return;
   }
-  /* if (app != APP_FINPUT && app != APP_TEXTINPUT) {
-    APPS_deinit();
-  } */
+  APPS_deinit();
   pushApp(app);
   gCurrentApp = app;
 
@@ -164,10 +164,9 @@ bool APPS_exit(void) {
   }
   APPS_deinit();
   AppType_t app = popApp();
-  /* if (app != APP_FINPUT && app != APP_TEXTINPUT) {
-    APPS_init(APPS_Peek());
-  } else { */
   gCurrentApp = APPS_Peek();
+
+  APPS_init(gCurrentApp);
 
   STATUSLINE_SetText("%s", apps[gCurrentApp].name);
   gRedrawScreen = true;

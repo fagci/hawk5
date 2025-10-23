@@ -140,7 +140,13 @@ static void spi_write_word(uint16_t data) {
 // Register Access
 // ============================================================================
 
+static uint16_t reg30state = 0xffff;
+
 uint16_t BK4819_ReadRegister(BK4819_REGISTER_t reg) {
+  if (reg == BK4819_REG_30) {
+    return reg30state;
+  }
+  // Log("[BK] R 0x%02x", reg);
   gpio_set_scn(true);
   gpio_set_scl(false);
   // SYSTICK_Delay250ns(1);
@@ -160,7 +166,10 @@ uint16_t BK4819_ReadRegister(BK4819_REGISTER_t reg) {
 }
 
 void BK4819_WriteRegister(BK4819_REGISTER_t reg, uint16_t data) {
-  // Log("BK W 0x%02x %u", reg, data);
+  if (reg == BK4819_REG_30) {
+    reg30state = data;
+  }
+  // Log("[BK] W 0x%02x %u", reg, data);
   gpio_set_scn(true);
   gpio_set_scl(false);
   // SYSTICK_Delay250ns(1);
@@ -339,10 +348,6 @@ uint32_t BK4819_GetFrequency(void) {
 }
 
 void BK4819_TuneTo(uint32_t freq, bool precise) {
-  /* if (gLastFrequency == freq) {
-    return;
-  } */
-
   BK4819_SetFrequency(freq);
   gLastFrequency = freq;
 

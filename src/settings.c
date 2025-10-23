@@ -326,6 +326,8 @@ void SETTINGS_SetValue(Setting s, uint32_t v) {
     break;
   case SETTING_BOUND240_280:
     gSettings.bound_240_280 = v;
+    ctx->dirty[PARAM_FILTER] = true; // filter update
+    RADIO_ApplySettings(ctx);
     break;
   case SETTING_NOLISTEN:
     gSettings.noListen = v;

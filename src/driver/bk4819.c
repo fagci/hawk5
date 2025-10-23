@@ -272,7 +272,7 @@ void BK4819_SelectFilterEx(Filter filter) {
     return;
   }
   gSelectedFilter = filter;
-  // Log("flt=%u", filter);
+  Log("flt=%u", filter);
   const uint16_t PIN_BIT_VHF = 0x40U >> BK4819_GPIO4_PIN32_VHF_LNA;
   const uint16_t PIN_BIT_UHF = 0x40U >> BK4819_GPIO3_PIN31_UHF_LNA;
 

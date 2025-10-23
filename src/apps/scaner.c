@@ -62,7 +62,16 @@ void SCANER_init(void) {
   SCAN_Init(false);
 }
 
-void SCANER_update(void) { SCAN_Check(isAnalyserMode); }
+static uint32_t lastRender;
+
+void SCANER_update(void) {
+  SCAN_Check(isAnalyserMode);
+
+  if (Now() - lastRender >= 500) {
+    lastRender = Now();
+    gRedrawScreen = true;
+  }
+}
 
 bool SCANER_key(KEY_Code_t key, Key_State_t state) {
   if (state == KEY_RELEASED && REGSMENU_Key(key, state)) {

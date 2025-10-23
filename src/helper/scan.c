@@ -18,10 +18,13 @@ typedef struct {
   uint32_t stayAtTimeout; // Таймаут удержания на частоте
   uint32_t scanListenTimeout; // Таймаут прослушивания
   uint32_t scanCycles; // Количество циклов сканирования
-  uint32_t lastCpsTime;    // Последнее время замера CPS
+  uint32_t lastCpsTime; // Последнее время замера CPS
+  uint32_t currentCps; // Текущее значение CPS (кешированное)
+  uint32_t cpsUpdateInterval; // Интервал обновления CPS (мс)
   uint32_t lastRenderTime; // Последнее время отрисовки
   uint16_t squelchLevel; // Текущий уровень шумоподавления
-  bool thinking;         // Думоем
+
+  bool thinking;           // Думоем
   bool wasThinkingEarlier; // Флаг для корректировки squelch
   bool lastListenState;    // Последнее состояние squelch
   bool isMultiband;        // Мультидиапазонный режим
@@ -38,12 +41,28 @@ static ScanState scan = {
     .scanListenTimeout = 0,
     .scanCycles = 0,
     .lastCpsTime = 0,
+    .currentCps = 0,
     .lastRenderTime = 0,
+    .cpsUpdateInterval = 1000,
 };
 
 // =============================
 // Вспомогательные функции
 // =============================
+
+static void UpdateCPS() {
+  uint32_t now = Now();
+  uint32_t elapsed = now - scan.lastCpsTime;
+
+  // Обновляем CPS только если прошел достаточный интервал
+  if (elapsed >= scan.cpsUpdateInterval) {
+    if (elapsed > 0) {
+      scan.currentCps = (scan.scanCycles * 1000) / elapsed;
+    }
+    scan.lastCpsTime = now;
+    scan.scanCycles = 0;
+  }
+}
 
 static uint16_t MeasureSignal(uint32_t frequency, bool precise) {
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, precise, false);
@@ -94,6 +113,7 @@ static void NextFrequency() {
   SetTimeout(&scan.scanListenTimeout, 0);
   SetTimeout(&scan.stayAtTimeout, 0);
   scan.scanCycles++;
+  UpdateCPS();
 }
 
 static void NextWithTimeout() {
@@ -118,12 +138,7 @@ static void NextWithTimeout() {
 // =============================
 // API функций
 // =============================
-uint32_t SCAN_GetCps() {
-  uint32_t cps = scan.scanCycles * 1000 / (Now() - scan.lastCpsTime);
-  scan.lastCpsTime = Now();
-  scan.scanCycles = 0;
-  return cps;
-}
+uint32_t SCAN_GetCps() { return scan.currentCps; }
 
 void SCAN_setBand(Band b) {
   gCurrentBand = b;
@@ -153,6 +168,7 @@ void SCAN_Init(bool multiband) {
   vfo->msm.snr = 0;
   scan.lastCpsTime = Now();
   scan.scanCycles = 0;
+  scan.currentCps = 0;
   ApplyBandSettings();
   BK4819_WriteRegister(BK4819_REG_3F, 0);
 }
@@ -163,10 +179,6 @@ void SCAN_Init(bool multiband) {
 static void HandleAnalyserMode() {
   vfo->msm.rssi = MeasureSignal(vfo->msm.f, false);
   SP_AddPoint(&vfo->msm);
-  if (Now() - scan.lastRenderTime > 500) {
-    gRedrawScreen = true;
-    scan.lastRenderTime = Now();
-  }
   NextFrequency();
 }
 
@@ -237,7 +249,7 @@ void SCAN_Check(bool isAnalyserMode) {
     RADIO_UpdateSquelch(&gRadioState);
     vfo->msm.open = vfo->is_open;
     scan.thinking = false;
-    gRedrawScreen = true;
+    // gRedrawScreen = true;
     if (!vfo->msm.open) {
       scan.squelchLevel++;
     }
@@ -257,7 +269,7 @@ void SCAN_Check(bool isAnalyserMode) {
   if (!vfo->msm.open) {
     if (stepsPassed++ > 64) {
       stepsPassed = 0;
-      gRedrawScreen = true;
+      // gRedrawScreen = true;
       if (!scan.wasThinkingEarlier && scan.squelchLevel > 0) {
         scan.squelchLevel--;
       }

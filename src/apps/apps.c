@@ -1,6 +1,7 @@
 #include "apps.h"
 #include "../driver/st7565.h"
 #include "../driver/uart.h"
+#include "../helper/menu.h"
 #include "../ui/graphics.h"
 #include "../ui/statusline.h"
 #include "about.h"
@@ -131,6 +132,7 @@ void APPS_render(void) {
 
 void APPS_deinit(void) {
   LogC(LOG_C_YELLOW, "[APP] Deinit %s", apps[gCurrentApp].name);
+  MENU_Deinit();
   if (apps[gCurrentApp].deinit) {
     apps[gCurrentApp].deinit();
   }

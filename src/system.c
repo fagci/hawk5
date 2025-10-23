@@ -157,6 +157,10 @@ void SYS_Main() {
     ST7565_Init(false);
     BACKLIGHT_Init();
 
+    // better UX
+    STATUSLINE_render();
+    ST7565_Blit();
+
     Log("LOAD BANDS");
     BANDS_Load();
 

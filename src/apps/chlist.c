@@ -144,19 +144,27 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
     }
   }
   if (state == KEY_RELEASED) {
-    if (viewMode == MODE_DELETE && key == KEY_1) {
-      CHANNELS_Delete(chNum);
-      return true;
-    }
-
-    if (viewMode == MODE_TX && key == KEY_1) {
-      CHANNELS_Load(chNum, &ch);
-      ch.allowTx = !ch.allowTx;
-      CHANNELS_Save(chNum, &ch);
-      return true;
-    }
     switch (key) {
+    case KEY_1:
+      if (viewMode == MODE_DELETE) {
+        CHANNELS_Delete(chNum);
+        return true;
+      }
+
+      if (viewMode == MODE_TX) {
+        CHANNELS_Load(chNum, &ch);
+        ch.allowTx = !ch.allowTx;
+        CHANNELS_Save(chNum, &ch);
+        return true;
+      }
+      break;
     case KEY_PTT:
+      if (gChListFilter == TYPE_FILTER_BAND) {
+        LogC(LOG_C_YELLOW, "BAND Selected by user");
+        BANDS_Select(chNum, true);
+        APPS_exit();
+        return true;
+      }
       RADIO_LoadChannelToVFO(&gRadioState,
                              RADIO_GetCurrentVFONumber(&gRadioState), chNum);
       APPS_run(APP_VFO1);
@@ -264,11 +272,6 @@ bool CHLIST_key(KEY_Code_t key, Key_State_t state) {
       return true;
     case KEY_STAR:
       viewMode = IncDecU(viewMode, 0, ARRAY_SIZE(VIEW_MODE_NAMES), true);
-      return true;
-    case KEY_MENU:
-      return true;
-    case KEY_EXIT:
-      APPS_exit();
       return true;
     default:
       break;

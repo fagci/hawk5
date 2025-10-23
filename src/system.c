@@ -111,7 +111,7 @@ static void processKeyboard() {
       return;
     }
 
-    if (APPS_key(n.key, n.state) || MENU_IsActive()) {
+    if (APPS_key(n.key, n.state)) {
       gRedrawScreen = true;
     } else {
       // Log("Process keys external");

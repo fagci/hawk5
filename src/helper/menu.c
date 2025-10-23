@@ -219,5 +219,6 @@ bool MENU_Back() {
 
     return true;
   }
+  active_menu = NULL;
   return false;
 }

@@ -95,9 +95,6 @@ void REGSMENU_Draw() {
 }
 
 bool REGSMENU_Key(KEY_Code_t key, Key_State_t state) {
-  if (inMenu && MENU_HandleInput(key, state)) {
-    return true;
-  }
   if (state == KEY_RELEASED) {
     switch (key) {
     case KEY_0:
@@ -115,6 +112,9 @@ bool REGSMENU_Key(KEY_Code_t key, Key_State_t state) {
     default:
       break;
     }
+  }
+  if (inMenu && MENU_HandleInput(key, state)) {
+    return true;
   }
 
   return inMenu;

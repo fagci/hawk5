@@ -54,7 +54,7 @@ void VFO1_update(void) {
 }
 
 bool VFO1_key(KEY_Code_t key, Key_State_t state) {
-  if (!gIsNumNavInput && state == KEY_RELEASED && REGSMENU_Key(key, state)) {
+  if (state == KEY_RELEASED && REGSMENU_Key(key, state)) {
     return true;
   }
 

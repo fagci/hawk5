@@ -141,12 +141,20 @@ static void processKeyboard() {
   }
 }
 
+void initDisplay() {
+  LogC(LOG_C_BRIGHT_WHITE, "DISPLAY");
+  ST7565_Init(true);
+  LogC(LOG_C_BRIGHT_WHITE, "BACKLIGHT");
+  BACKLIGHT_Init();
+}
+
 void SYS_Main() {
-  BOARD_Init();
+
   BATTERY_UpdateBatteryInfo();
 
   SystemMessages n = KEYBOARD_GetKey();
   if (resetNeeded() || n.key == KEY_EXIT) {
+    initDisplay();
     gSettings.batteryCalibration = 2000;
     gSettings.backlight = 5;
     APPS_run(APP_RESET);
@@ -154,20 +162,16 @@ void SYS_Main() {
     loadSettingsOrReset();
     BATTERY_UpdateBatteryInfo();
 
-    ST7565_Init(false);
-    BACKLIGHT_Init();
+    initDisplay();
 
     // better UX
     STATUSLINE_render();
     ST7565_Blit();
 
-    Log("LOAD BANDS");
+    LogC(LOG_C_BRIGHT_WHITE, "LOAD BANDS");
     BANDS_Load();
 
-    // Log("INIT RADIO");
-    // RADIO_Init();
-
-    Log("RUN DEFAULT APP");
+    LogC(LOG_C_BRIGHT_WHITE, "RUN DEFAULT APP");
     APPS_run(gSettings.mainApp);
   }
 

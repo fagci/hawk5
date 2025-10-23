@@ -306,7 +306,7 @@ static void toggleBK4819(bool on) {
   }
   bk4819_listen = on;
 
-  Log("Toggle bk4819 audio %u", on);
+  Log("[RADIO] BK4819 audio=%u", on);
   if (on) {
     BK4819_ToggleAFDAC(true);
     BK4819_ToggleAFBit(true);
@@ -373,7 +373,7 @@ static void toggleBK1080SI4732(bool on) {
     return;
   }
   bc_listen = on;
-  Log("Toggle bk1080si audio %u", on);
+  Log("[RADIO] BK1080/SI audio=%u", on);
   if (on) {
     SYS_DelayMs(8);
     AUDIO_ToggleSpeaker(true);
@@ -631,7 +631,7 @@ bool RADIO_IsParamValid(VFOContext *ctx, ParamType param, uint32_t value) {
 void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
                     bool save_to_eeprom) {
   if (!RADIO_IsParamValid(ctx, param, value)) {
-    LogC(LOG_C_RED, "[ERR] %-12s -> %u", PARAM_NAMES[param], value);
+    LogC(LOG_C_RED, "[RADIO] ERR: %-12s -> %u", PARAM_NAMES[param], value);
     return;
   }
 
@@ -737,7 +737,7 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
 
   // Если значение изменилось и требуется сохранение - устанавливаем флаг
   if (save_to_eeprom && (old_value != value)) {
-    LogC(LOG_C_BRIGHT_YELLOW, "NEED SAVE, set save_to_eeprom = 1");
+    LogC(LOG_C_BRIGHT_YELLOW, "[RADIO] SAVE %s", PARAM_NAMES[param]);
     ctx->save_to_eeprom = true;
     ctx->last_save_time = Now();
   }
@@ -875,7 +875,7 @@ bool RADIO_AdjustParam(VFOContext *ctx, ParamType param, uint32_t inc,
     ma = 3;
     break;
   default:
-    LogC(LOG_C_RED, "IDK range of %s", PARAM_NAMES[param]);
+    LogC(LOG_C_RED, "[RADIO] ERR: range %s", PARAM_NAMES[param]);
     return false;
   }
   RADIO_SetParam(ctx, param, AdjustU(v, mi, ma, inc), save_to_eeprom);
@@ -903,7 +903,7 @@ static spf_ptr setParamForRadio[] = {
 // Применение настроек
 void RADIO_ApplySettings(VFOContext *ctx) {
   if (ctx->dirty[PARAM_RADIO]) {
-    LogC(LOG_C_BRIGHT_MAGENTA, "[RADIO] Change to %s",
+    LogC(LOG_C_BRIGHT_MAGENTA, "[RADIO] =%s",
          RADIO_GetParamValueString(ctx, PARAM_RADIO));
     ctx->dirty[PARAM_RADIO] = false;
   }
@@ -1024,7 +1024,7 @@ bool RADIO_IsSSB(const VFOContext *ctx) {
 
 // Initialize radio state
 void RADIO_InitState(RadioState *state, uint8_t num_vfos) {
-  Log("RADIO_InitState()");
+  Log("[RADIO] InitState");
   memset(state, 0, sizeof(RadioState));
   state->num_vfos = (num_vfos > MAX_VFOS) ? MAX_VFOS : num_vfos;
 
@@ -1042,7 +1042,7 @@ void RADIO_InitState(RadioState *state, uint8_t num_vfos) {
   updateContext();
 
   state->last_scan_time = 0;
-  state->multiwatch_enabled = false;
+  state->multiwatch_enabled = gSettings.mWatch;
 }
 
 // Функция проверки необходимости сохранения и собственно сохранения
@@ -1104,7 +1104,7 @@ bool RADIO_SwitchVFO(RadioState *state, uint8_t vfo_index) {
     return false;
   }
 
-  Log("RADIO_SwitchVFO");
+  Log("[RADIO] SwitchVFO");
 
   RADIO_CheckAndSaveVFO(state);
 
@@ -1142,7 +1142,7 @@ void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
                               const VFO *storage) {
   if (vfo_index >= state->num_vfos)
     return;
-  LogC(LOG_C_BRIGHT_CYAN, "[RADIO] LoadVFOFromStorage");
+  LogC(LOG_C_BRIGHT_CYAN, "[RADIO] MEM -> VFO");
 
   ExtendedVFOContext *vfo = &state->vfos[vfo_index];
   vfo->mode = storage->isChMode;
@@ -1191,7 +1191,7 @@ void RADIO_SaveVFOToStorage(const RadioState *state, uint8_t vfo_index,
                             VFO *storage) {
   if (vfo_index >= state->num_vfos)
     return;
-  LogC(LOG_C_BRIGHT_CYAN, "[RADIO] SaveVFOToStorage");
+  LogC(LOG_C_BRIGHT_CYAN, "[RADIO] VFO -> MEM");
 
   const ExtendedVFOContext *vfo = &state->vfos[vfo_index];
   const VFOContext *ctx = &vfo->context;
@@ -1235,7 +1235,7 @@ void RADIO_LoadChannelToVFO(RadioState *state, uint8_t vfo_index,
     return;
   }
 
-  LogC(LOG_C_BRIGHT_CYAN, "[RADIO] LoadChannel %u to VFO", channel_index);
+  LogC(LOG_C_BRIGHT_CYAN, "[RADIO] CH %u -> VFO", channel_index);
 
   ExtendedVFOContext *vfo = &state->vfos[vfo_index];
   VFOContext *ctx = &vfo->context;
@@ -1298,8 +1298,7 @@ bool RADIO_ToggleVFOMode(RadioState *state, uint8_t vfo_index) {
   CHANNELS_Load(vfo->vfo_ch_index, &ch);
 
   ch.isChMode = new_mode == MODE_CHANNEL;
-  LogC(LOG_C_BRIGHT_CYAN, "[RADIO] ToggleVFOMode to %s",
-       ch.isChMode ? "MR" : "VFO");
+  LogC(LOG_C_BRIGHT_CYAN, "[RADIO] VFOMode = %s", ch.isChMode ? "MR" : "VFO");
 
   CHANNELS_Save(vfo->vfo_ch_index, &ch);
 
@@ -1321,6 +1320,9 @@ bool RADIO_ToggleVFOMode(RadioState *state, uint8_t vfo_index) {
 
 // Toggle multiwatch on/off
 void RADIO_ToggleMultiwatch(RadioState *state, bool enable) {
+  if (state->multiwatch_enabled == enable) {
+    return;
+  }
   state->multiwatch_enabled = enable;
   if (!enable) {
     // Return to the primary VFO when disabling multiwatch
@@ -1460,10 +1462,9 @@ void RADIO_UpdateMultiwatch(RadioState *state) {
 }
 
 void RADIO_LoadVFOs(RadioState *state) {
-  Log("RADIO_LoadVFOs()");
+  Log("[RADIO] LoadVFOs");
 
-  // NOTE: temporary
-  Log("BK4819 INIT");
+  // TODO: init each radio separately
   BK4819_Init();
   BK4819_RX_TurnOn();
 

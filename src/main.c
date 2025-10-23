@@ -18,7 +18,7 @@ void Main(void) {
   CRC_Init();
   UART_Init();
 
-  Log("hawk5");
+  LogC(LOG_C_BRIGHT_YELLOW, "hawk5");
 
   SYS_Main();
 }

@@ -4,6 +4,7 @@
 #include "driver/bk4819.h"
 #include "driver/eeprom.h"
 #include "driver/st7565.h"
+#include "driver/uart.h"
 #include "external/printf/printf.h"
 #include "helper/battery.h"
 #include "helper/measurements.h"

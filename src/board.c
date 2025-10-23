@@ -410,8 +410,4 @@ void BOARD_ToggleRed(bool on) {
 }
 
 void BOARD_Init(void) {
-  Log("INIT DISPLAY");
-  ST7565_Init(true);
-  Log("INIT BL");
-  BACKLIGHT_Init();
 }

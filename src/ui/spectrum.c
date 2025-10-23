@@ -52,8 +52,8 @@ uint32_t SP_X2F(uint8_t x) {
 }
 
 void SP_AddPoint(const Measurement *msm) {
-  uint32_t xs = SP_F2X(msm->f);
-  uint32_t xe = SP_F2X(msm->f + step);
+  uint8_t xs = SP_F2X(msm->f);
+  uint8_t xe = SP_F2X(msm->f + step);
 
   // Обрезаем индексы по диапазону допустимых значений
   if (xs >= MAX_POINTS)
@@ -63,7 +63,7 @@ void SP_AddPoint(const Measurement *msm) {
 
   // Если xs > xe, меняем местами
   if (xs > xe) {
-    uint32_t temp = xs;
+    uint8_t temp = xs;
     xs = xe;
     xe = temp;
   }
@@ -110,7 +110,7 @@ VMinMax SP_GetMinMax() {
   };
 }
 
-void SP_Render(const Band *p, VMinMax v) {
+/* void SP_Render(const Band *p, VMinMax v) {
   if (p) {
     UI_DrawTicks(S_BOTTOM, p);
   }
@@ -118,7 +118,34 @@ void SP_Render(const Band *p, VMinMax v) {
   DrawHLine(0, S_BOTTOM, MAX_POINTS, C_FILL);
 
   for (uint8_t i = 0; i < filledPoints; ++i) {
-    uint8_t yVal = ConvertDomain(rssiHistory[i], v.vMin, v.vMax, 0, SPECTRUM_H);
+    uint8_t yVal = ConvertDomainF(rssiHistory[i], v.vMin, v.vMax, 0, SPECTRUM_H);
+    DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
+  }
+} */
+
+void SP_Render(const Band *p, VMinMax v) {
+  if (p) {
+    UI_DrawTicks(S_BOTTOM, p);
+  }
+
+  DrawHLine(0, S_BOTTOM, MAX_POINTS, C_FILL);
+
+  uint16_t smoothed[MAX_POINTS];
+  
+  smoothed[0] = rssiHistory[0];
+  
+  for (uint8_t i = 1; i < filledPoints - 1; ++i) {
+    smoothed[i] = ((uint32_t)rssiHistory[i - 1] + 
+                   (uint32_t)rssiHistory[i] * 2 + 
+                   (uint32_t)rssiHistory[i + 1]) / 4;
+  }
+  
+  if (filledPoints > 1) {
+    smoothed[filledPoints - 1] = rssiHistory[filledPoints - 1];
+  }
+
+  for (uint8_t i = 0; i < filledPoints; ++i) {
+    uint8_t yVal = ConvertDomain(smoothed[i], v.vMin, v.vMax, 0, SPECTRUM_H);
     DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
   }
 }

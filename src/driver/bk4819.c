@@ -143,7 +143,7 @@ static void spi_write_word(uint16_t data) {
 static uint16_t reg30state = 0xffff;
 
 uint16_t BK4819_ReadRegister(BK4819_REGISTER_t reg) {
-  if (reg == BK4819_REG_30) {
+  if (reg == BK4819_REG_30 && reg30state != 0xffff) {
     return reg30state;
   }
   // Log("[BK] R 0x%02x", reg);
@@ -327,6 +327,8 @@ void BK4819_SetFilterBandwidth(BK4819_FilterBandwidth_t bw) {
 void BK4819_SetFrequency(uint32_t freq) {
   static uint16_t prev_low = 0;
   static uint16_t prev_high = 0;
+
+  freq += 64;
 
   uint16_t low = freq & 0xFFFF;
   uint16_t high = (freq >> 16) & 0xFFFF;
@@ -882,16 +884,47 @@ void BK4819_XtalSet(XtalMode mode) {
 // AFC (Automatic Frequency Control)
 // ============================================================================
 
+/**
+ * @param disable
+ * @param range 0..7
+ * @param speed 9..63
+ */
+void _BK4819_SetAFC(bool disable, uint8_t range, uint8_t speed) {
+  BK4819_WriteRegister(0x73,
+                       0x4005 | (range << 11) | (speed << 5) | (disable << 4));
+}
+
+#define BK4819_REG_73 0x73
+#define BK4819_REG_73_DISABLE (1 << 4)
+#define BK4819_REG_73_LEVEL_MASK (0xF << 11) // Mask for bits 14:11
+#define BK4819_REG_73_DEFAULT_LEVEL 7        // Default for disable mode
+
+/**
+ * Set AFC level for BK4819.
+ * @param level 0 = off (disable AFC), 1..8 = range
+ */
 void BK4819_SetAFC(uint8_t level) {
   if (level > 8) {
     level = 8;
   }
 
-  if (level) {
-    BK4819_WriteRegister(0x73, (8 - level) << 11);
+  uint16_t reg_val = BK4819_ReadRegister(BK4819_REG_73);
+
+  reg_val &= ~(BK4819_REG_73_LEVEL_MASK | BK4819_REG_73_DISABLE);
+
+  uint8_t afc_level;
+  if (level == 0) {
+    // Disable AFC with default level
+    afc_level = BK4819_REG_73_DEFAULT_LEVEL;
+    reg_val |= BK4819_REG_73_DISABLE;
   } else {
-    BK4819_WriteRegister(0x73, (7 << 11) | (1 << 4));
+    // Enable AFC (disable bit remains 0) with calculated level
+    afc_level = 8 - level;
   }
+
+  reg_val |= (afc_level << 11);
+
+  BK4819_WriteRegister(BK4819_REG_73, reg_val);
 }
 
 uint8_t BK4819_GetAFC(void) {
@@ -902,6 +935,27 @@ uint8_t BK4819_GetAFC(void) {
   }
 
   return 8 - ((afc >> 11) & 0b111);
+}
+
+/**
+ * Set AFC speed for BK4819.
+ * @param level 0(slow)..63(fast)
+ */
+void BK4819_SetAFCSpeed(uint8_t speed) {
+  if (speed > 63) {
+    speed = 63;
+  }
+
+  uint16_t reg_val = BK4819_ReadRegister(BK4819_REG_73);
+
+  reg_val &= ~(63 << 5);
+  reg_val |= ((63 - speed) << 5);
+
+  BK4819_WriteRegister(BK4819_REG_73, reg_val);
+}
+
+uint8_t BK4819_GetAFCSpeed(void) {
+  return 63 - ((BK4819_ReadRegister(0x73) >> 5) & 63);
 }
 
 // ============================================================================

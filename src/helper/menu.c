@@ -150,6 +150,7 @@ bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
       case KEY_DOWN:
         current_index =
             IncDecU(current_index, 0, active_menu->num_items, key == KEY_DOWN);
+        active_menu->action && active_menu->action(current_index, key, state);
         return true;
       default:
         break;

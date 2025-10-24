@@ -33,7 +33,6 @@ typedef const enum {
   PARAM_PRECISE_F_CHANGE,
   PARAM_STEP,
   PARAM_POWER,
-  PARAM_TX_OFFSET,
   PARAM_MODULATION,
   PARAM_SQUELCH_TYPE,
   PARAM_SQUELCH_VALUE,
@@ -41,8 +40,11 @@ typedef const enum {
   PARAM_VOLUME,
   PARAM_BANDWIDTH,
 
+  PARAM_TX_OFFSET,
+  PARAM_TX_OFFSET_DIR,
   PARAM_TX_STATE,
   PARAM_TX_FREQUENCY,
+  PARAM_TX_FREQUENCY_FACT,
   PARAM_TX_POWER,
   PARAM_TX_POWER_AMPLIFIER,
 
@@ -50,6 +52,7 @@ typedef const enum {
   PARAM_TX_CODE,
 
   PARAM_AFC,
+  PARAM_AFC_SPD,
   PARAM_DEV,
   PARAM_MIC,
   PARAM_XTAL,
@@ -101,6 +104,7 @@ typedef struct {
     TXStatus last_error;
     ModulationType modulation; // Модуляция TX
     Code code;
+    OffsetDirection offsetDirection;
     bool dirty;     // Флаг изменения параметров TX
     bool is_active; // true, если идёт передача
     bool pa_enabled;
@@ -120,12 +124,14 @@ typedef struct {
   uint8_t gain;
 
   uint8_t afc;
+  uint8_t afc_speed;
   uint8_t mic;
   XtalMode xtal;
 
   Filter filter;
 
   bool preciseFChange;
+  bool fixed_bounds;
 
   bool save_to_eeprom; // Флаг необходимости сохранения в EEPROM
 } VFOContext;

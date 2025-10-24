@@ -9,14 +9,3 @@ void ABOUT_Render() {
   PrintSmallEx(LCD_XCENTER, LCD_YCENTER + 24, POS_C, C_FILL,
                "t.me/uvk5_spectrum_talk");
 }
-
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-bool ABOUT_key(KEY_Code_t k, Key_State_t state) {
-  switch (k) {
-  case KEY_EXIT:
-    APPS_exit();
-    return true;
-  default:
-    return false;
-  }
-}

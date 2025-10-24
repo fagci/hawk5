@@ -95,7 +95,7 @@ bool GENERATOR_key(KEY_Code_t key, Key_State_t state) {
 }
 
 void GENERATOR_render() {
-  uint32_t txf = RADIO_GetParam(ctx, PARAM_TX_FREQUENCY);
+  uint32_t txf = RADIO_GetParam(ctx, PARAM_TX_FREQUENCY_FACT);
   PrintMediumEx(LCD_XCENTER, 15, POS_C, C_FILL, "%u.%05u", txf / MHZ,
                 txf % MHZ);
   PrintMediumEx(LCD_XCENTER, 15 + 12, POS_C, C_FILL, "F: %uHz", tone1Freq);

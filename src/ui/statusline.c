@@ -141,7 +141,7 @@ void STATUSLINE_render(void) {
 void STATUSLINE_RenderRadioSettings() {
   char gain[8];
   char bandwidth[8];
-  char afc[8];
+  // char afc[8];
   char squelch_type[8];
   char squelch_value[8];
   char modulation[8];
@@ -149,7 +149,7 @@ void STATUSLINE_RenderRadioSettings() {
   strncpy(gain, RADIO_GetParamValueString(ctx, PARAM_GAIN), sizeof(gain));
   strncpy(bandwidth, RADIO_GetParamValueString(ctx, PARAM_BANDWIDTH),
           sizeof(bandwidth));
-  strncpy(afc, RADIO_GetParamValueString(ctx, PARAM_AFC), sizeof(afc));
+  // strncpy(afc, RADIO_GetParamValueString(ctx, PARAM_AFC), sizeof(afc));
   strncpy(squelch_type, RADIO_GetParamValueString(ctx, PARAM_SQUELCH_TYPE),
           sizeof(squelch_type));
   strncpy(squelch_value, RADIO_GetParamValueString(ctx, PARAM_SQUELCH_VALUE),
@@ -157,6 +157,6 @@ void STATUSLINE_RenderRadioSettings() {
   strncpy(modulation, RADIO_GetParamValueString(ctx, PARAM_MODULATION),
           sizeof(modulation));
 
-  STATUSLINE_SetText("%s %s AFC%s %s %s %s", gain, bandwidth, afc, squelch_type,
+  STATUSLINE_SetText("%s %s %s %s %s", gain, bandwidth, squelch_type,
                      squelch_value, modulation);
 }

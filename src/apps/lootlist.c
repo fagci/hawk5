@@ -20,6 +20,7 @@
 
 static uint8_t menuIndex = 0;
 static const uint8_t MENU_ITEM_H_LARGER = 15;
+static void initMenu();
 
 typedef enum {
   SORT_LOT,
@@ -48,7 +49,6 @@ static bool shortList = true;
 static bool sortRev = false;
 
 static void tuneToLoot(const Loot *loot, bool save) {
-  VFOContext *ctx = &RADIO_GetCurrentVFO(&gRadioState)->context;
   BANDS_SetRadioParamsFromCurrentBand();
   RADIO_SetParam(ctx, PARAM_FREQUENCY, loot->f, save);
   RADIO_ApplySettings(ctx);
@@ -113,38 +113,6 @@ static void sort(Sort type) {
   STATUSLINE_SetText("By %s %s", sortNames[sortType], sortRev ? "v" : "^");
 }
 
-static uint32_t lastSqCheck;
-void LOOTLIST_update() {
-  RADIO_UpdateMultiwatch(&gRadioState);
-  RADIO_CheckAndSaveVFO(&gRadioState);
-
-  if (Now() - lastSqCheck >= 55) {
-    RADIO_UpdateSquelch(&gRadioState);
-    lastSqCheck = Now();
-  }
-  gRedrawScreen = true;
-  SYS_DelayMs(SQL_DELAY);
-}
-
-static Menu lootMenu = {"Loot", .render_item = renderItem};
-
-static void initMenu() {
-  lootMenu.num_items = LOOT_Size();
-  lootMenu.itemHeight = shortList ? MENU_ITEM_H : MENU_ITEM_H_LARGER;
-  MENU_Init(&lootMenu);
-}
-
-void LOOTLIST_render(void) { MENU_Render(); }
-
-void LOOTLIST_init(void) {
-  initMenu();
-  sortType = SORT_F;
-  sort(SORT_LOT);
-  if (LOOT_Size()) {
-    tuneToLoot(LOOT_Item(menuIndex), false);
-  }
-}
-
 static void saveLootToCh(const Loot *loot, int16_t chnum, uint16_t scanlist) {
   CH ch = LOOT_ToCh(loot);
   ch.scanlists = scanlist;
@@ -187,9 +155,10 @@ static void saveToFreeChannels(bool saveWhitelist, uint16_t scanlist) {
   SYS_DelayMs(2000);
 }
 
-bool LOOTLIST_key(KEY_Code_t key, Key_State_t state) {
+static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
+
   Loot *loot;
-  loot = LOOT_Item(menuIndex);
+  loot = LOOT_Item(index);
   const uint8_t MENU_SIZE = LOOT_Size();
 
   VFOContext *ctx = &RADIO_GetCurrentVFO(&gRadioState)->context;
@@ -223,8 +192,6 @@ bool LOOTLIST_key(KEY_Code_t key, Key_State_t state) {
     switch (key) {
     case KEY_UP:
     case KEY_DOWN:
-      menuIndex = IncDecU(menuIndex, 0, MENU_SIZE, key != KEY_UP);
-      loot = LOOT_Item(menuIndex);
       tuneToLoot(loot, false);
       return true;
     default:
@@ -292,6 +259,44 @@ bool LOOTLIST_key(KEY_Code_t key, Key_State_t state) {
     default:
       break;
     }
+  }
+}
+
+static uint32_t lastSqCheck;
+void LOOTLIST_update() {
+  RADIO_UpdateMultiwatch(&gRadioState);
+  RADIO_CheckAndSaveVFO(&gRadioState);
+
+  if (Now() - lastSqCheck >= 55) {
+    RADIO_UpdateSquelch(&gRadioState);
+    lastSqCheck = Now();
+  }
+  gRedrawScreen = true;
+  SYS_DelayMs(SQL_DELAY);
+}
+
+static Menu lootMenu = {"Loot", .render_item = renderItem, .action = action};
+
+static void initMenu() {
+  lootMenu.num_items = LOOT_Size();
+  lootMenu.itemHeight = shortList ? MENU_ITEM_H : MENU_ITEM_H_LARGER;
+  MENU_Init(&lootMenu);
+}
+
+void LOOTLIST_render(void) { MENU_Render(); }
+
+void LOOTLIST_init(void) {
+  initMenu();
+  sortType = SORT_F;
+  sort(SORT_LOT);
+  if (LOOT_Size()) {
+    tuneToLoot(LOOT_Item(menuIndex), false);
+  }
+}
+
+bool LOOTLIST_key(KEY_Code_t key, Key_State_t state) {
+  if (MENU_HandleInput(key, state)) {
+    return true;
   }
 
   return false;

@@ -7,7 +7,7 @@
 
 static bool inMenu;
 
-static MenuItem menuItems[14];
+static MenuItem menuItems[15];
 
 static Menu regsMenu = {
     .title = "",
@@ -41,6 +41,7 @@ static const ParamType paramsBK4819[] = {
     PARAM_MODULATION,         //
     PARAM_STEP,               //
     PARAM_AFC,                //
+    PARAM_AFC_SPD,            //
     PARAM_DEV,                //
     PARAM_MIC,                //
     PARAM_XTAL,               //

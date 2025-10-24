@@ -54,7 +54,7 @@ void VFO1_update(void) {
 }
 
 bool VFO1_key(KEY_Code_t key, Key_State_t state) {
-  if (state == KEY_RELEASED && REGSMENU_Key(key, state)) {
+  if (REGSMENU_Key(key, state)) {
     return true;
   }
 
@@ -241,7 +241,7 @@ int32_t afc_to_deviation_hz(uint16_t reg_6d) {
   int64_t sign = (signed_val >= 0) ? 1 : -1;
   int64_t offset_Hz_rounded =
       ((int64_t)signed_val * 1000LL + sign * 145LL) / 291LL;
-  return offset_Hz_rounded-333;
+  return offset_Hz;
 }
 
 void VFO1_render(void) {
@@ -258,8 +258,8 @@ void VFO1_render(void) {
                        RADIO_GetParamValueString(ctx, PARAM_RADIO));
   }
 
-  uint32_t f =
-      ctx->tx_state.is_active ? ctx->tx_state.frequency : ctx->frequency;
+  uint32_t f = RADIO_GetParam(
+      ctx, ctx->tx_state.is_active ? PARAM_TX_FREQUENCY_FACT : PARAM_FREQUENCY);
   const char *mod = RADIO_GetParamValueString(ctx, PARAM_MODULATION);
 
   if (vfo->mode == MODE_CHANNEL) {

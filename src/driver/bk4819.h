@@ -205,6 +205,8 @@ uint16_t BK4819_GetRegValue(RegisterSpec s);
 void BK4819_SetRegValue(RegisterSpec s, uint16_t v);
 void BK4819_SetAFC(uint8_t level);
 uint8_t BK4819_GetAFC();
+void BK4819_SetAFCSpeed(uint8_t speed);
+uint8_t BK4819_GetAFCSpeed(void);
 void BK4819_TuneTo(uint32_t f, bool precise);
 void BK4819_SetToneFrequency(uint16_t f);
 void BK4819_SetTone2Frequency(uint16_t f);

@@ -96,7 +96,7 @@ const App apps[APPS_COUNT] = {
                   true, true},
     [APP_GENERATOR] = {"Generator", GENERATOR_init, GENERATOR_update,
                        GENERATOR_render, GENERATOR_key, NULL, true, true},
-    [APP_ABOUT] = {"ABOUT", NULL, NULL, ABOUT_Render, ABOUT_key, NULL},
+    [APP_ABOUT] = {"ABOUT", NULL, NULL, ABOUT_Render, NULL, NULL},
 };
 
 bool APPS_key(KEY_Code_t Key, Key_State_t state) {

@@ -50,7 +50,7 @@ CHTypeFilter gChListFilter = TYPE_FILTER_CH;
 
 static uint8_t viewMode = MODE_INFO;
 static CH ch;
-static char tempName[9] = {0};
+static char tempName[10] = {0};
 
 static const Symbol typeIcons[] = {
     [TYPE_CH] = SYM_CH,         [TYPE_BAND] = SYM_BAND,

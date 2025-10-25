@@ -110,6 +110,7 @@ static bool setBounds(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
 static bool setName(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
   if (state == KEY_RELEASED && key == KEY_MENU) {
     gTextinputText = gChEd.name;
+    gTextInputSize = 9;
     APPS_run(APP_TEXTINPUT);
     return true;
   }

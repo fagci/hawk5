@@ -30,6 +30,7 @@ static void nextWithTimeout() {
 
   if (CheckTimeout(&timeout)) {
     CHANNELS_Next(true);
+    gRedrawScreen = true;
     isWaiting = false;
     SetTimeout(&timeout, 0);
     return;
@@ -44,18 +45,23 @@ void CHSCAN_init(void) {
 void CHSCAN_deinit(void) {}
 
 static uint32_t lastSqCheck;
+static uint32_t lastRender;
 
 void CHSCAN_update(void) {
   RADIO_UpdateMultiwatch(&gRadioState);
   RADIO_CheckAndSaveVFO(&gRadioState);
 
-  nextWithTimeout();
-  SYS_DelayMs(SQL_DELAY);
-  if (Now() - lastSqCheck >= 55) {
+  if (!gSettings.mWatch && Now() - lastSqCheck >= SQL_DELAY) {
     RADIO_UpdateSquelch(&gRadioState);
     lastSqCheck = Now();
   }
-  gRedrawScreen = true;
+
+  if (Now() - lastRender >= 500) {
+    lastRender = Now();
+    gRedrawScreen = true;
+  }
+
+  nextWithTimeout();
 }
 
 bool CHSCAN_key(KEY_Code_t key, Key_State_t state) {

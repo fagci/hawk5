@@ -31,7 +31,15 @@ static void tuneTo(uint32_t f, uint32_t _) {
   RADIO_ApplySettings(ctx);
 }
 
-void VFO1_init(void) { gLastActiveLoot = NULL; }
+void VFO1_init(void) {
+  gLastActiveLoot = NULL;
+  if (vfo->mode == MODE_CHANNEL) {
+    CHANNELS_LoadScanlist(gChListFilter, gSettings.currentScanlist);
+    RADIO_LoadChannelToVFO(&gRadioState,
+                           RADIO_GetCurrentVFONumber(&gRadioState),
+                           vfo->channel_index);
+  }
+}
 
 static uint32_t lastRender;
 static uint32_t lastSqCheck;
@@ -87,7 +95,6 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
       } else {
         RADIO_IncDecParam(ctx, PARAM_FREQUENCY, key == KEY_UP, true);
       }
-      // RADIO_SaveCurrentVFODelayed();
       return true;
     case KEY_SIDE1:
     case KEY_SIDE2:
@@ -228,7 +235,7 @@ int32_t afc_to_deviation_hz(uint16_t reg_6d) {
   // Коэффициент: 1000 Гц / 291 единиц ≈ 3.436 Hz/единица
   // Используем целочисленную арифметику: (signed_val * 1000) / 291
   // Для точности используем int64_t
-  return ((int64_t)reg_6d * 1000LL) / 291LL;
+  return ((int64_t)(int16_t)reg_6d * 1000LL) / 291LL;
 }
 
 void VFO1_render(void) {
@@ -250,7 +257,7 @@ void VFO1_render(void) {
   const char *mod = RADIO_GetParamValueString(ctx, PARAM_MODULATION);
 
   if (vfo->mode == MODE_CHANNEL) {
-    PrintMediumEx(LCD_XCENTER, BASE - 16, POS_C, C_FILL, "VFO %u", vfoN + 1);
+    PrintMediumEx(LCD_XCENTER, BASE - 16, POS_C, C_FILL, "%s", ctx->name);
   } else {
     if (gCurrentBand.meta.type == TYPE_BAND_DETACHED) {
       PrintSmallEx(32, 12, POS_L, C_FILL, "*%s", gCurrentBand.name);

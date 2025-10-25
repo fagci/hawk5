@@ -94,7 +94,7 @@ typedef struct {
 
 // Контекст VFO
 typedef struct {
-
+  char name[10];
   uint32_t last_save_time; // Время последнего сохранения
   uint32_t frequency;      // Текущая частота
 

@@ -1322,6 +1322,8 @@ void RADIO_LoadChannelToVFO(RadioState *state, uint8_t vfo_index,
   ctx->code = channel.code.rx;
   ctx->tx_state.code = channel.code.tx;
 
+  strncpy(ctx->name, channel.name, 9);
+
   // Initialize TX state
   vfo->context.tx_state.frequency = ctx->frequency; // Default to RX frequency
   vfo->context.tx_state.power_level = 0;

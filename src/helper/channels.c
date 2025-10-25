@@ -82,18 +82,21 @@ void CHANNELS_Next(bool next) {
   if (gScanlistSize) {
     chScanlistIndex = IncDecI(chScanlistIndex, 0, gScanlistSize, next);
     // CHANNELS_LoadCurrentScanlistCH();
+    RADIO_LoadChannelToVFO(&gRadioState,
+                           RADIO_GetCurrentVFONumber(&gRadioState),
+                           gScanlist[chScanlistIndex]);
   }
 }
 
 void CHANNELS_SetScanlistIndexFromRadio() {
-  /* if (RADIO_IsChMode() && gScanlistSize) {
+  if (vfo->mode == MODE_CHANNEL && gScanlistSize) {
     for (uint16_t i = 0; i < gScanlistSize; ++i) {
-      if (gScanlist[i] == radio.channel) {
+      if (gScanlist[i] == vfo->channel_index) {
         chScanlistIndex = i;
         break;
       }
     }
-  } */
+  }
 }
 
 static CHTypeFilter _typeFilter = TYPE_FILTER_BAND_SAVE;

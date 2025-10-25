@@ -613,7 +613,8 @@ void RADIO_Init(VFOContext *ctx, Radio radio_type) {
     /* ctx->xtal = BK4819_GetRegValue(RS_XTAL_MODE);
     ctx->afc = BK4819_GetAFC();
     ctx->dev = BK4819_GetRegValue(RS_DEV);
-    ctx->mic = BK4819_GetRegValue(RS_MIC); */
+    ctx->mic = BK4819_GetRegValue(RS_MIC);
+    */
 
     break;
   case RADIO_SI4732:
@@ -1257,6 +1258,7 @@ void RADIO_SaveVFOToStorage(const RadioState *state, uint8_t vfo_index,
   storage->radio = ctx->radio_type;
 
   storage->rxF = ctx->frequency;
+  storage->txF = ctx->tx_state.frequency;
   storage->step = ctx->step;
 
   storage->bw = ctx->bandwidth;

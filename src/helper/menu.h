@@ -31,6 +31,7 @@ typedef struct Menu {
   const char *title;
   const MenuItem *items;
   uint16_t num_items;
+  uint16_t i;
   MenuRenderItem render_item;
   MenuOnEnter on_enter;
   bool (*action)(const uint16_t index, KEY_Code_t, Key_State_t);

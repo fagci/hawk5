@@ -196,6 +196,8 @@ uint32_t SETTINGS_GetValue(Setting s) {
     return gSettings.upconverter;
   case SETTING_DEVIATION:
     return gSettings.deviation;
+  case SETTING_MIC:
+    return gSettings.mic;
   case SETTING_COUNT:
     return SETTING_COUNT;
   case SETTING_SHOWLEVELINVFO:
@@ -322,6 +324,9 @@ void SETTINGS_SetValue(Setting s, uint32_t v) {
   case SETTING_DEVIATION:
     gSettings.deviation = v;
     break;
+  case SETTING_MIC:
+    gSettings.mic = v;
+    break;
   case SETTING_SHOWLEVELINVFO:
     gSettings.showLevelInVFO = v;
     break;
@@ -420,6 +425,7 @@ const char *SETTINGS_GetValueString(Setting s) {
     sprintf(buf, "%d", v - 8);
     break;
 
+  case SETTING_MIC:
   case SETTING_COUNT:
   case SETTING_ACTIVEVFO:
   case SETTING_BRIGHTNESS_L:
@@ -531,6 +537,9 @@ void SETTINGS_IncDecValue(Setting s, bool inc) {
     break;
   case SETTING_DEVIATION:
     ma = 256;
+    break;
+  case SETTING_MIC:
+    ma = 16;
     break;
 
   case SETTING_COUNT:

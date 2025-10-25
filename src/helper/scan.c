@@ -8,6 +8,7 @@
 #include "../scheduler.h"
 #include "../ui/spectrum.h"
 #include "bands.h"
+#include "channels.h"
 #include "lootlist.h"
 
 // =============================
@@ -169,6 +170,9 @@ void SCAN_Init(bool multiband) {
   scan.lastCpsTime = Now();
   scan.scanCycles = 0;
   scan.currentCps = 0;
+
+  CHANNELS_LoadBlacklistToLoot();
+
   ApplyBandSettings();
   BK4819_WriteRegister(BK4819_REG_3F, 0);
 }

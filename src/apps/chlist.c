@@ -207,6 +207,9 @@ static Menu chListMenu = {
     .render_item = renderItem, .itemHeight = MENU_ITEM_H, .action = action};
 
 void CHLIST_init() {
+  if (gChSaveMode) {
+    gChListFilter = 1 << gChEd.meta.type | (1 << TYPE_EMPTY);
+  }
   CHANNELS_LoadScanlist(gChListFilter, gSettings.currentScanlist);
   Log("Scanlist loaded: size=%u", gScanlistSize);
 

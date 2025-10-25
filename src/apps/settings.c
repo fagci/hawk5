@@ -73,6 +73,7 @@ static const MenuItem radioMenuItems[] = {
     {"Tone local", SETTING_TONELOCAL, getValS, updateValS},
     {"Roger", SETTING_ROGER, getValS, updateValS},
     {"Multiwatch", SETTING_MULTIWATCH, getValS, updateValS},
+    {"Mic", SETTING_MIC, getValS, updateValS},
 };
 
 static Menu radioMenu = {"Radio", radioMenuItems, ARRAY_SIZE(radioMenuItems)};

@@ -124,9 +124,9 @@ void STATUSLINE_render(void) {
     icons[idx++] = SYM_LOCK;
   }
 
-  /* if (gCurrentApp == APP_CH_LIST || gCurrentApp == APP_LOOT_LIST) {
+  if (gCurrentApp == APP_CH_LIST || gCurrentApp == APP_LOOT_LIST) {
     UI_Scanlists(LCD_XCENTER - 13, 0, gSettings.currentScanlist);
-  } */
+  }
 
   PrintSymbolsEx(LCD_WIDTH - 1 - 22, BASE_Y, POS_R, C_FILL, "%s", icons);
 

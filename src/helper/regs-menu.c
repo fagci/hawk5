@@ -7,7 +7,7 @@
 
 static bool inMenu;
 
-static MenuItem menuItems[15];
+static MenuItem menuItems[11];
 
 static Menu regsMenu = {
     .title = "",
@@ -34,21 +34,17 @@ static void updateVal(const MenuItem *item, bool up) {
 static void updateValueAlt(bool inc) {}
 
 static const ParamType paramsBK4819[] = {
-    PARAM_RADIO,              //
-    PARAM_GAIN,               //
-    PARAM_BANDWIDTH,          //
-    PARAM_SQUELCH_VALUE,      //
-    PARAM_MODULATION,         //
-    PARAM_STEP,               //
-    PARAM_AFC,                //
-    PARAM_AFC_SPD,            //
-    PARAM_DEV,                //
-    PARAM_MIC,                //
-    PARAM_XTAL,               //
-    PARAM_FILTER,             //
-    PARAM_POWER,              //
-    PARAM_TX_POWER,           //
-    PARAM_TX_POWER_AMPLIFIER, //
+    PARAM_RADIO,         //
+    PARAM_GAIN,          //
+    PARAM_BANDWIDTH,     //
+    PARAM_SQUELCH_VALUE, //
+    PARAM_MODULATION,    //
+    PARAM_STEP,          //
+    PARAM_AFC,           //
+    PARAM_DEV,           //
+    PARAM_XTAL,          //
+    PARAM_FILTER,        //
+    PARAM_POWER,         //
 };
 static const ParamType paramsSI[] = {
     PARAM_RADIO,         //

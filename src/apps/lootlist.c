@@ -174,7 +174,7 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
       gMonitorMode = !gMonitorMode;
       return true;
     case KEY_8:
-      saveToFreeChannels(false, 7);
+      saveToFreeChannels(false, 1 << 15);
       return true;
     case KEY_5:
       saveToFreeChannels(true, gSettings.currentScanlist);

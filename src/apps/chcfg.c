@@ -73,6 +73,30 @@ static void applyBounds(uint32_t fs, uint32_t fe) {
   gChEd.txF = fe;
 }
 
+static void setRXFValue(uint32_t f, uint32_t _) { gChEd.rxF = f; }
+
+static void setTXFValue(uint32_t f, uint32_t _) { gChEd.txF = f; }
+
+static bool setRXF(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
+  if (state == KEY_RELEASED && key == KEY_MENU) {
+    FINPUT_setup(0, BK4819_F_MAX, UNIT_MHZ, false);
+    gFInputCallback = setRXFValue;
+    APPS_run(APP_FINPUT);
+    return true;
+  }
+  return false;
+}
+
+static bool setTXF(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
+  if (state == KEY_RELEASED && key == KEY_MENU) {
+    FINPUT_setup(0, BK4819_F_MAX, UNIT_MHZ, false);
+    gFInputCallback = setTXFValue;
+    APPS_run(APP_FINPUT);
+    return true;
+  }
+  return false;
+}
+
 static bool setBounds(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
   if (state == KEY_RELEASED && key == KEY_MENU) {
     FINPUT_setup(0, BK4819_F_MAX, UNIT_MHZ, true);
@@ -149,7 +173,7 @@ static uint32_t getValue(MemProp p) {
   case MEM_TX_OFFSET:
     if (gChEd.offsetDir == OFFSET_NONE) {
       return 0;
-    } else if (gChEd.offsetDir == OFFSET_MINUS) {
+    } else if (gChEd.offsetDir == OFFSET_FREQ) {
       return -gChEd.txF;
     }
     return gChEd.txF;
@@ -369,8 +393,8 @@ static MenuItem menuChVfo[] = {
     {"Type", MEM_TYPE, getValS, updVal},
     {"Name", MEM_NAME, getValS, .action = setName},
 
-    {"RX f", MEM_F_RX, getValS, updVal},
-    {"TX f / offset", MEM_F_TX, getValS, updVal},
+    {"RX f", MEM_F_RX, getValS, .action = setRXF},
+    {"TX f / offset", MEM_F_TX, getValS, .action = setTXF},
     {"TX offset dir", MEM_TX_OFFSET_DIR, getValS, updVal},
 
     {"Radio", .submenu = &radioMenu},
@@ -540,15 +564,10 @@ static void setPCalH(uint32_t f) {
   gChEd.misc.powCalib.e = Clamp(f / MHZ, 0, 255);
 }
 
-static void setRXF(uint32_t f) { gChEd.rxF = f; }
-
-static void setTXF(uint32_t f) { gChEd.txF = f; }
-
 static void setLastF(uint32_t f) { gChEd.misc.lastUsedFreq = f; }
 
 void CHCFG_init(void) {
   if (gChEd.meta.type == TYPE_BAND) {
-    gChEd.meta.type = TYPE_BAND;
     menu = &bandMenu;
   } else {
     gChEd.meta.type = TYPE_CH;
@@ -561,10 +580,7 @@ void CHCFG_init(void) {
 void CHCFG_deinit(void) { gChNum = -1; }
 
 bool CHCFG_key(KEY_Code_t key, Key_State_t state) {
-  if (MENU_HandleInput(key, state)) {
-    return true;
-  }
-  return false;
+  return MENU_HandleInput(key, state);
 }
 
 void CHCFG_render(void) { MENU_Render(); }

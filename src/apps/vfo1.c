@@ -224,24 +224,11 @@ static void renderChannelName(uint8_t y, uint16_t channel) {
   }
 }
 
-#define AFC_COEFF_NUM 171 // 3.42 * 50 (упрощенный коэффициент)
-#define AFC_COEFF_DEN 50 // Знаменатель
-#define AFC_MODULO 65536
-
 int32_t afc_to_deviation_hz(uint16_t reg_6d) {
-  // Конвертируем в signed int16_t
-  int16_t signed_val = (int16_t)reg_6d;
-
   // Коэффициент: 1000 Гц / 291 единиц ≈ 3.436 Hz/единица
   // Используем целочисленную арифметику: (signed_val * 1000) / 291
   // Для точности используем int64_t
-  int64_t offset_Hz = ((int64_t)signed_val * 1000LL) / 291LL;
-
-  // Для округления: добавляем половину делителя с учетом знака
-  int64_t sign = (signed_val >= 0) ? 1 : -1;
-  int64_t offset_Hz_rounded =
-      ((int64_t)signed_val * 1000LL + sign * 145LL) / 291LL;
-  return offset_Hz;
+  return ((int64_t)reg_6d * 1000LL) / 291LL;
 }
 
 void VFO1_render(void) {
@@ -299,6 +286,9 @@ void VFO1_render(void) {
                  RADIO_GetParamValueString(ctx, PARAM_RX_CODE));
   }
 
+  uint32_t txF = RADIO_GetParam(ctx, PARAM_TX_FREQUENCY_FACT);
+  bool isTxFDifferent = txF != RADIO_GetParam(ctx, PARAM_FREQUENCY);
+
   if (gSettings.iAmPro) {
     if (vfo->msm.open) {
       int32_t hz = afc_to_deviation_hz(BK4819_ReadRegister(0x6D));
@@ -307,10 +297,17 @@ void VFO1_render(void) {
         PrintSmallEx(40, 21, POS_R, C_FILL, "%+d", hz);
       }
     }
+  }
 
+  if (gSettings.iAmPro && !isTxFDifferent) {
     uint32_t lambda = 29979246 / (ctx->frequency / 100);
     PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "L=%u/%ucm", lambda,
                  lambda / 4);
+  }
+
+  if (isTxFDifferent) {
+    PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "TX: %s",
+                 RADIO_GetParamValueString(ctx, PARAM_TX_FREQUENCY_FACT));
   }
 
   if (gMonitorMode) {

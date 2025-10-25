@@ -263,17 +263,19 @@ void BANDS_SaveCurrent(void) {
 
 PowerCalibration BANDS_GetPowerCalib(uint32_t f) {
   Band b = BANDS_ByFrequency(f);
-  if (b.meta.type == TYPE_BAND &&
-      b.misc.powCalib.e > 0) { // not TYPE_BAND_DETACHED
+
+  // not TYPE_BAND_DETACHED
+  if (b.meta.type == TYPE_BAND && b.misc.powCalib.e > 0) {
     return b.misc.powCalib;
   }
+
   for (uint8_t ci = 0; ci < ARRAY_SIZE(POWER_CALIBRATIONS); ++ci) {
     PCal cal = POWER_CALIBRATIONS[ci];
     if (cal.s <= f && f <= cal.e) {
       return cal.c;
-      break;
     }
   }
+
   return DEFAULT_POWER_CALIB;
 }
 

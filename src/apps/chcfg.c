@@ -55,10 +55,12 @@ typedef enum {
 } MemProp;
 
 static void syncVFO() {
-  RADIO_LoadVFOFromStorage(gRadioState, RADIO_GetCurrentVFONumber(gRadioState),
-                           &gChEd);
-  ctx->save_to_eeprom = true;
-  ctx->last_save_time = Now();
+  if (gChNum == -1) {
+    RADIO_LoadVFOFromStorage(gRadioState,
+                             RADIO_GetCurrentVFONumber(gRadioState), &gChEd);
+    ctx->save_to_eeprom = true;
+    ctx->last_save_time = Now();
+  }
 }
 
 static bool save(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
@@ -588,7 +590,10 @@ void CHCFG_init(void) {
   MENU_Init(menu);
 }
 
-void CHCFG_deinit(void) { gChNum = -1; }
+void CHCFG_deinit(void) {
+  gChNum = -1;
+  RADIO_CheckAndSaveVFO(gRadioState);
+}
 
 bool CHCFG_key(KEY_Code_t key, Key_State_t state) {
   return MENU_HandleInput(key, state);

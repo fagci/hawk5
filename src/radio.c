@@ -690,6 +690,7 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
   case PARAM_STEP:
     ctx->step = (Step)value;
     break;
+  case PARAM_TX_FREQUENCY:
   case PARAM_TX_OFFSET:
     ctx->tx_state.frequency = value;
     break;
@@ -717,9 +718,6 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
     if (!BANDS_InRange(value, gCurrentBand)) {
       BANDS_SelectByFrequency(value, ctx->fixed_bounds);
     }
-    break;
-  case PARAM_TX_FREQUENCY:
-    ctx->tx_state.frequency = value;
     break;
   case PARAM_MODULATION:
     ctx->modulation = (ModulationType)value;
@@ -1203,6 +1201,7 @@ static void setCommonParamsFromCh(VFOContext *ctx, const VFO *storage) {
   RADIO_SetParam(ctx, PARAM_SQUELCH_VALUE, storage->squelch.value, false);
   RADIO_SetParam(ctx, PARAM_STEP, storage->step, false);
   RADIO_SetParam(ctx, PARAM_TX_FREQUENCY, storage->txF, false);
+  RADIO_SetParam(ctx, PARAM_TX_OFFSET, storage->txF, false);
   RADIO_SetParam(ctx, PARAM_TX_OFFSET_DIR, storage->offsetDir, false);
 }
 
@@ -1230,15 +1229,10 @@ void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
   RADIO_SetParam(ctx, PARAM_VOLUME, 100, false);
 
-  RADIO_SetParam(ctx, PARAM_TX_OFFSET, storage->txF, false);
-  RADIO_SetParam(ctx, PARAM_TX_OFFSET_DIR, storage->offsetDir, false);
-
   vfo->context.code = storage->code.rx;
   vfo->context.tx_state.code = storage->code.tx;
 
   // Initialize TX state
-  vfo->context.tx_state.frequency = storage->rxF; // Default to RX frequency
-  vfo->context.power = storage->power;
   vfo->context.tx_state.is_active = false;
   vfo->context.tx_state.last_error = TX_UNKNOWN;
 
@@ -1269,7 +1263,6 @@ void RADIO_SaveVFOToStorage(const RadioState *state, uint8_t vfo_index,
   storage->radio = ctx->radio_type;
 
   storage->rxF = ctx->frequency;
-  storage->txF = ctx->tx_state.frequency;
   storage->step = ctx->step;
 
   storage->bw = ctx->bandwidth;
@@ -1280,6 +1273,7 @@ void RADIO_SaveVFOToStorage(const RadioState *state, uint8_t vfo_index,
   storage->code.rx = ctx->code;
   storage->code.tx = ctx->tx_state.code;
 
+  storage->txF = ctx->tx_state.frequency;
   storage->offsetDir = ctx->tx_state.offsetDirection;
 }
 
@@ -1331,9 +1325,6 @@ void RADIO_LoadChannelToVFO(RadioState *state, uint8_t vfo_index,
   strncpy(ctx->name, channel.name, 9);
 
   // Initialize TX state
-  vfo->context.tx_state.frequency = ctx->frequency; // Default to RX frequency
-  vfo->context.tx_state.power_level = 0;
-  vfo->context.tx_state.pa_enabled = false;
   vfo->context.tx_state.is_active = false;
   vfo->context.tx_state.last_error = TX_UNKNOWN;
 

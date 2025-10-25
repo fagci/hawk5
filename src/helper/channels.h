@@ -170,6 +170,7 @@ bool CHANNELS_Existing(int16_t i);
 uint16_t CHANNELS_Scanlists(int16_t i);
 void CHANNELS_LoadScanlist(CHTypeFilter type, uint16_t n);
 void CHANNELS_LoadBlacklistToLoot();
+void CHANNELS_LoadCurrentScanlistCH();
 
 void CHANNELS_SetScanlistIndexFromRadio();
 

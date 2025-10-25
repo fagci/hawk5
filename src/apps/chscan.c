@@ -16,16 +16,11 @@ static bool lastListenState;
 static uint32_t timeout = 0;
 static bool isWaiting;
 
-static void loadCurrentCh() {
-  RADIO_LoadChannelToVFO(&gRadioState, RADIO_GetCurrentVFONumber(&gRadioState),
-                         CHANNELS_GetCurrentScanlistCH());
-}
-
 static void nextWithTimeout() {
   if (lastListenState != vfo->is_open) {
     lastListenState = vfo->is_open;
     if (vfo->is_open) {
-      loadCurrentCh();
+      CHANNELS_LoadCurrentScanlistCH();
       isWaiting = true;
     }
     SetTimeout(&timeout, vfo->is_open
@@ -43,7 +38,7 @@ static void nextWithTimeout() {
 
 void CHSCAN_init(void) {
   CHANNELS_LoadScanlist(TYPE_FILTER_CH, gSettings.currentScanlist);
-  loadCurrentCh();
+  CHANNELS_LoadCurrentScanlistCH();
 }
 
 void CHSCAN_deinit(void) {}
@@ -70,7 +65,7 @@ bool CHSCAN_key(KEY_Code_t key, Key_State_t state) {
     gSettings.currentScanlist = CHANNELS_ScanlistByKey(
         gSettings.currentScanlist, key, longHeld && !simpleKeypress);
     CHANNELS_LoadScanlist(TYPE_FILTER_CH, gSettings.currentScanlist);
-    loadCurrentCh();
+    CHANNELS_LoadCurrentScanlistCH();
     SETTINGS_DelayedSave();
     isWaiting = false;
     return true;

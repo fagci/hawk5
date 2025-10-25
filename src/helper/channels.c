@@ -78,13 +78,15 @@ int16_t CHANNELS_GetCurrentScanlistCH() {
   return -1;
 }
 
+void CHANNELS_LoadCurrentScanlistCH() {
+  RADIO_LoadChannelToVFO(&gRadioState, RADIO_GetCurrentVFONumber(&gRadioState),
+                         CHANNELS_GetCurrentScanlistCH());
+}
+
 void CHANNELS_Next(bool next) {
   if (gScanlistSize) {
     chScanlistIndex = IncDecI(chScanlistIndex, 0, gScanlistSize, next);
-    // CHANNELS_LoadCurrentScanlistCH();
-    RADIO_LoadChannelToVFO(&gRadioState,
-                           RADIO_GetCurrentVFONumber(&gRadioState),
-                           gScanlist[chScanlistIndex]);
+    CHANNELS_LoadCurrentScanlistCH();
   }
 }
 

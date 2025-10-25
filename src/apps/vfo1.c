@@ -33,11 +33,9 @@ static void tuneTo(uint32_t f, uint32_t _) {
 
 void VFO1_init(void) {
   gLastActiveLoot = NULL;
+  CHANNELS_LoadScanlist(TYPE_FILTER_CH, gSettings.currentScanlist);
   if (vfo->mode == MODE_CHANNEL) {
-    CHANNELS_LoadScanlist(gChListFilter, gSettings.currentScanlist);
-    RADIO_LoadChannelToVFO(&gRadioState,
-                           RADIO_GetCurrentVFONumber(&gRadioState),
-                           vfo->channel_index);
+    setChannel(vfo->channel_index);
   }
 }
 

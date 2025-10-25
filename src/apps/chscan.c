@@ -16,6 +16,8 @@ static bool lastListenState;
 static uint32_t timeout = 0;
 static bool isWaiting;
 
+static VFOContext ctxBkp;
+
 static void nextWithTimeout() {
   if (lastListenState != vfo->is_open) {
     lastListenState = vfo->is_open;

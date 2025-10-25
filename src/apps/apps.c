@@ -56,13 +56,13 @@ AppType_t APPS_Peek(void) {
 }
 
 const AppType_t appsAvailableToRun[RUN_APPS_COUNT] = {
-    APP_VFO1,    //
-    APP_CH_LIST, //
-    APP_FC,      //
-    APP_SCANER,  //
+    APP_VFO1,      //
+    APP_CH_LIST,   //
+    APP_FC,        //
+    APP_SCANER,    //
     APP_CH_SCAN,   //
     APP_BAND_SCAN, //
-    APP_ABOUT, //
+    APP_ABOUT,     //
 };
 
 const App apps[APPS_COUNT] = {

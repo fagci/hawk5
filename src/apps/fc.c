@@ -75,11 +75,11 @@ void FC_update(void) {
     return;
   }
 
-  ExtendedVFOContext *vfo = RADIO_GetCurrentVFO(&gRadioState);
+  ExtendedVFOContext *vfo = RADIO_GetCurrentVFO(gRadioState);
   VFOContext *ctx = &vfo->context;
 
-  RADIO_UpdateMultiwatch(&gRadioState);
-  RADIO_CheckAndSaveVFO(&gRadioState);
+  RADIO_UpdateMultiwatch(gRadioState);
+  RADIO_CheckAndSaveVFO(gRadioState);
 
   if (isScanning) {
     if (BK4819_GetFrequencyScanResult(&currentFrequency)) {
@@ -133,7 +133,7 @@ void FC_update(void) {
       SYS_DelayMs(SQL_DELAY);
     }
     // Log("FC checklisten");
-    RADIO_UpdateSquelch(&gRadioState);
+    RADIO_UpdateSquelch(gRadioState);
 
     if (vfo->is_open) {
       gRedrawScreen = true;
@@ -153,7 +153,7 @@ bool FC_key(KEY_Code_t key, Key_State_t state) {
       break;
     }
   }
-  ExtendedVFOContext *vfo = RADIO_GetCurrentVFO(&gRadioState);
+  ExtendedVFOContext *vfo = RADIO_GetCurrentVFO(gRadioState);
   VFOContext *ctx = &vfo->context;
 
   if (state == KEY_RELEASED) {
@@ -198,7 +198,7 @@ bool FC_key(KEY_Code_t key, Key_State_t state) {
 }
 
 void FC_render() {
-  ExtendedVFOContext *vfo = RADIO_GetCurrentVFO(&gRadioState);
+  ExtendedVFOContext *vfo = RADIO_GetCurrentVFO(gRadioState);
   VFOContext *ctx = &vfo->context;
   PrintMediumEx(0, 16, POS_L, C_FILL, "%s %ums HZ %u SQ %u %s",
                 FILTER_NAMES[filter], 200 << gSettings.fcTime, hz,

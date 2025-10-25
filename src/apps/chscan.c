@@ -50,11 +50,11 @@ static uint32_t lastSqCheck;
 static uint32_t lastRender;
 
 void CHSCAN_update(void) {
-  RADIO_UpdateMultiwatch(&gRadioState);
-  RADIO_CheckAndSaveVFO(&gRadioState);
+  RADIO_UpdateMultiwatch(gRadioState);
+  RADIO_CheckAndSaveVFO(gRadioState);
 
   if (!gSettings.mWatch && Now() - lastSqCheck >= SQL_DELAY) {
-    RADIO_UpdateSquelch(&gRadioState);
+    RADIO_UpdateSquelch(gRadioState);
     lastSqCheck = Now();
   }
 

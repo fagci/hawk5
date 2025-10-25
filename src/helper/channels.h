@@ -187,7 +187,7 @@ uint16_t CHANNELS_ScanlistByKey(uint16_t sl, KEY_Code_t key, bool longPress);
 extern uint16_t gScanlistSize;
 extern uint16_t gScanlist[SCANLIST_MAX];
 extern const char *TX_POWER_NAMES[4];
-extern const char *TX_OFFSET_NAMES[3];
+extern const char *TX_OFFSET_NAMES[4];
 extern const char *TX_CODE_TYPES[4];
 
 #endif /* end of include guard: CHANNELS_H */

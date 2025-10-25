@@ -161,7 +161,7 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
   loot = LOOT_Item(index);
   const uint8_t MENU_SIZE = LOOT_Size();
 
-  VFOContext *ctx = &RADIO_GetCurrentVFO(&gRadioState)->context;
+  VFOContext *ctx = &RADIO_GetCurrentVFO(gRadioState)->context;
 
   if (state == KEY_LONG_PRESSED) {
     switch (key) {
@@ -264,11 +264,11 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
 
 static uint32_t lastSqCheck;
 void LOOTLIST_update() {
-  RADIO_UpdateMultiwatch(&gRadioState);
-  RADIO_CheckAndSaveVFO(&gRadioState);
+  RADIO_UpdateMultiwatch(gRadioState);
+  RADIO_CheckAndSaveVFO(gRadioState);
 
   if (Now() - lastSqCheck >= 55) {
-    RADIO_UpdateSquelch(&gRadioState);
+    RADIO_UpdateSquelch(gRadioState);
     lastSqCheck = Now();
   }
   gRedrawScreen = true;

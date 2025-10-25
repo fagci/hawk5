@@ -136,6 +136,7 @@ void APPS_deinit(void) {
   }
 }
 
+RadioState radioState;
 void APPS_run(AppType_t app) {
   if (appsStack[stackIndex] == app) {
     return;
@@ -147,9 +148,10 @@ void APPS_run(AppType_t app) {
   if (loadedVfoApp != gCurrentApp && apps[gCurrentApp].needsRadioState) {
     LogC(LOG_C_MAGENTA, "[APP] Load radio state for %s",
          apps[gCurrentApp].name);
-    RADIO_InitState(&gRadioState, 16);
-    RADIO_LoadVFOs(&gRadioState);
-    RADIO_ToggleMultiwatch(&gRadioState, gSettings.mWatch);
+    gRadioState = &radioState;
+    RADIO_InitState(gRadioState, 16);
+    RADIO_LoadVFOs(gRadioState);
+    RADIO_ToggleMultiwatch(gRadioState, gSettings.mWatch);
     loadedVfoApp = gCurrentApp;
   }
 

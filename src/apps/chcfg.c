@@ -7,6 +7,7 @@
 #include "../helper/menu.h"
 #include "../misc.h"
 #include "../radio.h"
+#include "../scheduler.h"
 #include "apps.h"
 #include "chlist.h"
 #include "finput.h"
@@ -53,6 +54,13 @@ typedef enum {
   MEM_COUNT,
 } MemProp;
 
+static void syncVFO() {
+  RADIO_LoadVFOFromStorage(gRadioState, RADIO_GetCurrentVFONumber(gRadioState),
+                           &gChEd);
+  ctx->save_to_eeprom = true;
+  ctx->last_save_time = Now();
+}
+
 static bool save(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
   if (state == KEY_RELEASED && key == KEY_MENU) {
     if (gChNum >= 0) {
@@ -71,11 +79,18 @@ static bool save(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
 static void applyBounds(uint32_t fs, uint32_t fe) {
   gChEd.rxF = fs;
   gChEd.txF = fe;
+  syncVFO();
 }
 
-static void setRXFValue(uint32_t f, uint32_t _) { gChEd.rxF = f; }
+static void setRXFValue(uint32_t f, uint32_t _) {
+  gChEd.rxF = f;
+  syncVFO();
+}
 
-static void setTXFValue(uint32_t f, uint32_t _) { gChEd.txF = f; }
+static void setTXFValue(uint32_t f, uint32_t _) {
+  gChEd.txF = f;
+  syncVFO();
+}
 
 static bool setRXF(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
   if (state == KEY_RELEASED && key == KEY_MENU) {
@@ -170,13 +185,7 @@ static uint32_t getValue(MemProp p) {
     return gChEd.rxF;
   case MEM_END:
   case MEM_F_TX:
-    return gChEd.txF;
   case MEM_TX_OFFSET:
-    if (gChEd.offsetDir == OFFSET_NONE) {
-      return 0;
-    } else if (gChEd.offsetDir == OFFSET_FREQ) {
-      return -gChEd.txF;
-    }
     return gChEd.txF;
   case MEM_LAST_F:
     return gChEd.misc.lastUsedFreq;
@@ -357,6 +366,7 @@ static void setValue(MemProp p, uint32_t v) {
   default:
     break;
   }
+  syncVFO();
 }
 
 static void updVal(const MenuItem *item, bool inc);
@@ -524,7 +534,7 @@ static void updVal(const MenuItem *item, bool inc) {
     setValue(item->setting, v);
     break;
   case MEM_TX_OFFSET_DIR:
-    v = IncDecU(v, 0, 3, inc);
+    v = IncDecU(v, 0, OFFSET_FREQ + 1, inc);
     setValue(item->setting, v);
     break;
   case MEM_F_TXP:

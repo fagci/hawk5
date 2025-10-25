@@ -166,8 +166,8 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
         APPS_exit();
         return true;
       }
-      RADIO_LoadChannelToVFO(&gRadioState,
-                             RADIO_GetCurrentVFONumber(&gRadioState), chNum);
+      RADIO_LoadChannelToVFO(gRadioState,
+                             RADIO_GetCurrentVFONumber(gRadioState), chNum);
       APPS_run(APP_VFO1);
       return true;
     case KEY_F:

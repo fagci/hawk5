@@ -22,7 +22,7 @@
 static char String[16];
 
 static void setChannel(uint16_t v) {
-  RADIO_LoadChannelToVFO(&gRadioState, RADIO_GetCurrentVFONumber(&gRadioState),
+  RADIO_LoadChannelToVFO(gRadioState, RADIO_GetCurrentVFONumber(gRadioState),
                          v);
 }
 
@@ -45,11 +45,11 @@ static uint32_t lastSqCheck;
 static const Step liveStep = STEP_5_0kHz;
 
 void VFO1_update(void) {
-  RADIO_UpdateMultiwatch(&gRadioState);
-  RADIO_CheckAndSaveVFO(&gRadioState);
+  RADIO_UpdateMultiwatch(gRadioState);
+  RADIO_CheckAndSaveVFO(gRadioState);
 
   if (!gSettings.mWatch && Now() - lastSqCheck >= SQL_DELAY) {
-    RADIO_UpdateSquelch(&gRadioState);
+    RADIO_UpdateSquelch(gRadioState);
     lastSqCheck = Now();
   }
 
@@ -64,7 +64,7 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
     return true;
   }
 
-  uint8_t vfoN = RADIO_GetCurrentVFONumber(&gRadioState);
+  uint8_t vfoN = RADIO_GetCurrentVFONumber(gRadioState);
 
   if (state == KEY_RELEASED && vfo->mode == MODE_CHANNEL) {
     if (!gIsNumNavInput && key <= KEY_9) {
@@ -122,15 +122,15 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
       }
       return false;
     case KEY_3:
-      RADIO_SaveCurrentVFO(&gRadioState);
-      RADIO_ToggleVFOMode(&gRadioState, vfoN);
+      RADIO_SaveCurrentVFO(gRadioState);
+      RADIO_ToggleVFOMode(gRadioState, vfoN);
       // VFO1_init();
       return true;
     case KEY_4:
       gShowAllRSSI = !gShowAllRSSI;
       return true;
     case KEY_5:
-      RADIO_ToggleMultiwatch(&gRadioState, !gRadioState.multiwatch_enabled);
+      RADIO_ToggleMultiwatch(gRadioState, !gRadioState->multiwatch_enabled);
       return true;
     case KEY_6:
       RADIO_IncDecParam(ctx, PARAM_POWER, true, true);
@@ -173,8 +173,8 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
       APPS_key(key, state);
       return true;
     case KEY_F:
-      RADIO_SaveVFOToStorage(&gRadioState,
-                             RADIO_GetCurrentVFONumber(&gRadioState), &gChEd);
+      RADIO_SaveVFOToStorage(gRadioState,
+                             RADIO_GetCurrentVFONumber(gRadioState), &gChEd);
       gChNum = -1;
       APPS_run(APP_CH_CFG);
       return true;
@@ -193,9 +193,9 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
         return true;
       }
       if (!APPS_exit()) {
-        RADIO_SaveCurrentVFO(&gRadioState);
-        RADIO_SwitchVFO(&gRadioState,
-                        IncDecU(vfoN, 0, gRadioState.num_vfos, true));
+        RADIO_SaveCurrentVFO(gRadioState);
+        RADIO_SwitchVFO(gRadioState,
+                        IncDecU(vfoN, 0, gRadioState->num_vfos, true));
       }
       return true;
     default:
@@ -219,11 +219,11 @@ static void renderTxRxState(uint8_t y, bool isTx) {
 }
 
 static void renderChannelName(uint8_t y, uint16_t channel) {
-  uint8_t vfoN = RADIO_GetCurrentVFONumber(&gRadioState);
+  uint8_t vfoN = RADIO_GetCurrentVFONumber(gRadioState);
   FillRect(0, y - 14, 30, 7, C_FILL);
   PrintSmallEx(15, y - 9, POS_C, C_INVERT, "VFO %u/%u", vfoN + 1,
-               gRadioState.num_vfos);
-  if (gRadioState.vfos[vfoN].mode == MODE_CHANNEL) {
+               gRadioState->num_vfos);
+  if (gRadioState->vfos[vfoN].mode == MODE_CHANNEL) {
     PrintSmallEx(32, y - 9, POS_L, C_FILL, "MR %03u", channel);
     UI_Scanlists(LCD_WIDTH - 25, y - 13, gSettings.currentScanlist);
   }
@@ -239,7 +239,7 @@ int32_t afc_to_deviation_hz(uint16_t reg_6d) {
 void VFO1_render(void) {
   const uint8_t BASE = 40;
 
-  uint8_t vfoN = RADIO_GetCurrentVFONumber(&gRadioState);
+  uint8_t vfoN = RADIO_GetCurrentVFONumber(gRadioState);
 
   if (gIsNumNavInput) {
     STATUSLINE_SetText("Select: %s", gNumNavInput);

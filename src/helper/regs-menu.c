@@ -19,12 +19,12 @@ static Menu regsMenu = {
 static void initMenu();
 
 static void getValS(const MenuItem *item, char *buf, uint8_t buf_size) {
-  VFOContext *ctx = &RADIO_GetCurrentVFO(&gRadioState)->context;
+  VFOContext *ctx = &RADIO_GetCurrentVFO(gRadioState)->context;
   snprintf(buf, buf_size, "%s", RADIO_GetParamValueString(ctx, item->setting));
 }
 
 static void updateVal(const MenuItem *item, bool up) {
-  VFOContext *ctx = &RADIO_GetCurrentVFO(&gRadioState)->context;
+  VFOContext *ctx = &RADIO_GetCurrentVFO(gRadioState)->context;
   RADIO_IncDecParam(ctx, item->setting, up, true);
   if (item->setting == PARAM_RADIO) {
     initMenu();
@@ -73,7 +73,7 @@ static const uint8_t radioParamCount[] = {
 };
 
 static void initMenu() {
-  VFOContext *ctx = &RADIO_GetCurrentVFO(&gRadioState)->context;
+  VFOContext *ctx = &RADIO_GetCurrentVFO(gRadioState)->context;
   regsMenu.num_items = radioParamCount[ctx->radio_type];
   for (uint8_t i = 0; i < regsMenu.num_items; ++i) {
     ParamType p = radioParams[ctx->radio_type][i];

@@ -95,7 +95,7 @@ static void NextFrequency() {
   vfo->msm.f += step;
   if (vfo->is_open) {
     vfo->is_open = false;
-    RADIO_SwitchAudioToVFO(&gRadioState, gRadioState.active_vfo_index);
+    RADIO_SwitchAudioToVFO(gRadioState, gRadioState->active_vfo_index);
   }
 
   if (vfo->msm.f > gCurrentBand.txF) {
@@ -230,8 +230,8 @@ void SCAN_Check(bool isAnalyserMode) {
     lastFreqChangeTime = Now();
   }
 
-  RADIO_UpdateMultiwatch(&gRadioState);
-  RADIO_CheckAndSaveVFO(&gRadioState);
+  RADIO_UpdateMultiwatch(gRadioState);
+  RADIO_CheckAndSaveVFO(gRadioState);
 
   if (isAnalyserMode) {
     HandleAnalyserMode();
@@ -239,7 +239,7 @@ void SCAN_Check(bool isAnalyserMode) {
   }
 
   if (vfo->msm.open) {
-    RADIO_UpdateSquelch(&gRadioState);
+    RADIO_UpdateSquelch(gRadioState);
     vfo->msm.open = vfo->is_open;
     gRedrawScreen = true;
   } else {
@@ -250,7 +250,7 @@ void SCAN_Check(bool isAnalyserMode) {
     scan.thinking = true;
     scan.wasThinkingEarlier = true;
     SYS_DelayMs(SQL_DELAY);
-    RADIO_UpdateSquelch(&gRadioState);
+    RADIO_UpdateSquelch(gRadioState);
     vfo->msm.open = vfo->is_open;
     scan.thinking = false;
     // gRedrawScreen = true;

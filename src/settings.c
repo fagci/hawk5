@@ -257,7 +257,7 @@ void SETTINGS_SetValue(Setting s, uint32_t v) {
     break;
   case SETTING_MULTIWATCH:
     gSettings.mWatch = v;
-    RADIO_ToggleMultiwatch(&gRadioState, gSettings.mWatch);
+    RADIO_ToggleMultiwatch(gRadioState, gSettings.mWatch);
     break;
   case SETTING_PTT_LOCK:
     gSettings.pttLock = v;

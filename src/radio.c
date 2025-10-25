@@ -29,7 +29,7 @@
 bool gShowAllRSSI = false;
 bool gMonitorMode = false;
 
-RadioState gRadioState;
+RadioState *gRadioState;
 ExtendedVFOContext *vfo;
 VFOContext *ctx;
 
@@ -215,16 +215,17 @@ static const FreqBand si4732_bands[] = {
 static bool RADIO_HasSi() { return BK1080_ReadRegister(1) != 0x1080; }
 
 static uint32_t getRealTxFreq(const VFOContext *ctx) {
-  if (ctx->tx_state.offsetDirection == OFFSET_NONE) {
-    return ctx->frequency;
-  }
-  if (ctx->tx_state.offsetDirection == OFFSET_PLUS) {
+  switch (ctx->tx_state.offsetDirection) {
+  case OFFSET_PLUS:
     return ctx->frequency + ctx->tx_state.frequency;
-  }
-  if (ctx->tx_state.offsetDirection == OFFSET_MINUS) {
+  case OFFSET_MINUS:
     return ctx->frequency - ctx->tx_state.frequency;
+  case OFFSET_FREQ:
+    return ctx->tx_state.frequency;
+  default:
+    break;
   }
-  return ctx->tx_state.frequency;
+  return ctx->frequency;
 }
 
 static void enableCxCSS(VFOContext *ctx) {
@@ -593,7 +594,7 @@ uint8_t RADIO_GetGlitch(const VFOContext *ctx) {
 }
 
 static void updateContext() {
-  vfo = RADIO_GetCurrentVFO(&gRadioState);
+  vfo = RADIO_GetCurrentVFO(gRadioState);
   ctx = &vfo->context;
 }
 
@@ -865,6 +866,7 @@ bool RADIO_AdjustParam(VFOContext *ctx, ParamType param, uint32_t inc,
     mi = band->min_freq;
     ma = band->max_freq;
     break;
+  case PARAM_TX_OFFSET:
   case PARAM_TX_FREQUENCY:
     mi = band->min_freq;
     ma = band->max_freq;
@@ -1190,6 +1192,20 @@ bool RADIO_SwitchVFO(RadioState *state, uint8_t vfo_index) {
   return true;
 }
 
+static void setCommonParamsFromCh(VFOContext *ctx, const VFO *storage) {
+  RADIO_SetParam(ctx, PARAM_BANDWIDTH, storage->bw, false);
+  RADIO_SetParam(ctx, PARAM_FREQUENCY, storage->rxF, false);
+  RADIO_SetParam(ctx, PARAM_GAIN, storage->gainIndex, false);
+  RADIO_SetParam(ctx, PARAM_MODULATION, storage->modulation, false);
+  RADIO_SetParam(ctx, PARAM_POWER, storage->power, false);
+  RADIO_SetParam(ctx, PARAM_RADIO, storage->radio, false);
+  RADIO_SetParam(ctx, PARAM_SQUELCH_TYPE, storage->squelch.type, false);
+  RADIO_SetParam(ctx, PARAM_SQUELCH_VALUE, storage->squelch.value, false);
+  RADIO_SetParam(ctx, PARAM_STEP, storage->step, false);
+  RADIO_SetParam(ctx, PARAM_TX_FREQUENCY, storage->txF, false);
+  RADIO_SetParam(ctx, PARAM_TX_OFFSET_DIR, storage->offsetDir, false);
+}
+
 // Load VFO settings from EEPROM storage
 void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
                               const VFO *storage) {
@@ -1202,15 +1218,7 @@ void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
   VFOContext *ctx = &vfo->context;
 
   // Set basic parameters
-  RADIO_SetParam(ctx, PARAM_RADIO, storage->radio, false);
-  RADIO_SetParam(ctx, PARAM_BANDWIDTH, storage->bw, false);
-  RADIO_SetParam(ctx, PARAM_FREQUENCY, storage->rxF, false);
-  RADIO_SetParam(ctx, PARAM_GAIN, storage->gainIndex, false);
-  RADIO_SetParam(ctx, PARAM_MODULATION, storage->modulation, false);
-  RADIO_SetParam(ctx, PARAM_POWER, storage->power, false);
-  RADIO_SetParam(ctx, PARAM_SQUELCH_TYPE, storage->squelch.type, false);
-  RADIO_SetParam(ctx, PARAM_SQUELCH_VALUE, storage->squelch.value, false);
-  RADIO_SetParam(ctx, PARAM_STEP, storage->step, false);
+  setCommonParamsFromCh(ctx, storage);
 
   RADIO_SetParam(ctx, PARAM_MIC, gSettings.mic, false);
   RADIO_SetParam(ctx, PARAM_DEV, gSettings.deviation * 10, false);
@@ -1221,6 +1229,9 @@ void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
 
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
   RADIO_SetParam(ctx, PARAM_VOLUME, 100, false);
+
+  RADIO_SetParam(ctx, PARAM_TX_OFFSET, storage->txF, false);
+  RADIO_SetParam(ctx, PARAM_TX_OFFSET_DIR, storage->offsetDir, false);
 
   vfo->context.code = storage->code.rx;
   vfo->context.tx_state.code = storage->code.tx;
@@ -1268,6 +1279,8 @@ void RADIO_SaveVFOToStorage(const RadioState *state, uint8_t vfo_index,
 
   storage->code.rx = ctx->code;
   storage->code.tx = ctx->tx_state.code;
+
+  storage->offsetDir = ctx->tx_state.offsetDirection;
 }
 
 bool RADIO_SaveCurrentVFO(RadioState *state) {
@@ -1301,15 +1314,8 @@ void RADIO_LoadChannelToVFO(RadioState *state, uint8_t vfo_index,
   vfo->channel_index = channel_index;
 
   // Set parameters from channel
-  RADIO_SetParam(ctx, PARAM_RADIO, channel.radio, false);
-  RADIO_SetParam(ctx, PARAM_BANDWIDTH, channel.bw, false);
-  RADIO_SetParam(ctx, PARAM_FREQUENCY, channel.rxF, false);
-  RADIO_SetParam(ctx, PARAM_GAIN, channel.gainIndex, false);
-  RADIO_SetParam(ctx, PARAM_MODULATION, channel.modulation, false);
-  RADIO_SetParam(ctx, PARAM_POWER, channel.power, false);
-  RADIO_SetParam(ctx, PARAM_SQUELCH_TYPE, channel.squelch.type, false);
-  RADIO_SetParam(ctx, PARAM_SQUELCH_VALUE, channel.squelch.value, false);
-  RADIO_SetParam(ctx, PARAM_STEP, channel.step, false);
+
+  setCommonParamsFromCh(ctx, &channel);
 
   RADIO_SetParam(ctx, PARAM_XTAL, XTAL_2_26M, false);
   RADIO_SetParam(ctx, PARAM_AFC, 8, false);
@@ -1448,7 +1454,7 @@ void RADIO_UpdateMultiwatch(RadioState *state) {
     break;
 
   case RADIO_SCAN_STATE_SWITCHING:
-    // RADIO_CheckAndSaveVFO(&gRadioState);
+    // RADIO_CheckAndSaveVFO(gRadioState);
     // Ищем следующий VFO для сканирования (пропускаем активный и вещательные)
     do {
       current_scan_vfo = (current_scan_vfo + 1) % state->num_vfos;

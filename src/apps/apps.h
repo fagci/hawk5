@@ -35,7 +35,7 @@ typedef struct App {
   bool (*key)(KEY_Code_t Key, Key_State_t state);
   void (*deinit)(void);
   bool needsRadioState;
-  RadioState radioState;
+  // RadioState radioState;
 } App;
 
 extern const App apps[APPS_COUNT];

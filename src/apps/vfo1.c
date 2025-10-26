@@ -21,6 +21,14 @@
 
 static char String[16];
 
+static void updateBand() {
+  uint32_t f = RADIO_GetParam(ctx, PARAM_FREQUENCY);
+  if (!BANDS_InRange(f, gCurrentBand) ||
+      gCurrentBand.meta.type == TYPE_BAND_DETACHED) {
+    BANDS_SelectByFrequency(f, ctx->fixed_bounds);
+  }
+}
+
 static void setChannel(uint16_t v) {
   RADIO_LoadChannelToVFO(gRadioState, RADIO_GetCurrentVFONumber(gRadioState),
                          v);
@@ -29,6 +37,7 @@ static void setChannel(uint16_t v) {
 static void tuneTo(uint32_t f, uint32_t _) {
   RADIO_SetParam(ctx, PARAM_FREQUENCY, f, true);
   RADIO_ApplySettings(ctx);
+  updateBand();
 }
 
 void VFO1_init(void) {
@@ -37,6 +46,7 @@ void VFO1_init(void) {
   if (vfo->mode == MODE_CHANNEL) {
     setChannel(vfo->channel_index);
   }
+  updateBand();
 }
 
 static uint32_t lastRender;
@@ -93,6 +103,7 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
       } else {
         RADIO_IncDecParam(ctx, PARAM_FREQUENCY, key == KEY_UP, true);
       }
+      updateBand();
       return true;
     case KEY_SIDE1:
     case KEY_SIDE2:
@@ -124,6 +135,7 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
     case KEY_3:
       RADIO_SaveCurrentVFO(gRadioState);
       RADIO_ToggleVFOMode(gRadioState, vfoN);
+      updateBand();
       // VFO1_init();
       return true;
     case KEY_4:
@@ -196,6 +208,7 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
         RADIO_SaveCurrentVFO(gRadioState);
         RADIO_SwitchVFO(gRadioState,
                         IncDecU(vfoN, 0, gRadioState->num_vfos, true));
+        updateBand();
       }
       return true;
     default:

@@ -120,6 +120,9 @@ static void saveLootToCh(const Loot *loot, int16_t chnum, uint16_t scanlist) {
 }
 
 static void saveToFreeChannels(bool saveWhitelist, uint16_t scanlist) {
+  FillRect(0, LCD_YCENTER - 4, LCD_WIDTH, 9, C_FILL);
+  PrintMediumBoldEx(LCD_XCENTER, LCD_YCENTER + 3, POS_C, C_INVERT, "Saving...");
+  ST7565_Blit();
   uint32_t saved = 0;
   for (uint16_t i = 0; i < LOOT_Size(); ++i) {
     uint16_t chnum = CHANNELS_GetCountMax();

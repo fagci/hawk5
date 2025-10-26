@@ -715,9 +715,6 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
 
   case PARAM_FREQUENCY:
     ctx->frequency = value;
-    if (!BANDS_InRange(value, gCurrentBand)) {
-      BANDS_SelectByFrequency(value, ctx->fixed_bounds);
-    }
     break;
   case PARAM_MODULATION:
     ctx->modulation = (ModulationType)value;
@@ -1203,6 +1200,25 @@ static void setCommonParamsFromCh(VFOContext *ctx, const VFO *storage) {
   RADIO_SetParam(ctx, PARAM_TX_FREQUENCY, storage->txF, false);
   RADIO_SetParam(ctx, PARAM_TX_OFFSET, storage->txF, false);
   RADIO_SetParam(ctx, PARAM_TX_OFFSET_DIR, storage->offsetDir, false);
+
+  strncpy(ctx->name, storage->name, 9);
+
+  ctx->code = storage->code.rx;
+  ctx->tx_state.code = storage->code.tx;
+
+  // Initialize TX state
+  ctx->tx_state.is_active = false;
+  ctx->tx_state.last_error = TX_UNKNOWN;
+
+  RADIO_SetParam(ctx, PARAM_MIC, gSettings.mic, false);
+  RADIO_SetParam(ctx, PARAM_DEV, gSettings.deviation * 10, false);
+  RADIO_SetParam(ctx, PARAM_XTAL, XTAL_2_26M, false);
+  RADIO_SetParam(ctx, PARAM_AFC, 8, false);
+  RADIO_SetParam(ctx, PARAM_AFC_SPD, 63, false);
+  RADIO_SetParam(ctx, PARAM_FILTER, FILTER_AUTO, false);
+
+  RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
+  RADIO_SetParam(ctx, PARAM_VOLUME, 100, false);
 }
 
 // Load VFO settings from EEPROM storage
@@ -1218,23 +1234,6 @@ void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
 
   // Set basic parameters
   setCommonParamsFromCh(ctx, storage);
-
-  RADIO_SetParam(ctx, PARAM_MIC, gSettings.mic, false);
-  RADIO_SetParam(ctx, PARAM_DEV, gSettings.deviation * 10, false);
-  RADIO_SetParam(ctx, PARAM_XTAL, XTAL_2_26M, false);
-  RADIO_SetParam(ctx, PARAM_AFC, 8, false);
-  RADIO_SetParam(ctx, PARAM_AFC_SPD, 63, false);
-  RADIO_SetParam(ctx, PARAM_FILTER, FILTER_AUTO, false);
-
-  RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
-  RADIO_SetParam(ctx, PARAM_VOLUME, 100, false);
-
-  vfo->context.code = storage->code.rx;
-  vfo->context.tx_state.code = storage->code.tx;
-
-  // Initialize TX state
-  vfo->context.tx_state.is_active = false;
-  vfo->context.tx_state.last_error = TX_UNKNOWN;
 
   // Handle channel mode
   if (vfo->mode == MODE_CHANNEL) {
@@ -1307,28 +1306,7 @@ void RADIO_LoadChannelToVFO(RadioState *state, uint8_t vfo_index,
   vfo->mode = MODE_CHANNEL;
   vfo->channel_index = channel_index;
 
-  // Set parameters from channel
-
   setCommonParamsFromCh(ctx, &channel);
-
-  RADIO_SetParam(ctx, PARAM_XTAL, XTAL_2_26M, false);
-  RADIO_SetParam(ctx, PARAM_AFC, 8, false);
-  RADIO_SetParam(ctx, PARAM_AFC_SPD, 63, false);
-  RADIO_SetParam(ctx, PARAM_FILTER, FILTER_AUTO, false);
-
-  RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
-  RADIO_SetParam(ctx, PARAM_VOLUME, 100, false);
-
-  ctx->code = channel.code.rx;
-  ctx->tx_state.code = channel.code.tx;
-
-  strncpy(ctx->name, channel.name, 9);
-
-  // Initialize TX state
-  vfo->context.tx_state.is_active = false;
-  vfo->context.tx_state.last_error = TX_UNKNOWN;
-
-  // RADIO_ApplySettings(&vfo->context);
 }
 
 /**

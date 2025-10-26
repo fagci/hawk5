@@ -185,6 +185,8 @@ bool SCANER_key(KEY_Code_t key, Key_State_t state) {
     case KEY_PTT:
       if (gLastActiveLoot && !gSettings.keylock) {
         RADIO_SetParam(ctx, PARAM_FREQUENCY, gLastActiveLoot->f, true);
+        RADIO_ApplySettings(ctx);
+        RADIO_SaveCurrentVFO(gRadioState);
         APPS_run(APP_VFO1);
         return true;
       }

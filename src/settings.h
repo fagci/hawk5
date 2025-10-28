@@ -49,6 +49,7 @@ typedef enum {
   SETTING_TONELOCAL,
   SETTING_FCTIME,
   SETTING_MULTIWATCH,
+  SETTING_FREQ_CORRECTION,
 
   SETTING_COUNT,
 } Setting;
@@ -166,7 +167,7 @@ typedef struct {
   bool si4732PowerOff : 1;
   uint8_t mWatch : 2;
 
-  uint8_t reserved6;
+  uint8_t freqCorrection;
 
   BacklightOnSquelchMode backlightOnSquelch : 2;
   bool toneLocal : 1;

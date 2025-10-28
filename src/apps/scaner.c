@@ -97,6 +97,13 @@ bool SCANER_key(KEY_Code_t key, Key_State_t state) {
       gChListFilter = TYPE_FILTER_BAND;
       APPS_run(APP_CH_LIST);
       return true;
+    case KEY_PTT:
+      if (gSettings.keylock) {
+        LOOT_WhitelistLast();
+        SCAN_Next(true);
+        return true;
+      }
+      break;
     default:
       break;
     }
@@ -188,6 +195,11 @@ bool SCANER_key(KEY_Code_t key, Key_State_t state) {
         RADIO_ApplySettings(ctx);
         RADIO_SaveCurrentVFO(gRadioState);
         APPS_run(APP_VFO1);
+        return true;
+      }
+      if (gSettings.keylock) {
+        LOOT_BlacklistLast();
+        SCAN_Next(true);
         return true;
       }
       break;

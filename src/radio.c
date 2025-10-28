@@ -900,7 +900,7 @@ bool RADIO_AdjustParam(VFOContext *ctx, ParamType param, uint32_t inc,
     ma = 64;
     break;
   case PARAM_DEV:
-    ma = 1451;
+    ma = 2550;
     break;
   case PARAM_MIC:
     ma = 16;
@@ -937,6 +937,9 @@ bool RADIO_IncDecParam(VFOContext *ctx, ParamType param, bool inc,
   uint32_t v = 1;
   if (param == PARAM_FREQUENCY) {
     v = StepFrequencyTable[ctx->step];
+  }
+  if (param == PARAM_DEV) {
+    v = 10;
   }
   return RADIO_AdjustParam(ctx, param, inc ? v : -v, save_to_eeprom);
 }

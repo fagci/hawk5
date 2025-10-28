@@ -130,6 +130,8 @@ uint32_t SETTINGS_GetValue(Setting s) {
   switch (s) {
   case SETTING_FCTIME:
     return gSettings.fcTime;
+  case SETTING_FREQ_CORRECTION:
+    return gSettings.freqCorrection;
   case SETTING_EEPROMTYPE:
     return gSettings.eepromType;
   case SETTING_BATSAVE:
@@ -220,6 +222,9 @@ void SETTINGS_SetValue(Setting s, uint32_t v) {
   switch (s) {
   case SETTING_FCTIME:
     gSettings.fcTime = v;
+    break;
+  case SETTING_FREQ_CORRECTION:
+    gSettings.freqCorrection = v;
     break;
   case SETTING_EEPROMTYPE:
     gSettings.eepromType = v;
@@ -424,6 +429,9 @@ const char *SETTINGS_GetValueString(Setting s) {
   case SETTING_CONTRAST:
     sprintf(buf, "%d", v - 8);
     break;
+  case SETTING_FREQ_CORRECTION:
+    sprintf(buf, "%+dHz", (v - 127) * 10);
+    break;
 
   case SETTING_MIC:
   case SETTING_COUNT:
@@ -514,6 +522,9 @@ void SETTINGS_IncDecValue(Setting s, bool inc) {
     break;
   case SETTING_FCTIME:
     ma = ARRAY_SIZE(FC_TIME_NAMES);
+    break;
+  case SETTING_FREQ_CORRECTION:
+    ma = 256;
     break;
 
   case SETTING_BATTERYCALIBRATION:

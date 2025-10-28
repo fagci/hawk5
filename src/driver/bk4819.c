@@ -328,7 +328,7 @@ void BK4819_SetFrequency(uint32_t freq) {
   static uint16_t prev_low = 0;
   static uint16_t prev_high = 0;
 
-  freq += 64;
+  freq += (gSettings.freqCorrection - 127);
 
   uint16_t low = freq & 0xFFFF;
   uint16_t high = (freq >> 16) & 0xFFFF;

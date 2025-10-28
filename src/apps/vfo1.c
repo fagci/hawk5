@@ -60,6 +60,8 @@ void VFO1_update(void) {
 
   if (!gSettings.mWatch && Now() - lastSqCheck >= SQL_DELAY) {
     RADIO_UpdateSquelch(gRadioState);
+    SP_ShiftGraph(-1);
+    SP_AddGraphPoint(&vfo->msm);
     lastSqCheck = Now();
   }
 
@@ -339,6 +341,7 @@ void VFO1_render(void) {
           [GRAPH_NOISE] = "Noise",         //
           [GRAPH_GLITCH] = "Glitch",       //
           [GRAPH_SNR] = "SNR",             //
+          [GRAPH_POW] = "POW?",            //
       };
       switch (graphMeasurement) {
       case GRAPH_RSSI:
@@ -347,6 +350,7 @@ void VFO1_render(void) {
         break;
       case GRAPH_NOISE:
       case GRAPH_GLITCH:
+      case GRAPH_POW:
         SP_RenderGraph(0, 256);
         break;
       case GRAPH_SNR:

@@ -60,6 +60,7 @@ static const MenuItem displayMenuItems[] = {
     {"BL time", SETTING_BACKLIGHT, getValS, updateValS},
     {"BL SQL mode", SETTING_BACKLIGHTONSQUELCH, getValS, updateValS},
     {"CH display", SETTING_CHDISPLAYMODE, getValS, updateValS},
+    {"Level in VFO", SETTING_SHOWLEVELINVFO, getValS, updateValS},
 };
 
 static Menu displayMenu = {"Display", displayMenuItems,

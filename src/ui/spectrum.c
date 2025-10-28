@@ -199,9 +199,9 @@ void SP_Render(const Band *p, VMinMax v) {
   }
 
   // Очистка и базовые линии (грид для красоты)
-  FillRect(0, SPECTRUM_Y, MAX_POINTS, SPECTRUM_H, C_CLEAR);  // Полная очистка для свежести
-  DrawHLine(0, S_BOTTOM, MAX_POINTS, C_FILL);  // Нижняя линия
-  
+  FillRect(0, SPECTRUM_Y, MAX_POINTS, SPECTRUM_H,
+           C_CLEAR); // Полная очистка для свежести
+  DrawHLine(0, S_BOTTOM, MAX_POINTS, C_FILL); // Нижняя линия
 
   // Адаптивное сглаживание (только если шаг широкий)
   bool smooth = (step > ((range->txF - range->rxF) / (MAX_POINTS - 1)) * 2);
@@ -212,11 +212,24 @@ void SP_Render(const Band *p, VMinMax v) {
       if (i == 0 || i == filledPoints - 1) {
         values[i] = rssiHistory[i];
       } else {
-        uint16_t vals[3] = {rssiHistory[i-1], rssiHistory[i], rssiHistory[i+1]};
+        uint16_t vals[3] = {rssiHistory[i - 1], rssiHistory[i],
+                            rssiHistory[i + 1]};
         // Простая сортировка для median
-        if (vals[0] > vals[1]) { uint16_t t = vals[0]; vals[0] = vals[1]; vals[1] = t; }
-        if (vals[1] > vals[2]) { uint16_t t = vals[1]; vals[1] = vals[2]; vals[2] = t; }
-        if (vals[0] > vals[1]) { uint16_t t = vals[0]; vals[0] = vals[1]; vals[1] = t; }
+        if (vals[0] > vals[1]) {
+          uint16_t t = vals[0];
+          vals[0] = vals[1];
+          vals[1] = t;
+        }
+        if (vals[1] > vals[2]) {
+          uint16_t t = vals[1];
+          vals[1] = vals[2];
+          vals[2] = t;
+        }
+        if (vals[0] > vals[1]) {
+          uint16_t t = vals[0];
+          vals[0] = vals[1];
+          vals[1] = t;
+        }
         values[i] = vals[1];
       }
     }
@@ -296,6 +309,9 @@ void SP_AddGraphPoint(const Measurement *msm) {
   switch (graphMeasurement) {
   case GRAPH_PEAK_RSSI:
     v = msm->lnaPeakRssi;
+    break;
+  case GRAPH_POW:
+    v = msm->pow;
     break;
   /* case GRAPH_REL_RSSI:
     v = msm->rssiRel;

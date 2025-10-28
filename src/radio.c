@@ -1389,6 +1389,7 @@ static void RADIO_UpdateMeasurement(ExtendedVFOContext *vfo) {
   vfo->msm.snr = RADIO_GetSNR(ctx);
   vfo->msm.noise = BK4819_GetNoise();
   vfo->msm.glitch = BK4819_GetGlitch();
+  vfo->msm.pow = BK4819_GetSignalPower();
   vfo->msm.open = RADIO_CheckSquelch(ctx);
   if (!gMonitorMode) {
     LOOT_Update(&vfo->msm);

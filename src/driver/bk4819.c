@@ -984,6 +984,10 @@ uint8_t BK4819_GetAfTxRx(void) {
   return BK4819_ReadRegister(BK4819_REG_6F) & 0x3F;
 }
 
+uint8_t BK4819_GetSignalPower(void) {
+  return (BK4819_ReadRegister(0x7E) >> 6) & 0b111111;
+}
+
 uint8_t BK4819_GetSNR(void) { return BK4819_ReadRegister(0x61) & 0xFF; }
 
 uint16_t BK4819_GetVoiceAmplitude(void) { return BK4819_ReadRegister(0x64); }

@@ -51,6 +51,12 @@ typedef struct {
   Key_State_t state;
 } SystemMessages;
 
+typedef struct {
+  KEY_Code_t key;
+  Key_State_t state;
+  void (*action)(KEY_Code_t);
+} KeyBinding;
+
 void KEYBOARD_Poll(void);
 void KEYBOARD_CheckKeys();
 SystemMessages KEYBOARD_GetKey();

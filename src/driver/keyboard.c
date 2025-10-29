@@ -7,10 +7,10 @@
 
 static SystemMessages n;
 
-static const uint32_t LONG_PRESS_TIME = 500;
-static const uint32_t LONG_PRESS_REPEAT_TIME = 100;
-static const uint32_t ROWS = 5;
-static const uint32_t COLS = 4;
+#define LONG_PRESS_TIME 500
+#define LONG_PRESS_REPEAT_TIME 100
+#define KEYBOARD_ROWS 5
+#define KEYBOARD_COLS 4
 
 static bool mKeyPtt;
 static KEY_Code_t mKeyPressed = KEY_INVALID;
@@ -26,20 +26,19 @@ static uint32_t mPttLongPressRepeatTimer;
 typedef const struct {
   uint16_t setToZeroMask;
   struct {
-    uint8_t key : 5; // Key 23 is highest
-    uint8_t pin : 3; // Pin 6 is highest
+    uint8_t key : 5;
+    uint8_t pin : 3;
   } pins[4];
 } Keyboard;
 
 static Keyboard keyboard[5] = {
     /* Zero row  */
-    {// Set to zero to handle special case of nothing pulled down.
+    {
      .setToZeroMask = 0xffff,
      .pins =
          {
              {.key = KEY_SIDE1, .pin = GPIOA_PIN_KEYBOARD_0},
              {.key = KEY_SIDE2, .pin = GPIOA_PIN_KEYBOARD_1},
-             /* Duplicate to fill the array with valid values */
              {.key = KEY_SIDE2, .pin = GPIOA_PIN_KEYBOARD_1},
              {.key = KEY_SIDE2, .pin = GPIOA_PIN_KEYBOARD_1},
          }},
@@ -81,31 +80,16 @@ static Keyboard keyboard[5] = {
          }},
 };
 
-/* static void HandlePttKey() {
-  mKeyPtt = !GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT);
-
-  if (mPrevStatePtt == KEY_PRESSED && !mKeyPtt) {
-    SYS_MsgKey(KEY_PTT, KEY_RELEASED);
-    mPrevStatePtt = KEY_RELEASED;
-  } else if (mPrevStatePtt == KEY_RELEASED && mKeyPtt) {
-    SYS_MsgKey(KEY_PTT, KEY_PRESSED);
-    mPrevStatePtt = KEY_PRESSED;
-  }
-} */
-
-static void HandlePttKey() {
+static void HandlePttKey(void) {
   uint32_t currentTick = Now();
   mKeyPtt = !GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT);
 
   if (mKeyPtt) {
-    // PTT нажата
     if (mPrevStatePtt == KEY_RELEASED) {
-      // Первое нажатие
       SYS_MsgKey(KEY_PTT, KEY_PRESSED);
       mPrevStatePtt = KEY_PRESSED;
       mPttLongPressTimer = currentTick;
     } else if (mPrevStatePtt == KEY_PRESSED) {
-      // Проверяем длительность нажатия
       uint32_t elapsedTime = currentTick - mPttLongPressTimer;
       if (elapsedTime >= LONG_PRESS_TIME) {
         SYS_MsgKey(KEY_PTT, KEY_LONG_PRESSED);
@@ -115,7 +99,6 @@ static void HandlePttKey() {
       }
     } else if (mPrevStatePtt == KEY_LONG_PRESSED ||
                mPrevStatePtt == KEY_LONG_PRESSED_CONT) {
-      // Повторяющиеся события длинного нажатия
       uint32_t elapsedTime = currentTick - mPttLongPressRepeatTimer;
       if (elapsedTime >= LONG_PRESS_REPEAT_TIME) {
         mPttLongPressRepeatTimer = currentTick;
@@ -124,9 +107,7 @@ static void HandlePttKey() {
       }
     }
   } else {
-    // PTT отпущена
     if (mPrevStatePtt != KEY_RELEASED) {
-      // Отправляем событие отпускания только если это было короткое нажатие
       if (mPrevStatePtt == KEY_PRESSED) {
         SYS_MsgKey(KEY_PTT, KEY_RELEASED);
       }
@@ -147,7 +128,7 @@ static void ResetKeyboardRow(uint8_t row) {
   GPIOA->DATA &= keyboard[row].setToZeroMask;
 }
 
-static uint16_t ReadStableGpioData() {
+static uint16_t ReadStableGpioData(void) {
   uint16_t reg, reg2;
   uint8_t ii;
 
@@ -162,17 +143,17 @@ static uint16_t ReadStableGpioData() {
   return reg;
 }
 
-static void ResetKeyboardPins() {
+static void ResetKeyboardPins(void) {
   GPIOA->DATA = (GPIOA->DATA & ~(1u << GPIOA_PIN_KEYBOARD_6)) |
                 (1u << GPIOA_PIN_KEYBOARD_7);
 }
 
-static uint8_t ScanKeyboardMatrix() {
-  for (uint8_t i = 0; i < ROWS; i++) {
+static uint8_t ScanKeyboardMatrix(void) {
+  for (uint8_t i = 0; i < KEYBOARD_ROWS; i++) {
     ResetKeyboardRow(i);
     uint16_t reg = ReadStableGpioData();
 
-    for (uint8_t j = 0; j < COLS; j++) {
+    for (uint8_t j = 0; j < KEYBOARD_COLS; j++) {
       const uint16_t mask = 1u << keyboard[i].pins[j].pin;
       if (!(reg & mask)) {
         return keyboard[i].pins[j].key;
@@ -194,7 +175,7 @@ void SYS_MsgKey(KEY_Code_t key, Key_State_t state) {
   n.state = state;
 }
 
-void KEYBOARD_CheckKeys() {
+void KEYBOARD_CheckKeys(void) {
   uint32_t currentTick = Now();
 
   if (mKeyPressed != KEY_INVALID) {
@@ -207,15 +188,17 @@ void KEYBOARD_CheckKeys() {
     } else if (mPrevKeyState == KEY_PRESSED) {
       uint32_t elapsedTime = currentTick - mLongPressTimer;
       if (elapsedTime >= LONG_PRESS_TIME) {
+        SYS_MsgKey(mKeyPressed, KEY_LONG_PRESSED);
         mLongPressTimer = 0;
         mPrevKeyState = KEY_LONG_PRESSED;
+        mLongPressRepeatTimer = currentTick;
       }
     } else if (mPrevKeyState == KEY_LONG_PRESSED ||
                mPrevKeyState == KEY_LONG_PRESSED_CONT) {
       uint32_t elapsedTime = currentTick - mLongPressRepeatTimer;
       if (elapsedTime >= LONG_PRESS_REPEAT_TIME) {
         mLongPressRepeatTimer = currentTick;
-        SYS_MsgKey(mKeyPressed, mPrevKeyState);
+        SYS_MsgKey(mKeyPressed, KEY_LONG_PRESSED_CONT);
         mPrevKeyState = KEY_LONG_PRESSED_CONT;
       }
     }
@@ -238,7 +221,7 @@ void KEYBOARD_CheckKeys() {
   }
 }
 
-SystemMessages KEYBOARD_GetKey() {
+SystemMessages KEYBOARD_GetKey(void) {
   n.message = MSG_NONE;
   KEYBOARD_Poll();
   KEYBOARD_CheckKeys();

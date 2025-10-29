@@ -5,7 +5,7 @@ static const uint32_t TICK_MULTIPLIER = 48;
 
 void SYSTICK_Init(void) { SysTick_Config(48000); }
 
-void SYSTICK_DelayTicks(const uint32_t ticks) {
+/* void SYSTICK_DelayTicks(const uint32_t ticks) {
   uint32_t elapsed_ticks = 0;
   uint32_t Start = SysTick->LOAD;
   uint32_t Previous = SysTick->VAL;
@@ -15,6 +15,28 @@ void SYSTICK_DelayTicks(const uint32_t ticks) {
     if (Current != Previous) {
       uint32_t Delta = (Current < Previous) ? (Previous - Current)
                                             : (Start - Current + Previous);
+
+      elapsed_ticks += Delta;
+      Previous = Current;
+    }
+  } while (elapsed_ticks < ticks);
+} */
+
+void SYSTICK_DelayTicks(const uint32_t ticks) {
+  uint32_t elapsed_ticks = 0;
+  uint32_t Start = SysTick->LOAD;
+  uint32_t Previous = SysTick->VAL;
+
+  do {
+    uint32_t Current = SysTick->VAL;
+    if (Current != Previous) {
+      uint32_t Delta;
+      if (Current < Previous) {
+        Delta = Previous - Current;
+      } else {
+        // Произошло переполнение
+        Delta = (Start + 1) - Current + Previous;
+      }
 
       elapsed_ticks += Delta;
       Previous = Current;

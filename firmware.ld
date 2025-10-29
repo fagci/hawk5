@@ -1,79 +1,157 @@
+/* Entry Point */
 ENTRY(HandlerReset)
 
+/* Highest address of the user mode stack */
 _estack = 0x20004000;    /* end of 16K RAM */
 
+/* Generate a link error if heap and stack don't fit into RAM */
 _Min_Heap_Size = 0;      /* required amount of heap  */
-_Min_Stack_Size = 0x80;  /* required amount of stack */
+_Min_Stack_Size = 0x100; /* required amount of stack (256 bytes min recommended) */
 
+/* Specify the memory areas */
 MEMORY
 {
-	FLASH (rx)      : ORIGIN = 0x00000000, LENGTH = 60K
-	RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 16K
+    FLASH (rx)      : ORIGIN = 0x00000000, LENGTH = 60K
+    RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 16K
 }
 
+/* Define output sections */
 SECTIONS
 {
-	/* Program code */
-	.text :
-	{
-		. = ALIGN(4);
-		KEEP(*(.text.isr)) /* .text sections of code  */
-		*(.text)           /* .text sections of code  */
-		*(.text*)          /* .text* sections of code */
-		*(.rodata)         /* .rodata sections        */
-		*(.rodata*)        /* .rodata* sections       */
-		*(.glue_7)         /* Glue arm to thumb code  */
-		*(.glue_7t)        /* Glue thumb to arm code  */
-		*(.eh_frame)
+    /* The startup code goes first into FLASH */
+    .isr_vector :
+    {
+        . = ALIGN(4);
+        KEEP(*(.isr_vector)) /* Startup code and vector table */
+        . = ALIGN(4);
+    } >FLASH
 
-		KEEP(*(.fini))
-		. = ALIGN(4);
-		_etext = .;        /* global symbols at end   */
-	} >FLASH
+    /* The program code and other data goes into FLASH */
+    .text :
+    {
+        . = ALIGN(4);
+        KEEP(*(.text.isr))     /* ISR handlers */
+        *(.text)               /* .text sections (code) */
+        *(.text*)              /* .text* sections (code) */
+        
+        . = ALIGN(4);
+        *(.rodata)             /* .rodata sections (constants) */
+        *(.rodata*)            /* .rodata* sections (constants) */
+        
+        *(.glue_7)             /* glue arm to thumb code */
+        *(.glue_7t)            /* glue thumb to arm code */
+        
+        KEEP(*(.init))         /* Initialization functions */
+        KEEP(*(.fini))         /* Finalization functions */
+        
+        . = ALIGN(4);
+        _etext = .;            /* define a global symbol at end of code */
+    } >FLASH
 
-	/* Used by startup code */
+    /* Constant data goes into FLASH */
+    .rodata :
+    {
+        . = ALIGN(4);
+        *(.rodata)
+        *(.rodata*)
+        . = ALIGN(4);
+    } >FLASH
 
-	. = ALIGN(4);
+    .ARM.extab :
+    {
+        *(.ARM.extab* .gnu.linkonce.armextab.*)
+    } >FLASH
+    
+    .ARM :
+    {
+        __exidx_start = .;
+        *(.ARM.exidx*)
+        __exidx_end = .;
+    } >FLASH
 
-	flash_data_start = .;
+    .preinit_array :
+    {
+        PROVIDE_HIDDEN (__preinit_array_start = .);
+        KEEP (*(.preinit_array*))
+        PROVIDE_HIDDEN (__preinit_array_end = .);
+    } >FLASH
+    
+    .init_array :
+    {
+        PROVIDE_HIDDEN (__init_array_start = .);
+        KEEP (*(SORT(.init_array.*)))
+        KEEP (*(.init_array*))
+        PROVIDE_HIDDEN (__init_array_end = .);
+    } >FLASH
+    
+    .fini_array :
+    {
+        PROVIDE_HIDDEN (__fini_array_start = .);
+        KEEP (*(SORT(.fini_array.*)))
+        KEEP (*(.fini_array*))
+        PROVIDE_HIDDEN (__fini_array_end = .);
+    } >FLASH
 
-	.data :
-	{
-		. = ALIGN(4);
-		sram_data_start = .;
-		*(.sramtext)
-		*(.srambss)
-		*(.data)           /* .data sections              */
-		*(.data*)          /* .data* sections             */
+    /* used by the startup to initialize data */
+    _sidata = LOADADDR(.data);
 
-		. = ALIGN(4);
-		_edata = .;        /* Global symbol at data end   */
-	} >RAM AT> FLASH
+    /* Initialized data sections goes into RAM, load LMA copy after code */
+    .data :
+    {
+        . = ALIGN(4);
+        _sdata = .;            /* create a global symbol at data start */
+        sram_data_start = .;
+        
+        *(.sramtext)           /* Code in RAM */
+        *(.data)               /* .data sections */
+        *(.data*)              /* .data* sections */
 
-	sram_data_end = .;
+        . = ALIGN(4);
+        _edata = .;            /* define a global symbol at data end */
+        sram_data_end = .;
+    } >RAM AT> FLASH
 
-	/* Uninitialized data */
-	. = ALIGN(4);
-	.bss :
-	{
-		_sbss = .;         /* Global symbol at bss start */
-		__bss_start__ = _sbss;
-		*(.bss)
-		*(.bss*)
-		*(COMMON)
+    /* Uninitialized data section */
+    . = ALIGN(4);
+    .bss :
+    {
+        /* This is used by the startup in order to initialize the .bss section */
+        _sbss = .;             /* define a global symbol at bss start */
+        __bss_start__ = _sbss;
+        
+        *(.srambss)
+        *(.bss)
+        *(.bss*)
+        *(COMMON)
 
-		. = ALIGN(4);
-		_ebss = .;         /* Global symbol at bss end */
-		__bss_end__ = _ebss;
-	} >RAM
+        . = ALIGN(4);
+        _ebss = .;             /* define a global symbol at bss end */
+        __bss_end__ = _ebss;
+    } >RAM
 
-	/* Check that there is enough RAM */
-	._user_heap_stack :
-	{
-		. = ALIGN(4);
-		. = . + _Min_Heap_Size;
-		. = . + _Min_Stack_Size;
-		. = ALIGN(4);
-	} >RAM
+    /* User_heap_stack section, used to check that there is enough RAM left */
+    ._user_heap_stack :
+    {
+        . = ALIGN(8);
+        PROVIDE ( end = . );
+        PROVIDE ( _end = . );
+        . = . + _Min_Heap_Size;
+        . = . + _Min_Stack_Size;
+        . = ALIGN(8);
+    } >RAM
+
+    /* Remove information from the standard libraries */
+    /DISCARD/ :
+    {
+        libc.a ( * )
+        libm.a ( * )
+        libgcc.a ( * )
+    }
+
+    .ARM.attributes 0 : { *(.ARM.attributes) }
 }
 
+/* Memory usage checks */
+ASSERT(_etext < ORIGIN(FLASH) + LENGTH(FLASH), "FLASH overflow: code too large!")
+ASSERT(_ebss < ORIGIN(RAM) + LENGTH(RAM), "RAM overflow: data + bss too large!")
+ASSERT((_ebss + _Min_Heap_Size + _Min_Stack_Size) < (ORIGIN(RAM) + LENGTH(RAM)), "RAM overflow: not enough space for heap and stack!")

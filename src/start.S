@@ -13,238 +13,229 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+	.syntax unified
 	.cpu cortex-m0
 	.fpu softvfp
 	.thumb
 
-	.global Stack
+	@ External symbols
 	.global HandlerReset
-	.global Main
-
-	.global OVERLAY_Install
-	.global BOARD_FLASH_Init
-	.global BSS_Init
-
 	.global SystickHandler
 	.weak SystickHandler
 
-	.section .text.isr
+	@ Symbols from linker script
+	.extern _estack
+	.extern DATA_Init
+	.extern BSS_Init
+	.extern Main
 
-Stack:
-	.long	0x20003FF0
-Reset:
-	.long	HandlerReset + 1
-NMI:
-	.long	HandlerNMI + 1
-HardFault:
-	.long	HandlerHardFault + 1
-Reserved_10:
-	.long	0
-Reserved_14:
-	.long	0
-Reserved_18:
-	.long	0
-Reserved_1C:
-	.long	0
-Reserved_20:
-	.long	0
-Reserved_24:
-	.long	0
-Reserved_28:
-	.long	0
-SVCall:
-	.long	HandlerSVCall + 1
-Reserved_30:
-	.long	0
-Reserved_34:
-	.long	0
-PendSV:
-	.long	HandlerPendSV + 1
-SysTick:
-	.long	SystickHandler + 1
-WWDT:
-	.long	HandlerWWDT + 1
-IWDT:
-	.long	HandlerIWDT + 1
-RTC:
-	.long	HandlerRTC + 1
-DMA:
-	.long	HandlerDMA + 1
-SARADC:
-	.long	HandlerSARADC + 1
-TIMER_BASE0:
-	.long	HandlerTIMER_BASE0 + 1
-TIMER_BASE1:
-	.long	HandlerTIMER_BASE1 + 1
-TIMER_PLUS0:
-	.long	HandlerTIMER_PLUS0 + 1
-TIMER_PLUS1:
-	.long	HandlerTIMER_PLUS1 + 1
-PWM_BASE0:
-	.long	HandlerPWM_BASE0 + 1
-PWM_BASE1:
-	.long	HandlerPWM_BASE1 + 1
-PWM_PLUS0:
-	.long	HandlerPWM_PLUS0 + 1
-PWM_PLUS1:
-	.long	HandlerPWM_PLUS1 + 1
-UART0:
-	.long	HandlerUART0 + 1
-UART1:
-	.long	HandlerUART1 + 1
-UART2:
-	.long	HandlerUART2 + 1
-SPI0:
-	.long	HandlerSPI0 + 1
-SPI1:
-	.long	HandlerSPI1 + 1
-IIC0:
-	.long	HandlerIIC0 + 1
-IIC1:
-	.long	HandlerIIC1 + 1
-CMP:
-	.long	HandlerCMP + 1
-TIMER_BASE2:
-	.long	HandlerTIMER_BASE2 + 1
-GPIOA5:
-	.long	HandlerGPIOA5 + 1
-GPIOA6:
-	.long	HandlerGPIOA6 + 1
-GPIOA7:
-	.long	HandlerGPIOA7 + 1
-GPIOB0:
-	.long	HandlerGPIOB0 + 1
-GPIOB1:
-	.long	HandlerGPIOB1 + 1
-GPIOC0:
-	.long	HandlerGPIOC0 + 1
-GPIOC1:
-	.long	HandlerGPIOC1 + 1
-GPIOA:
-	.long	HandlerGPIOA + 1
-GPIOB:
-	.long	HandlerGPIOB + 1
-GPIOC:
-	.long	HandlerGPIOC + 1
+@ ==============================================================================
+@ Vector Table
+@ ==============================================================================
+	.section .isr_vector, "a", %progbits
+	.type g_pfnVectors, %object
+	.size g_pfnVectors, .-g_pfnVectors
 
-	.section .text
+g_pfnVectors:
+	.word	_estack                    @ Initial Stack Pointer
+	.word	HandlerReset               @ Reset Handler
+	.word	HandlerNMI                 @ NMI Handler
+	.word	HandlerHardFault           @ Hard Fault Handler
+	.word	0                          @ Reserved
+	.word	0                          @ Reserved
+	.word	0                          @ Reserved
+	.word	0                          @ Reserved
+	.word	0                          @ Reserved
+	.word	0                          @ Reserved
+	.word	0                          @ Reserved
+	.word	HandlerSVCall              @ SVCall Handler
+	.word	0                          @ Reserved
+	.word	0                          @ Reserved
+	.word	HandlerPendSV              @ PendSV Handler
+	.word	SystickHandler             @ SysTick Handler
+	
+	@ External Interrupts
+	.word	HandlerWWDT                @ WWDT
+	.word	HandlerIWDT                @ IWDT
+	.word	HandlerRTC                 @ RTC
+	.word	HandlerDMA                 @ DMA
+	.word	HandlerSARADC              @ SARADC
+	.word	HandlerTIMER_BASE0         @ TIMER_BASE0
+	.word	HandlerTIMER_BASE1         @ TIMER_BASE1
+	.word	HandlerTIMER_PLUS0         @ TIMER_PLUS0
+	.word	HandlerTIMER_PLUS1         @ TIMER_PLUS1
+	.word	HandlerPWM_BASE0           @ PWM_BASE0
+	.word	HandlerPWM_BASE1           @ PWM_BASE1
+	.word	HandlerPWM_PLUS0           @ PWM_PLUS0
+	.word	HandlerPWM_PLUS1           @ PWM_PLUS1
+	.word	HandlerUART0               @ UART0
+	.word	HandlerUART1               @ UART1
+	.word	HandlerUART2               @ UART2
+	.word	HandlerSPI0                @ SPI0
+	.word	HandlerSPI1                @ SPI1
+	.word	HandlerIIC0                @ IIC0
+	.word	HandlerIIC1                @ IIC1
+	.word	HandlerCMP                 @ CMP
+	.word	HandlerTIMER_BASE2         @ TIMER_BASE2
+	.word	HandlerGPIOA5              @ GPIOA5
+	.word	HandlerGPIOA6              @ GPIOA6
+	.word	HandlerGPIOA7              @ GPIOA7
+	.word	HandlerGPIOB0              @ GPIOB0
+	.word	HandlerGPIOB1              @ GPIOB1
+	.word	HandlerGPIOC0              @ GPIOC0
+	.word	HandlerGPIOC1              @ GPIOC1
+	.word	HandlerGPIOA               @ GPIOA
+	.word	HandlerGPIOB               @ GPIOB
+	.word	HandlerGPIOC               @ GPIOC
 
-HandlerNMI:
-	b	.
-
-HandlerHardFault:
-	b	.
-
-HandlerSVCall:
-	b	.
-
-HandlerPendSV:
-	b	.
-
-SystickHandler:
-	bx	lr
-
-HandlerWWDT:
-	b	.
-
-HandlerIWDT:
-	b	.
-
-HandlerRTC:
-	b	.
-
-HandlerDMA:
-	b	.
-
-HandlerSARADC:
-	b	.
-
-HandlerTIMER_BASE0:
-	b	.
-
-HandlerTIMER_BASE1:
-	b	.
-
-HandlerTIMER_PLUS0:
-	b	.
-
-HandlerTIMER_PLUS1:
-	b	.
-
-HandlerPWM_BASE0:
-	b	.
-
-HandlerPWM_BASE1:
-	b	.
-
-HandlerPWM_PLUS0:
-	b	.
-
-HandlerPWM_PLUS1:
-	b	.
-
-HandlerUART0:
-	b	.
-
-HandlerUART1:
-	b	.
-
-HandlerUART2:
-	b	.
-
-HandlerSPI0:
-	b	.
-
-HandlerSPI1:
-	b	.
-
-HandlerIIC0:
-	b	.
-
-HandlerIIC1:
-	b	.
-
-HandlerCMP:
-	b	.
-
-HandlerTIMER_BASE2:
-	b	.
-
-HandlerGPIOA5:
-	b	.
-
-HandlerGPIOA6:
-	b	.
-
-HandlerGPIOA7:
-	b	.
-
-HandlerGPIOB0:
-	b	.
-
-HandlerGPIOB1:
-	b	.
-
-HandlerGPIOC0:
-	b	.
-
-HandlerGPIOC1:
-	b	.
-
-HandlerGPIOA:
-	b	.
-
-HandlerGPIOB:
-	b	.
-
-HandlerGPIOC:
-	b	.
-
+@ ==============================================================================
+@ Reset Handler
+@ ==============================================================================
+	.section .text.HandlerReset
+	.type HandlerReset, %function
 HandlerReset:
-	ldr	r0, =0x20003FF0
+	@ Initialize stack pointer from linker script
+	ldr	r0, =_estack
 	mov	sp, r0
-	bl	DATA_Init
-	bl	BSS_Init
-	bl	Main
-	b 	.
 
+    cpsid	i
+
+	@ Copy .data section from FLASH to RAM
+	bl	DATA_Init
+
+	@ Zero .bss section
+	bl	BSS_Init
+
+    cpsie	i
+
+	@ Call main application
+	bl	Main
+
+	@ Infinite loop if Main returns
+_Reset_Loop:
+    wfi
+	b	_Reset_Loop
+	.size HandlerReset, .-HandlerReset
+
+@ ==============================================================================
+@ Default Interrupt Handlers
+@ ==============================================================================
+	.section .text.Default_Handler, "ax", %progbits
+Default_Handler:
+	b	Default_Handler
+	.size Default_Handler, .-Default_Handler
+
+@ ==============================================================================
+@ Weak aliases for interrupt handlers
+@ All handlers default to Default_Handler unless overridden
+@ ==============================================================================
+	.weak	HandlerNMI
+	.thumb_set HandlerNMI, Default_Handler
+
+	.weak	HandlerHardFault
+	.thumb_set HandlerHardFault, Default_Handler
+
+	.weak	HandlerSVCall
+	.thumb_set HandlerSVCall, Default_Handler
+
+	.weak	HandlerPendSV
+	.thumb_set HandlerPendSV, Default_Handler
+
+	.weak	SystickHandler
+	.thumb_set SystickHandler, Default_Handler
+
+	.weak	HandlerWWDT
+	.thumb_set HandlerWWDT, Default_Handler
+
+	.weak	HandlerIWDT
+	.thumb_set HandlerIWDT, Default_Handler
+
+	.weak	HandlerRTC
+	.thumb_set HandlerRTC, Default_Handler
+
+	.weak	HandlerDMA
+	.thumb_set HandlerDMA, Default_Handler
+
+	.weak	HandlerSARADC
+	.thumb_set HandlerSARADC, Default_Handler
+
+	.weak	HandlerTIMER_BASE0
+	.thumb_set HandlerTIMER_BASE0, Default_Handler
+
+	.weak	HandlerTIMER_BASE1
+	.thumb_set HandlerTIMER_BASE1, Default_Handler
+
+	.weak	HandlerTIMER_PLUS0
+	.thumb_set HandlerTIMER_PLUS0, Default_Handler
+
+	.weak	HandlerTIMER_PLUS1
+	.thumb_set HandlerTIMER_PLUS1, Default_Handler
+
+	.weak	HandlerPWM_BASE0
+	.thumb_set HandlerPWM_BASE0, Default_Handler
+
+	.weak	HandlerPWM_BASE1
+	.thumb_set HandlerPWM_BASE1, Default_Handler
+
+	.weak	HandlerPWM_PLUS0
+	.thumb_set HandlerPWM_PLUS0, Default_Handler
+
+	.weak	HandlerPWM_PLUS1
+	.thumb_set HandlerPWM_PLUS1, Default_Handler
+
+	.weak	HandlerUART0
+	.thumb_set HandlerUART0, Default_Handler
+
+	.weak	HandlerUART1
+	.thumb_set HandlerUART1, Default_Handler
+
+	.weak	HandlerUART2
+	.thumb_set HandlerUART2, Default_Handler
+
+	.weak	HandlerSPI0
+	.thumb_set HandlerSPI0, Default_Handler
+
+	.weak	HandlerSPI1
+	.thumb_set HandlerSPI1, Default_Handler
+
+	.weak	HandlerIIC0
+	.thumb_set HandlerIIC0, Default_Handler
+
+	.weak	HandlerIIC1
+	.thumb_set HandlerIIC1, Default_Handler
+
+	.weak	HandlerCMP
+	.thumb_set HandlerCMP, Default_Handler
+
+	.weak	HandlerTIMER_BASE2
+	.thumb_set HandlerTIMER_BASE2, Default_Handler
+
+	.weak	HandlerGPIOA5
+	.thumb_set HandlerGPIOA5, Default_Handler
+
+	.weak	HandlerGPIOA6
+	.thumb_set HandlerGPIOA6, Default_Handler
+
+	.weak	HandlerGPIOA7
+	.thumb_set HandlerGPIOA7, Default_Handler
+
+	.weak	HandlerGPIOB0
+	.thumb_set HandlerGPIOB0, Default_Handler
+
+	.weak	HandlerGPIOB1
+	.thumb_set HandlerGPIOB1, Default_Handler
+
+	.weak	HandlerGPIOC0
+	.thumb_set HandlerGPIOC0, Default_Handler
+
+	.weak	HandlerGPIOC1
+	.thumb_set HandlerGPIOC1, Default_Handler
+
+	.weak	HandlerGPIOA
+	.thumb_set HandlerGPIOA, Default_Handler
+
+	.weak	HandlerGPIOB
+	.thumb_set HandlerGPIOB, Default_Handler
+
+	.weak	HandlerGPIOC
+	.thumb_set HandlerGPIOC, Default_Handler

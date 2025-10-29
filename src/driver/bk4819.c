@@ -992,12 +992,6 @@ uint8_t BK4819_GetSNR(void) { return BK4819_ReadRegister(0x61) & 0xFF; }
 
 uint16_t BK4819_GetVoiceAmplitude(void) { return BK4819_ReadRegister(0x64); }
 
-void BK4819_ResetRSSI(void) {
-  uint16_t reg = BK4819_ReadRegister(BK4819_REG_30);
-  BK4819_WriteRegister(BK4819_REG_30, reg & ~1);
-  BK4819_WriteRegister(BK4819_REG_30, reg | 1);
-}
-
 // ============================================================================
 // Frequency Scanning
 // ============================================================================

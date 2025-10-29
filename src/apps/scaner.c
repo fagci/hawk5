@@ -73,12 +73,17 @@ void SCANER_update(void) {
   }
 }
 
+static bool pttWasLongPressed = false;
 bool SCANER_key(KEY_Code_t key, Key_State_t state) {
   if (state == KEY_RELEASED && REGSMENU_Key(key, state)) {
     return true;
   }
 
   uint32_t step = StepFrequencyTable[RADIO_GetParam(ctx, PARAM_STEP)];
+
+  if (state == KEY_PRESSED && key == KEY_PTT) {
+    pttWasLongPressed = false;
+  }
 
   if (state == KEY_LONG_PRESSED) {
     Band _b;
@@ -98,6 +103,7 @@ bool SCANER_key(KEY_Code_t key, Key_State_t state) {
       APPS_run(APP_CH_LIST);
       return true;
     case KEY_PTT:
+      pttWasLongPressed = true;
       if (gSettings.keylock) {
         LOOT_WhitelistLast();
         SCAN_Next(true);
@@ -197,7 +203,8 @@ bool SCANER_key(KEY_Code_t key, Key_State_t state) {
         APPS_run(APP_VFO1);
         return true;
       }
-      if (gSettings.keylock) {
+      if (gSettings.keylock && !pttWasLongPressed) {
+        pttWasLongPressed = false;
         LOOT_BlacklistLast();
         SCAN_Next(true);
         return true;

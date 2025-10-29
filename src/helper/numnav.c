@@ -1,4 +1,5 @@
 #include "numnav.h"
+#include "../driver/uart.h"
 #include <stddef.h>
 #include <string.h>
 

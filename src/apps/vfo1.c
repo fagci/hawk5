@@ -90,7 +90,7 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
   }
 
   if (key == KEY_PTT && !gIsNumNavInput) {
-    RADIO_ToggleTX(ctx, state == KEY_PRESSED);
+    RADIO_ToggleTX(ctx, state != KEY_RELEASED);
     return true;
   }
 

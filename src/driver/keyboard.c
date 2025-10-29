@@ -20,6 +20,9 @@ static Key_State_t mPrevKeyState;
 static uint32_t mLongPressTimer;
 static uint32_t mLongPressRepeatTimer;
 
+static uint32_t mPttLongPressTimer;
+static uint32_t mPttLongPressRepeatTimer;
+
 typedef const struct {
   uint16_t setToZeroMask;
   struct {
@@ -78,7 +81,7 @@ static Keyboard keyboard[5] = {
          }},
 };
 
-static void HandlePttKey() {
+/* static void HandlePttKey() {
   mKeyPtt = !GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT);
 
   if (mPrevStatePtt == KEY_PRESSED && !mKeyPtt) {
@@ -87,6 +90,54 @@ static void HandlePttKey() {
   } else if (mPrevStatePtt == KEY_RELEASED && mKeyPtt) {
     SYS_MsgKey(KEY_PTT, KEY_PRESSED);
     mPrevStatePtt = KEY_PRESSED;
+  }
+} */
+
+static void HandlePttKey() {
+  uint32_t currentTick = Now();
+  mKeyPtt = !GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT);
+
+  if (mKeyPtt) {
+    // PTT нажата
+    if (mPrevStatePtt == KEY_RELEASED) {
+      // Первое нажатие
+      SYS_MsgKey(KEY_PTT, KEY_PRESSED);
+      mPrevStatePtt = KEY_PRESSED;
+      mPttLongPressTimer = currentTick;
+    } else if (mPrevStatePtt == KEY_PRESSED) {
+      // Проверяем длительность нажатия
+      uint32_t elapsedTime = currentTick - mPttLongPressTimer;
+      if (elapsedTime >= LONG_PRESS_TIME) {
+        SYS_MsgKey(KEY_PTT, KEY_LONG_PRESSED);
+        mPttLongPressTimer = 0;
+        mPrevStatePtt = KEY_LONG_PRESSED;
+        mPttLongPressRepeatTimer = currentTick;
+      }
+    } else if (mPrevStatePtt == KEY_LONG_PRESSED ||
+               mPrevStatePtt == KEY_LONG_PRESSED_CONT) {
+      // Повторяющиеся события длинного нажатия
+      uint32_t elapsedTime = currentTick - mPttLongPressRepeatTimer;
+      if (elapsedTime >= LONG_PRESS_REPEAT_TIME) {
+        mPttLongPressRepeatTimer = currentTick;
+        SYS_MsgKey(KEY_PTT, KEY_LONG_PRESSED_CONT);
+        mPrevStatePtt = KEY_LONG_PRESSED_CONT;
+      }
+    }
+  } else {
+    // PTT отпущена
+    if (mPrevStatePtt != KEY_RELEASED) {
+      // Отправляем событие отпускания только если это было короткое нажатие
+      if (mPrevStatePtt == KEY_PRESSED) {
+        SYS_MsgKey(KEY_PTT, KEY_RELEASED);
+      }
+      if (mPrevStatePtt == KEY_LONG_PRESSED ||
+          mPrevStatePtt == KEY_LONG_PRESSED_CONT) {
+        SYS_MsgKey(KEY_PTT, KEY_RELEASED);
+      }
+
+      mPttLongPressTimer = 0;
+      mPrevStatePtt = KEY_RELEASED;
+    }
   }
 }
 

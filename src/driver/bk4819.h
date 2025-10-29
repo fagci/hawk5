@@ -214,7 +214,6 @@ void BK4819_SetTone2Frequency(uint16_t f);
 void BK4819_SetModulation(ModulationType type);
 ModulationType BK4819_GetModulation();
 bool BK4819_IsSquelchOpen();
-void BK4819_ResetRSSI();
 
 XtalMode BK4819_XtalGet();
 void BK4819_XtalSet(XtalMode mode);

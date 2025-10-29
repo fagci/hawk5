@@ -86,10 +86,14 @@ static void loadSettingsOrReset() {
 }
 
 static bool checkKeylock(Key_State_t state, KEY_Code_t key) {
-  if (state == KEY_LONG_PRESSED && key == KEY_F) {
+  bool isKeyLocked = gSettings.keylock;
+  bool isPttLocked = gSettings.pttLock;
+  bool isSpecialKey = key == KEY_PTT || key == KEY_SIDE1 || key == KEY_SIDE2;
+  bool isLongPressF = state == KEY_LONG_PRESSED && key == KEY_F;
+
+  if (isLongPressF) {
     gSettings.keylock = !gSettings.keylock;
     SETTINGS_Save();
-    gRedrawScreen = true;
     return true;
   }
 
@@ -98,15 +102,7 @@ static bool checkKeylock(Key_State_t state, KEY_Code_t key) {
     return true;
   } */
 
-  if (gSettings.keylock &&
-      (gSettings.pttLock
-           ? true
-           : (key != KEY_PTT && key != KEY_SIDE1 && key != KEY_SIDE2)) &&
-      !(state == KEY_LONG_PRESSED && key == KEY_F)) {
-    return true;
-  }
-
-  return false;
+  return isKeyLocked && (isPttLocked || !isSpecialKey) && !isLongPressF;
 }
 
 static void processKeyboard() {
@@ -116,6 +112,7 @@ static void processKeyboard() {
     BACKLIGHT_On();
 
     if (checkKeylock(n.state, n.key)) {
+      gRedrawScreen = true;
       return;
     }
 

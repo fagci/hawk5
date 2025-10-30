@@ -88,12 +88,12 @@ static void spi_write_byte(uint8_t data) {
 
   for (uint8_t i = 0; i < 8; i++) {
     gpio_set_sda(data & 0x80);
-    // SYSTICK_Delay250ns(1);
+    SYSTICK_Delay250ns(1);
     gpio_set_scl(true);
-    // SYSTICK_Delay250ns(1);
+    SYSTICK_Delay250ns(1);
     data <<= 1;
     gpio_set_scl(false);
-    // SYSTICK_Delay250ns(1);
+    SYSTICK_Delay250ns(1);
   }
 }
 

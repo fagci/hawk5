@@ -70,7 +70,7 @@ static uint16_t MeasureSignal(uint32_t frequency, bool precise) {
   RADIO_SetParam(ctx, PARAM_FREQUENCY, frequency, false);
   RADIO_ApplySettings(ctx);
   if (precise) {
-    SYSTICK_DelayUs(scan.scanDelayUs);
+    TIMER_DelayUs(scan.scanDelayUs);
   }
   return RADIO_GetRSSI(ctx);
 }
@@ -249,7 +249,7 @@ void SCAN_Check(bool isAnalyserMode) {
   if (vfo->msm.open && !vfo->is_open) {
     scan.thinking = true;
     scan.wasThinkingEarlier = true;
-    SYS_DelayMs(SQL_DELAY);
+    TIMER_DelayUs(SQL_DELAY * 1000);
     RADIO_UpdateSquelch(gRadioState);
     vfo->msm.open = vfo->is_open;
     scan.thinking = false;

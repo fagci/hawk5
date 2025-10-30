@@ -31,4 +31,6 @@ void SYS_ConfigureSysCon() {
                         SYSCON_DEV_CLK_GATE_CRC_BITS_ENABLE |
                         // SYSCON_DEV_CLK_GATE_AES_BITS_ENABLE |
                         SYSCON_DEV_CLK_GATE_PWM_PLUS0_BITS_ENABLE;
+  // timer
+  SYSCON_DEV_CLK_GATE |= SYSCON_DEV_CLK_GATE_TIMER_BASE0_BITS_ENABLE;
 }

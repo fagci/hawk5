@@ -1,5 +1,7 @@
 #include "systick.h"
 #include "../external/CMSIS_5/Device/ARM/ARMCM0/Include/ARMCM0.h"
+#include "../inc/dp32g030/timer.h"
+#include <stdbool.h>
 
 static const uint32_t TICK_MULTIPLIER = 48;
 
@@ -50,4 +52,40 @@ void SYSTICK_DelayUs(const uint32_t Delay) {
 
 void SYSTICK_Delay250ns(const uint32_t Delay) {
   SYSTICK_DelayTicks(Delay * TICK_MULTIPLIER / 4);
+}
+
+volatile bool delay_complete = false;
+
+void TIM0_INIT() {
+  TIMERBASE0_DIV = 4800; // Делитель тактовой частоты таймера
+  TIMERBASE0_LOW_LOAD =
+      10000; // Количество тактов для задержки (пример 1 секунда)
+  NVIC_SetPriority(Interrupt5_IRQn,
+                   0); // Приоритет прерывания (Interrupt5_IRQn — это номер
+                       // прерывания для TIMER_BASE0)
+
+  TIMERBASE0_IF |= 0x01; // Сбросить флаг прерывания
+  TIMERBASE0_IE |= 0x01; // Включить прерывания таймера
+  TIMERBASE0_EN |= 0x01; // Запустить таймер
+  NVIC_EnableIRQ(Interrupt5_IRQn); // Включить прерывания в NVIC
+}
+
+volatile uint32_t TIM0_CNT = 0;        // Счетчик прерываний
+
+void HandlerTIMER_BASE0(void) {
+  TIM0_CNT++; // Можно использовать для подсчёта тиков
+  TIMERBASE0_IF |=
+      0x01; // Сбросить флаг прерывания (важно для повторной работы таймера)
+}
+
+void timer_delay_ticks(uint32_t delay_in_ticks) {
+  TIM0_CNT = 0;
+  TIMERBASE0_LOW_LOAD = delay_in_ticks;
+  TIMERBASE0_EN |= 0x01; // Запустить таймер
+
+  while (TIM0_CNT == 0) {
+    __WFI(); // Ожидание прерывания (экономия энергии)
+  }
+
+  TIMERBASE0_EN &= ~0x01; // Остановить таймер
 }

@@ -10,6 +10,7 @@ void Main(void) {
 
   SYS_ConfigureSysCon();
   SYS_ConfigureClocks();
+  TIM0_INIT();
 
   BOARD_GPIO_Init();
   BOARD_PORTCON_Init();

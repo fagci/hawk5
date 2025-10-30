@@ -60,17 +60,17 @@ void TIM0_INIT() {
   TIMERBASE0_DIV = 4800; // Делитель тактовой частоты таймера
   TIMERBASE0_LOW_LOAD =
       10000; // Количество тактов для задержки (пример 1 секунда)
+
+  TIMERBASE0_IF = 0x01; // Сбросить флаг прерывания
+  TIMERBASE0_IE = 0x01; // Включить прерывания таймера
+  TIMERBASE0_EN = 0x01; // Запустить таймер
   NVIC_SetPriority(Interrupt5_IRQn,
                    0); // Приоритет прерывания (Interrupt5_IRQn — это номер
                        // прерывания для TIMER_BASE0)
-
-  TIMERBASE0_IF |= 0x01; // Сбросить флаг прерывания
-  TIMERBASE0_IE |= 0x01; // Включить прерывания таймера
-  TIMERBASE0_EN |= 0x01; // Запустить таймер
   NVIC_EnableIRQ(Interrupt5_IRQn); // Включить прерывания в NVIC
 }
 
-volatile uint32_t TIM0_CNT = 0;        // Счетчик прерываний
+volatile uint32_t TIM0_CNT = 0; // Счетчик прерываний
 
 void HandlerTIMER_BASE0(void) {
   TIM0_CNT++; // Можно использовать для подсчёта тиков
@@ -78,7 +78,7 @@ void HandlerTIMER_BASE0(void) {
       0x01; // Сбросить флаг прерывания (важно для повторной работы таймера)
 }
 
-void timer_delay_ticks(uint32_t delay_in_ticks) {
+void TIMER_DelayTicks(uint32_t delay_in_ticks) {
   TIM0_CNT = 0;
   TIMERBASE0_LOW_LOAD = delay_in_ticks;
   TIMERBASE0_EN |= 0x01; // Запустить таймер
@@ -88,4 +88,12 @@ void timer_delay_ticks(uint32_t delay_in_ticks) {
   }
 
   TIMERBASE0_EN &= ~0x01; // Остановить таймер
+}
+
+void TIMER_DelayUs(const uint32_t Delay) {
+  TIMER_DelayTicks(Delay * TICK_MULTIPLIER);
+}
+
+void TIMER_Delay250ns(const uint32_t Delay) {
+  TIMER_DelayTicks(Delay * TICK_MULTIPLIER / 4);
 }

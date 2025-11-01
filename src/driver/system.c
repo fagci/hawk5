@@ -3,7 +3,7 @@
 #include "../inc/dp32g030/syscon.h"
 #include "systick.h"
 
-void SYS_DelayMs(uint32_t Delay) { SYSTICK_DelayUs(Delay * 1000); }
+void SYS_DelayMs(uint32_t Delay) { TIMER_DelayUs(Delay * 1000); }
 
 void SYS_ConfigureClocks(void) {
   // Set source clock from external crystal

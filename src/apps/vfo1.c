@@ -55,6 +55,11 @@ static void handleDigitRelease(KEY_Code_t key) {
   }
 }
 
+static void handlePTTPress(KEY_Code_t key) {
+  if (!gIsNumNavInput)
+    RADIO_ToggleTX(ctx, true);
+}
+
 static void handlePTTRelease(KEY_Code_t key) {
   if (!gIsNumNavInput)
     RADIO_ToggleTX(ctx, false);
@@ -161,6 +166,7 @@ static void (*longHandlers[])(KEY_Code_t) = {
 };
 
 static const KeyBinding vfoBindings[] = {
+    {KEY_PTT, KEY_PRESSED, handlePTTRelease},
     {KEY_PTT, KEY_RELEASED, handlePTTRelease},
     {KEY_UP, KEY_PRESSED, handleUpDown},
     {KEY_DOWN, KEY_PRESSED, handleUpDown},

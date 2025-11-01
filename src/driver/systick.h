@@ -21,8 +21,10 @@
 
 void TIM0_INIT();
 void TIMER_DelayTicks(uint32_t delay_in_ticks);
-void TIMER_DelayUs(const uint32_t Delay);
 void TIMER_Delay250ns(const uint32_t Delay);
+void TIMER_DelayUs(const uint32_t Delay);
+void TIMER_DelayMs(uint32_t delay_ms);
+
 uint32_t TIMER_GetMsSinceBoot(void);
 
 #endif

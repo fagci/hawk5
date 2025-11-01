@@ -3,9 +3,9 @@
 #include "../inc/dp32g030/timer.h"
 #include <stdbool.h>
 
-static const uint32_t TICKS_PER_MS =
-    4000; // 1 ms = 4000 ticks @ 4 MHz timer clock (0.25 us/tick)
-volatile uint32_t ms_since_boot = 0; // Global millisecond counter
+// 1 ms = 4000 ticks @ 4 MHz timer clock (0.25 us/tick)
+static const uint32_t TICKS_PER_MS = 4000;
+volatile uint32_t ms_since_boot = 0;
 // Tick-based delay (hijacks timer; use sparingly)
 volatile bool timer_expired = false;
 
@@ -22,26 +22,14 @@ void TIM0_INIT() {
 }
 
 void HandlerTIMER_BASE0(void) {
-  ms_since_boot++;                    // Increment ms counter
-  TIMERBASE0_IF = 0x01;               // Clear flag
-  TIMERBASE0_LOW_LOAD = TICKS_PER_MS; // Explicit reload for periodic (ensures
-                                      // continuation if no auto-reload)
-  TIMERBASE0_EN = 0x01;               // Re-enable if timer stops on underflow
-  timer_expired = true;               // For one-shot delays
-}
-
-uint32_t TIMER_GetMsSinceBoot(void) {
-  __disable_irq();
-  uint32_t ms = ms_since_boot;
-  __enable_irq();
-  return ms;
-}
-
-// Recommended ms delay: busy-wait using global counter (no timer hijacking)
-void TIMER_DelayMs(uint32_t delay_ms) {
-  uint32_t start_ms = TIMER_GetMsSinceBoot();
-  while (TIMER_GetMsSinceBoot() - start_ms < delay_ms) {
-    __WFI(); // Power-saving wait
+  if (TIMERBASE0_IE & 0x01) { // Если прерывания включены = периодический режим
+    ms_since_boot++;
+    TIMERBASE0_IF = 0x01;
+    TIMERBASE0_LOW_LOAD = TICKS_PER_MS;
+    TIMERBASE0_EN = 0x01;
+  } else {
+    // В режиме polling для TIMER_DelayTicks - не должны сюда попадать
+    TIMERBASE0_IF = 0x01;
   }
 }
 
@@ -71,12 +59,32 @@ void TIMER_DelayTicks(uint32_t delay_in_ticks) {
   TIMERBASE0_EN = 0x01;
 }
 
+void TIMER_Delay250ns(const uint32_t Delay) { TIMER_DelayTicks(Delay); }
+
 void TIMER_DelayUs(const uint32_t Delay) {
   if (Delay < 1000) {
-    TIMER_DelayTicks(Delay * 4); // 0.25us per tick
+    TIMER_DelayTicks(Delay * 4);
   } else {
-    TIMER_DelayMs(Delay / 1000); // Для больших задержек
+    uint32_t ms = Delay / 1000;
+    uint32_t us_remainder = Delay % 1000;
+    TIMER_DelayMs(ms);
+    if (us_remainder > 0) {
+      TIMER_DelayTicks(us_remainder * 4);
+    }
   }
 }
 
-void TIMER_Delay250ns(const uint32_t Delay) { TIMER_DelayTicks(Delay); }
+// Recommended ms delay: busy-wait using global counter (no timer hijacking)
+void TIMER_DelayMs(uint32_t delay_ms) {
+  uint32_t start_ms = TIMER_GetMsSinceBoot();
+  while ((uint32_t)(TIMER_GetMsSinceBoot() - start_ms) < delay_ms) {
+    __WFI(); // Power-saving wait
+  }
+}
+
+uint32_t TIMER_GetMsSinceBoot(void) {
+  __disable_irq();
+  uint32_t ms = ms_since_boot;
+  __enable_irq();
+  return ms;
+}

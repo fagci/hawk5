@@ -21,9 +21,7 @@ void HandlerTIMER_BASE0(void) {
   TIMERBASE0_IF = 0x01;
 }
 
-uint32_t TIMER_GetMsSinceBoot(void) {
-  return ms_counter;
-}
+uint32_t TIMER_GetMsSinceBoot(void) { return ms_counter; }
 
 void TIMER_DelayMs(uint32_t ms) {
   uint32_t start = ms_counter;
@@ -32,15 +30,16 @@ void TIMER_DelayMs(uint32_t ms) {
   }
 }
 
-static void DelayTicks(uint32_t ticks) {
+void TIMER_DelayTicks(uint32_t ticks) {
   TIMERBASE0_IE = 0x00;
   TIMERBASE0_EN = 0x00;
   TIMERBASE0_LOW_LOAD = ticks;
   TIMERBASE0_IF = 0x01;
   TIMERBASE0_EN = 0x01;
-  
-  while (!(TIMERBASE0_IF & 0x01));
-  
+
+  while (!(TIMERBASE0_IF & 0x01))
+    ;
+
   TIMERBASE0_EN = 0x00;
   TIMERBASE0_LOW_LOAD = TICKS_PER_MS;
   TIMERBASE0_IF = 0x01;
@@ -53,12 +52,10 @@ void TIMER_DelayUs(uint32_t us) {
     TIMER_DelayMs(us / 1000);
     us %= 1000;
   }
-  
+
   if (us > 0) {
-    DelayTicks(us * 4);
+    TIMER_DelayTicks(us * 4);
   }
 }
 
-void TIMER_Delay250ns(uint32_t delay) {
-  DelayTicks(delay);
-}
+void TIMER_Delay250ns(uint32_t delay) { TIMER_DelayTicks(delay); }

@@ -172,6 +172,7 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
       LOOT_Clear();
       RADIO_SetParam(ctx, PARAM_FREQUENCY, 0, false);
       RADIO_ApplySettings(ctx);
+      initMenu();
       return true;
     case KEY_SIDE1:
       gMonitorMode = !gMonitorMode;
@@ -185,6 +186,7 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
     case KEY_STAR:
       // TODO: select any of SL
       CHANNELS_LoadBlacklistToLoot();
+      initMenu();
       return true;
     default:
       break;
@@ -263,6 +265,7 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
       break;
     }
   }
+  return false;
 }
 
 static uint32_t lastSqCheck;

@@ -30,7 +30,6 @@ typedef struct {
   uint8_t rssiAgc;
   uint8_t noise;
   uint8_t glitch;
-  uint8_t pow;
   uint8_t snr;
   uint8_t cd;
   uint8_t ct;

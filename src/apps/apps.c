@@ -106,12 +106,12 @@ bool APPS_key(KEY_Code_t Key, Key_State_t state) {
 
 void APPS_init(AppType_t app) {
 
-  STATUSLINE_SetText("%s", apps[gCurrentApp].name);
+  STATUSLINE_SetText("%s", apps[app].name);
   gRedrawScreen = true;
 
   // LogC(LOG_C_YELLOW, "[APP] Init %s", apps[gCurrentApp].name);
-  if (apps[gCurrentApp].init) {
-    apps[gCurrentApp].init();
+  if (apps[app].init) {
+    apps[app].init();
   }
 }
 

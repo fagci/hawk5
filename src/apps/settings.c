@@ -20,10 +20,12 @@ static void updateValS(const MenuItem *item, bool up) {
 }
 
 static void doCalibrate(uint32_t v, uint32_t _) {
+  (void)_;
   SETTINGS_SetValue(SETTING_BATTERYCALIBRATION, BATTERY_GetCal(v * 100));
 }
 
 static bool calibrate(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
+  (void)item;
   if (state == KEY_RELEASED && key == KEY_MENU) {
     gFInputValue1 = BATTERY_GetPreciseVoltage(
                         SETTINGS_GetValue(SETTING_BATTERYCALIBRATION)) /

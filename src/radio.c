@@ -516,6 +516,25 @@ static bool setParamBK4819(VFOContext *ctx, ParamType p) {
     BK4819_SetRegValue(RS_AF_DAC_GAIN,
                        ConvertDomain(ctx->volume, 0, 100, 0, 15));
     return true;
+  case PARAM_RADIO:
+  case PARAM_PRECISE_F_CHANGE:
+  case PARAM_STEP:
+  case PARAM_POWER:
+  case PARAM_TX_OFFSET:
+  case PARAM_TX_OFFSET_DIR:
+  case PARAM_TX_STATE:
+  case PARAM_TX_FREQUENCY:
+  case PARAM_TX_FREQUENCY_FACT:
+  case PARAM_TX_POWER:
+  case PARAM_TX_POWER_AMPLIFIER:
+  case PARAM_RX_CODE:
+  case PARAM_TX_CODE:
+  case PARAM_RSSI:
+  case PARAM_NOISE:
+  case PARAM_GLITCH:
+  case PARAM_SNR:
+  case PARAM_COUNT:
+    break;
   }
   return false;
 }
@@ -539,6 +558,36 @@ static bool setParamSI4732(VFOContext *ctx, ParamType p) {
       SI47XX_SetBandwidth(ctx->bandwidth, true);
     }
     return true;
+  case PARAM_VOLUME:
+    SI47XX_SetVolume(ctx->volume);
+    return true;
+  case PARAM_RADIO:
+  case PARAM_PRECISE_F_CHANGE:
+  case PARAM_STEP:
+  case PARAM_POWER:
+  case PARAM_SQUELCH_TYPE:
+  case PARAM_SQUELCH_VALUE:
+  case PARAM_TX_OFFSET:
+  case PARAM_TX_OFFSET_DIR:
+  case PARAM_TX_STATE:
+  case PARAM_TX_FREQUENCY:
+  case PARAM_TX_FREQUENCY_FACT:
+  case PARAM_TX_POWER:
+  case PARAM_TX_POWER_AMPLIFIER:
+  case PARAM_RX_CODE:
+  case PARAM_TX_CODE:
+  case PARAM_AFC:
+  case PARAM_AFC_SPD:
+  case PARAM_DEV:
+  case PARAM_MIC:
+  case PARAM_XTAL:
+  case PARAM_FILTER:
+  case PARAM_RSSI:
+  case PARAM_NOISE:
+  case PARAM_GLITCH:
+  case PARAM_SNR:
+  case PARAM_COUNT:
+    break;
   }
   return false;
 }
@@ -1024,7 +1073,9 @@ bool RADIO_StartTX(VFOContext *ctx) {
 
   BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, false);
 
-  BK4819_TuneTo(getRealTxFreq(ctx), true);
+  uint32_t txF = getRealTxFreq(ctx);
+  BK4819_SelectFilter(txF);
+  BK4819_TuneTo(txF, true);
 
   BOARD_ToggleRed(gSettings.brightness > 1);
   BK4819_PrepareTransmit();
@@ -1032,7 +1083,7 @@ bool RADIO_StartTX(VFOContext *ctx) {
   SYS_DelayMs(10);
   BK4819_ToggleGpioOut(BK4819_GPIO1_PIN29_PA_ENABLE, ctx->tx_state.pa_enabled);
   SYS_DelayMs(5);
-  BK4819_SetupPowerAmplifier(power, ctx->tx_state.frequency);
+  BK4819_SetupPowerAmplifier(power, txF);
   SYS_DelayMs(10);
 
   enableCxCSS(ctx);
@@ -1060,6 +1111,7 @@ void RADIO_StopTX(VFOContext *ctx) {
   BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, true);
 
   setupToneDetection(ctx);
+  BK4819_SelectFilter(ctx->frequency);
   BK4819_TuneTo(ctx->frequency, true);
 }
 
@@ -1389,7 +1441,6 @@ static void RADIO_UpdateMeasurement(ExtendedVFOContext *vfo) {
   vfo->msm.snr = RADIO_GetSNR(ctx);
   vfo->msm.noise = BK4819_GetNoise();
   vfo->msm.glitch = BK4819_GetGlitch();
-  vfo->msm.pow = BK4819_GetSignalPower();
   vfo->msm.open = RADIO_CheckSquelch(ctx);
   if (!gMonitorMode) {
     LOOT_Update(&vfo->msm);

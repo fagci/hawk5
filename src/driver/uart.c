@@ -140,7 +140,7 @@ typedef struct {
   uint8_t Padding[2];
   bool bAllowPassword;
   uint32_t Timestamp;
-  uint8_t Data[0];
+  uint8_t Data[128];
 } CMD_051D_t;
 
 typedef struct {
@@ -349,6 +349,7 @@ static void CMD_0527(void) {
 }
 
 static void CMD_052D(const uint8_t *pBuffer) {
+  (void)pBuffer;
   REPLY_052D_t Reply;
 
   Reply.Header.ID = 0x052E;
@@ -545,6 +546,9 @@ void LogC(LogColor c, const char *pattern, ...) {
   UART_printf("%+10u \033[%um%s\033[%um\n", Now(), c, text, LOG_C_RESET);
 }
 #else
-void Log(const char *pattern, ...) {}
-void LogC(LogColor c, const char *pattern, ...) {}
+void Log(const char *pattern, ...) { (void)pattern; }
+void LogC(LogColor c, const char *pattern, ...) {
+  (void)c;
+  (void)pattern;
+}
 #endif

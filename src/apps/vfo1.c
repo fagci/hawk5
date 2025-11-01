@@ -35,12 +35,11 @@ static void setChannel(uint16_t v) {
 }
 
 static void tuneTo(uint32_t f, uint32_t _) {
+  (void)_;
   RADIO_SetParam(ctx, PARAM_FREQUENCY, f, true);
   RADIO_ApplySettings(ctx);
   updateBand();
 }
-
-
 
 void VFO1_init(void) {
   gLastActiveLoot = NULL;
@@ -335,7 +334,7 @@ void VFO1_render(void) {
   if (gMonitorMode) {
     SPECTRUM_Y = BASE + 2;
     SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
-    if (false && gSettings.showLevelInVFO) {
+    if (gSettings.showLevelInVFO) {
       char *graphMeasurementNames[] = {
           [GRAPH_RSSI] = "RSSI",           //
           [GRAPH_PEAK_RSSI] = "Peak RSSI", //
@@ -343,7 +342,6 @@ void VFO1_render(void) {
           [GRAPH_NOISE] = "Noise",         //
           [GRAPH_GLITCH] = "Glitch",       //
           [GRAPH_SNR] = "SNR",             //
-          [GRAPH_POW] = "POW?",            //
       };
       switch (graphMeasurement) {
       case GRAPH_RSSI:
@@ -352,7 +350,6 @@ void VFO1_render(void) {
         break;
       case GRAPH_NOISE:
       case GRAPH_GLITCH:
-      case GRAPH_POW:
         SP_RenderGraph(0, 256);
         break;
       case GRAPH_SNR:

@@ -168,7 +168,7 @@ void SCAN_Init(bool multiband) {
   scan.scanCycles = 0;
   scan.currentCps = 0;
 
-  CHANNELS_LoadBlacklistToLoot();
+  // CHANNELS_LoadBlacklistToLoot();
 
   ApplyBandSettings();
   BK4819_WriteRegister(BK4819_REG_3F, 0);

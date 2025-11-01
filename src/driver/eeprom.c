@@ -23,7 +23,7 @@ void EEPROM_ReadBuffer(uint32_t address, void *pBuffer, uint16_t size) {
   I2C_Stop();
 }
 
-void EEPROM_WriteBuffer(uint32_t address, void *pBuffer, uint16_t size) {
+void EEPROM_WriteBuffer(uint32_t address, uint8_t *pBuffer, uint16_t size) {
   if (pBuffer == NULL) {
     return;
   }

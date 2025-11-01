@@ -719,6 +719,7 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
   uint32_t old_value = RADIO_GetParam(ctx, param);
 
   switch (param) {
+  case PARAM_TX_FREQUENCY_FACT:
   case PARAM_TX_STATE:
   case PARAM_RSSI:
   case PARAM_NOISE:
@@ -1664,27 +1665,24 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
     return TX_STATE_NAMES[ctx->tx_state.last_error];
   case PARAM_BANDWIDTH:
     if (ctx->radio_type == RADIO_BK4819) {
-      return BW_NAMES_BK4819[ctx->bandwidth];
+      return BW_NAMES_BK4819[v];
     }
     if (ctx->radio_type == RADIO_SI4732) {
       if (RADIO_IsSSB(ctx)) {
-        return BW_NAMES_SI47XX_SSB[ctx->bandwidth];
+        return BW_NAMES_SI47XX_SSB[v];
       }
-      return BW_NAMES_SI47XX[ctx->bandwidth];
+      return BW_NAMES_SI47XX[v];
     }
     return "?(WIP)";
   case PARAM_STEP:
-    snprintf(buf, 15, "%d.%02d", StepFrequencyTable[ctx->step] / KHZ,
-             StepFrequencyTable[ctx->step] % KHZ);
+    snprintf(buf, 15, "%d.%02d", StepFrequencyTable[v] / KHZ,
+             StepFrequencyTable[v] % KHZ);
     break;
   case PARAM_FREQUENCY:
-    mhzToS(buf, ctx->frequency);
-    break;
+  case PARAM_TX_OFFSET:
   case PARAM_TX_FREQUENCY:
-    mhzToS(buf, ctx->tx_state.frequency);
-    break;
   case PARAM_TX_FREQUENCY_FACT:
-    mhzToS(buf, getRealTxFreq(ctx));
+    mhzToS(buf, v);
     break;
   case PARAM_RADIO:
     snprintf(buf, 15, "%s", RADIO_NAMES[ctx->radio_type]);
@@ -1694,11 +1692,11 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
     break;
   case PARAM_GAIN:
     if (ctx->radio_type == RADIO_BK4819) {
-      snprintf(buf, 15, ctx->gain == AUTO_GAIN_INDEX ? "Auto" : "%+ddB",
-               -GAIN_TABLE[ctx->gain].gainDb + 33);
+      snprintf(buf, 15, v == AUTO_GAIN_INDEX ? "Auto" : "%+ddB",
+               -GAIN_TABLE[v].gainDb + 33);
       break;
     } else if (ctx->radio_type == RADIO_SI4732) {
-      snprintf(buf, 15, ctx->gain == 0 ? "Auto" : "%u", ctx->gain - 1);
+      snprintf(buf, 15, v == 0 ? "Auto" : "%u", v - 1);
       break;
     }
     snprintf(buf, 15, "Auto");
@@ -1728,6 +1726,7 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
   case PARAM_XTAL:
   case PARAM_SQUELCH_VALUE:
   case PARAM_PRECISE_F_CHANGE:
+  case PARAM_COUNT:
     snprintf(buf, 15, "%u", v);
     break;
   case PARAM_VOLUME:

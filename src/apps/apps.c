@@ -91,7 +91,7 @@ const App apps[APPS_COUNT] = {
                        BANDSCAN_render, BANDSCAN_key, BANDSCAN_deinit, true},
     [APP_FC] = {"FC", FC_init, FC_update, FC_render, FC_key, FC_deinit, true},
     [APP_VFO1] = {"1 VFO", VFO1_init, VFO1_update, VFO1_render, VFO1_key, NULL,
-                  true, true},
+                  true},
     /* [APP_GENERATOR] = {"Generator", GENERATOR_init, GENERATOR_update,
                        GENERATOR_render, GENERATOR_key, NULL, true, true}, */
     [APP_ABOUT] = {"ABOUT", NULL, NULL, ABOUT_Render, NULL, NULL},

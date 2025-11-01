@@ -12,8 +12,7 @@
 
 typedef void (*MenuAction)(void);
 typedef void (*MenuOnEnter)(void);
-typedef void (*MenuRenderItem)(uint16_t index, uint8_t visIndex,
-                               bool is_selected);
+typedef void (*MenuRenderItem)(uint16_t index, uint8_t visIndex);
 
 typedef struct MenuItem MenuItem;
 

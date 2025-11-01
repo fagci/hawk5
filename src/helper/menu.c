@@ -21,7 +21,7 @@ static inline uint8_t getMenuRightEdge(void) {
   return active_menu->x + active_menu->width;
 }
 
-static void renderItem(uint16_t index, uint8_t i, bool isCurrent) {
+static void renderItem(uint16_t index, uint8_t i) {
   const MenuItem *item = &active_menu->items[index];
   const uint8_t ex = getMenuRightEdge();
   const uint8_t y = active_menu->y + i * active_menu->itemHeight;
@@ -101,7 +101,7 @@ void MENU_Render(void) {
     const bool isActive = idx == active_menu->i;
     const uint8_t y = active_menu->y + i * active_menu->itemHeight;
 
-    active_menu->render_item(idx, i, isActive);
+    active_menu->render_item(idx, i);
 
     if (isActive) {
       FillRect(active_menu->x, y, ex - 4, active_menu->itemHeight, C_INVERT);
@@ -126,7 +126,7 @@ static bool handleNumNav(KEY_Code_t key, Key_State_t state) {
   }
   if (!gIsNumNavInput &&
       ((state == KEY_LONG_PRESSED && key == KEY_STAR) ||
-       (state == KEY_RELEASED && key >= KEY_0 && key <= KEY_9))) {
+       (state == KEY_RELEASED && key <= KEY_9))) {
     NUMNAV_Init(active_menu->i, 0, active_menu->num_items - 1);
     gNumNavCallback = setMenuIndex;
     return true;
@@ -145,13 +145,14 @@ static bool handleUpDownNavigation(KEY_Code_t key, bool hasItems) {
   if (key != KEY_UP && key != KEY_DOWN) {
     return false;
   }
-  
-  active_menu->i = IncDecU(active_menu->i, 0, active_menu->num_items, key == KEY_DOWN);
-  
+
+  active_menu->i =
+      IncDecU(active_menu->i, 0, active_menu->num_items, key == KEY_DOWN);
+
   if (!hasItems && active_menu->action) {
     active_menu->action(active_menu->i, key, KEY_RELEASED);
   }
-  
+
   return true;
 }
 
@@ -175,7 +176,8 @@ bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
 
   // Для меню без items
   if (!hasItems) {
-    if (active_menu->action && active_menu->action(active_menu->i, key, state)) {
+    if (active_menu->action &&
+        active_menu->action(active_menu->i, key, state)) {
       return true;
     }
     if (handleNumNav(key, state)) {
@@ -216,7 +218,7 @@ bool MENU_HandleInput(KEY_Code_t key, Key_State_t state) {
       break;
     }
   }
-  
+
   if (item->action && item->action(item, key, state)) {
     return true;
   }

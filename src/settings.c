@@ -54,7 +54,7 @@ char *SCAN_TIMEOUT_NAMES[15] = {
 static const uint8_t PATCH3_PREAMBLE[] = {0x15, 0x00, 0x03, 0x74,
                                           0x0b, 0xd4, 0x84, 0x60};
 
-Settings gSettings = (Settings){
+Settings gSettings = {
     .eepromType = EEPROM_UNKNOWN,
     .batsave = 4,
     .vox = 0,

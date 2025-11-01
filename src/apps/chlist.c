@@ -67,9 +67,8 @@ static inline uint16_t getChannelNumber(uint16_t menuIndex) {
   return gScanlist[menuIndex];
 }
 
-static void renderItem(uint16_t index, uint8_t i, bool isCurrent) {
+static void renderItem(uint16_t index, uint8_t i) {
   if (index >= gScanlistSize) {
-    Log("ERROR: index >= gScanlistSize");
     PrintMediumEx(13, MENU_Y + i * MENU_ITEM_H + 8, POS_L, C_INVERT, "ERROR");
     return;
   }

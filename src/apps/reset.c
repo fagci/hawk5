@@ -98,55 +98,55 @@ static void startReset(ResetType t) {
 }
 
 VFO vfos[9] = {
-    (VFO){
+    {
         .rxF = 10440000,
         .meta.type = TYPE_VFO,
         .gainIndex = AUTO_GAIN_INDEX,
         .radio = RADIO_BK1080,
     },
-    (VFO){
+    {
         .rxF = 14550000,
         .meta.type = TYPE_VFO,
         .gainIndex = AUTO_GAIN_INDEX,
         .radio = RADIO_BK4819,
     },
-    (VFO){
+    {
         .rxF = 17230000,
         .meta.type = TYPE_VFO,
         .gainIndex = AUTO_GAIN_INDEX,
         .radio = RADIO_BK4819,
     },
-    (VFO){
+    {
         .rxF = 25355000,
         .meta.type = TYPE_VFO,
         .gainIndex = AUTO_GAIN_INDEX,
         .radio = RADIO_BK4819,
     },
-    (VFO){
+    {
         .rxF = 40065000,
         .meta.type = TYPE_VFO,
         .gainIndex = AUTO_GAIN_INDEX,
         .radio = RADIO_BK4819,
     },
-    (VFO){
+    {
         .rxF = 43392500,
         .meta.type = TYPE_VFO,
         .gainIndex = AUTO_GAIN_INDEX,
         .radio = RADIO_BK4819,
     },
-    (VFO){
+    {
         .rxF = 43780000,
         .meta.type = TYPE_VFO,
         .gainIndex = AUTO_GAIN_INDEX,
         .radio = RADIO_BK4819,
     },
-    (VFO){
+    {
         .rxF = 86800000,
         .meta.type = TYPE_VFO,
         .gainIndex = AUTO_GAIN_INDEX,
         .radio = RADIO_BK4819,
     },
-    (VFO){
+    {
         .rxF = 25220000,
         .meta.type = TYPE_CH,
         .gainIndex = ARRAY_SIZE(GAIN_TABLE) - 1,
@@ -166,7 +166,7 @@ static bool resetFull() {
 
   if (stats.vfos < total.vfos) {
     VFO vfo = vfos[stats.vfos];
-    // memset(&vfo, 0, sizeof(VFO));
+    // memset(&vfo, 0, sizeof);
 
     if (vfo.meta.type == TYPE_VFO) {
       sprintf(vfo.name, "%s", "VFO-%c", 'A' + stats.vfos);

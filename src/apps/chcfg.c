@@ -64,6 +64,7 @@ static void syncVFO() {
 }
 
 static bool save(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
+  (void)item;
   if (state == KEY_RELEASED && key == KEY_MENU) {
     if (gChNum >= 0) {
       CHANNELS_Save(gChNum, &gChEd);
@@ -85,16 +86,19 @@ static void applyBounds(uint32_t fs, uint32_t fe) {
 }
 
 static void setRXFValue(uint32_t f, uint32_t _) {
+  (void)_;
   gChEd.rxF = f;
   syncVFO();
 }
 
 static void setTXFValue(uint32_t f, uint32_t _) {
+  (void)_;
   gChEd.txF = f;
   syncVFO();
 }
 
 static bool setRXF(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
+  (void)item;
   if (state == KEY_RELEASED && key == KEY_MENU) {
     FINPUT_setup(0, BK4819_F_MAX, UNIT_MHZ, false);
     gFInputCallback = setRXFValue;
@@ -105,6 +109,7 @@ static bool setRXF(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
 }
 
 static bool setTXF(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
+  (void)item;
   if (state == KEY_RELEASED && key == KEY_MENU) {
     FINPUT_setup(0, BK4819_F_MAX, UNIT_MHZ, false);
     gFInputCallback = setTXFValue;
@@ -115,6 +120,7 @@ static bool setTXF(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
 }
 
 static bool setBounds(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
+  (void)item;
   if (state == KEY_RELEASED && key == KEY_MENU) {
     FINPUT_setup(0, BK4819_F_MAX, UNIT_MHZ, true);
     gFInputCallback = applyBounds;
@@ -125,6 +131,7 @@ static bool setBounds(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
 }
 
 static bool setName(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
+  (void)item;
   if (state == KEY_RELEASED && key == KEY_MENU) {
     gTextinputText = gChEd.name;
     gTextInputSize = 9;
@@ -199,6 +206,7 @@ static uint32_t getValue(MemProp p) {
 }
 
 static void getValS(const MenuItem *item, char *buf, uint8_t _) {
+  (void)_;
   const uint32_t v = getValue(item->setting);
   switch (item->setting) {
   case MEM_BOUNDS: {
@@ -420,7 +428,7 @@ static MenuItem menuBand[] = {
     {"Type", MEM_TYPE, getValS, updVal},
     {"Name", MEM_NAME, getValS, .action = setName},
 
-    (MenuItem){"Bounds", MEM_BOUNDS, getValS, .action = setBounds},
+    {"Bounds", MEM_BOUNDS, getValS, .action = setBounds},
 
     {"Radio", .submenu = &radioMenu},
 

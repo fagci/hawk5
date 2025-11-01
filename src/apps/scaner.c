@@ -106,7 +106,7 @@ bool SCANER_key(KEY_Code_t key, Key_State_t state) {
       pttWasLongPressed = true;
       if (gSettings.keylock) {
         LOOT_WhitelistLast();
-        SCAN_Next(true);
+        SCAN_Next();
         return true;
       }
       break;
@@ -172,11 +172,11 @@ bool SCANER_key(KEY_Code_t key, Key_State_t state) {
       return true;
     case KEY_SIDE1:
       LOOT_BlacklistLast();
-      SCAN_Next(true);
+      SCAN_Next();
       return true;
     case KEY_SIDE2:
       LOOT_WhitelistLast();
-      SCAN_Next(true);
+      SCAN_Next();
       return true;
     case KEY_STAR:
       APPS_run(APP_LOOT_LIST);
@@ -206,7 +206,7 @@ bool SCANER_key(KEY_Code_t key, Key_State_t state) {
       if (gSettings.keylock && !pttWasLongPressed) {
         pttWasLongPressed = false;
         LOOT_BlacklistLast();
-        SCAN_Next(true);
+        SCAN_Next();
         return true;
       }
       break;
@@ -257,7 +257,7 @@ void SCANER_render(void) {
   if (isAnalyserMode) {
     renderAnalyzerUI();
   } else {
-    SP_RenderArrow(&gCurrentBand, RADIO_GetParam(ctx, PARAM_FREQUENCY));
+    SP_RenderArrow(RADIO_GetParam(ctx, PARAM_FREQUENCY));
   }
 
   // bottom
@@ -265,7 +265,7 @@ void SCANER_render(void) {
   bool showCurRange = Now() < cursorRangeTimeout;
   FSmall(1, LCD_HEIGHT - 2, POS_L, showCurRange ? r.rxF : gCurrentBand.rxF);
   FSmall(LCD_XCENTER, LCD_HEIGHT - 2, POS_C,
-         showCurRange ? CUR_GetCenterF(&gCurrentBand, step)
+         showCurRange ? CUR_GetCenterF(step)
                       : RADIO_GetParam(ctx, PARAM_FREQUENCY));
   FSmall(LCD_WIDTH - 1, LCD_HEIGHT - 2, POS_R,
          showCurRange ? r.txF : gCurrentBand.txF);

@@ -11,9 +11,13 @@ static uint8_t power = 26;
 static bool paEnabled = false;
 static uint8_t bkPower = 0;
 
-static void setTone1Freq(uint32_t f, uint32_t _) { tone1Freq = f; }
+static void setTone1Freq(uint32_t f, uint32_t _) {
+  (void)_;
+  tone1Freq = f;
+}
 
 static void setFreq(uint32_t f, uint32_t _) {
+  (void)_;
   RADIO_SetParam(ctx, PARAM_FREQUENCY, f, false);
   RADIO_ApplySettings(ctx);
 }

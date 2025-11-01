@@ -58,7 +58,7 @@ static void displayFreqBlWl(uint8_t y, const Loot *loot) {
   UI_DrawLoot(loot, 1, y + 7, POS_L);
 }
 
-static void getLootItem(uint16_t i, uint16_t index, bool isCurrent) {
+static void getLootItem(uint16_t i, uint16_t index) {
   const Loot *item = LOOT_Item(index);
   const uint8_t y = MENU_Y + i * MENU_ITEM_H_LARGER;
 
@@ -78,7 +78,7 @@ static void getLootItem(uint16_t i, uint16_t index, bool isCurrent) {
   }
 }
 
-static void getLootItemShort(uint16_t i, uint16_t index, bool isCurrent) {
+static void getLootItemShort(uint16_t i, uint16_t index) {
   const Loot *loot = LOOT_Item(index);
   const uint8_t x = LCD_WIDTH - 6;
   const uint8_t y = MENU_Y + i * MENU_ITEM_H;
@@ -98,8 +98,8 @@ static void getLootItemShort(uint16_t i, uint16_t index, bool isCurrent) {
   }
 }
 
-static void renderItem(uint16_t index, uint8_t i, bool isCurrent) {
-  (shortList ? getLootItemShort : getLootItem)(i, index, isCurrent);
+static void renderItem(uint16_t index, uint8_t i) {
+  (shortList ? getLootItemShort : getLootItem)(i, index);
 }
 
 static void sort(Sort type) {

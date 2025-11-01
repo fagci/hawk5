@@ -48,15 +48,15 @@ bool BANDSCAN_key(KEY_Code_t key, Key_State_t state) {
     switch (key) {
     case KEY_UP:
     case KEY_DOWN:
-      SCAN_Next(key == KEY_UP);
+      SCAN_Next();
       return true;
     case KEY_SIDE1:
       LOOT_BlacklistLast();
-      SCAN_Next(true);
+      SCAN_Next();
       return true;
     case KEY_SIDE2:
       LOOT_WhitelistLast();
-      SCAN_Next(true);
+      SCAN_Next();
       return true;
     case KEY_STAR:
       APPS_run(APP_LOOT_LIST);

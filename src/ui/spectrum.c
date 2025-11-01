@@ -247,7 +247,7 @@ void SP_Render(const Band *p, VMinMax v) {
   }
 }
 
-void SP_RenderArrow(const Band *p, uint32_t f) {
+void SP_RenderArrow(uint32_t f) {
   uint8_t cx = SP_F2X(f);
   DrawVLine(cx, SPECTRUM_Y + SPECTRUM_H + 1, 1, C_FILL);
   FillRect(cx - 1, SPECTRUM_Y + SPECTRUM_H + 2, 3, 1, C_FILL);
@@ -410,7 +410,7 @@ Band CUR_GetRange(Band *p, uint32_t step) {
   return range;
 }
 
-uint32_t CUR_GetCenterF(Band *p, uint32_t step) {
+uint32_t CUR_GetCenterF(uint32_t step) {
   return RoundToStep(SP_X2F(curX), step);
 }
 

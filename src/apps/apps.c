@@ -149,11 +149,8 @@ void APPS_run(AppType_t app) {
     LogC(LOG_C_MAGENTA, "[APP] Load radio state for %s",
          apps[gCurrentApp].name);
     gRadioState = &radioState;
-    UART_printf("RI");
     RADIO_InitState(gRadioState, 16);
-    UART_printf("RL");
     RADIO_LoadVFOs(gRadioState);
-    UART_printf("TM");
     RADIO_ToggleMultiwatch(gRadioState, gSettings.mWatch);
     loadedVfoApp = gCurrentApp;
   }

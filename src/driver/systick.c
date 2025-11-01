@@ -100,10 +100,7 @@ void TIMER_DelayTicks(uint32_t delay_in_ticks) {
   NVIC_DisableIRQ(Interrupt5_IRQn);
 }
 
-void TIMER_DelayUs(const uint32_t Delay) {
-  // Так как делитель 48 даёт 1 тик = 1 мкс, можно просто вызвать DelayTicks
-  TIMER_DelayTicks(Delay);
-}
+void TIMER_DelayUs(const uint32_t Delay) { TIMER_DelayTicks(Delay * 4); }
 
 void TIMER_Delay250ns(const uint32_t Delay) {
   // 1 тик = 1 мкс = 1000 нс

@@ -260,7 +260,7 @@ void BK4819_SetAGC(bool useDefault, uint8_t gainIndex) {
   const AgcConfig *config = useDefault ? &AGC_DEFAULT : &AGC_FAST;
   BK4819_WriteRegister(BK4819_REG_49, (config->lo << 14) | (config->high << 7) |
                                           (config->low << 0));
-  BK4819_WriteRegister(BK4819_REG_7B, 0x8420);
+  BK4819_WriteRegister(BK4819_REG_7B, 0x318C); // 0x8420
 }
 
 // ============================================================================

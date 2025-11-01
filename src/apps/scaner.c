@@ -137,7 +137,7 @@ bool SCANER_key(KEY_Code_t key, Key_State_t state) {
     case KEY_3:
     case KEY_9:
       RADIO_IncDecParam(ctx, PARAM_STEP, key == KEY_3, false);
-      gCurrentBand.step = StepFrequencyTable[RADIO_GetParam(ctx, PARAM_STEP)];
+      gCurrentBand.step = RADIO_GetParam(ctx, PARAM_STEP);
       SCAN_setBand(gCurrentBand);
       return true;
     case KEY_UP:

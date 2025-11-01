@@ -69,9 +69,7 @@ static uint16_t MeasureSignal(uint32_t frequency, bool precise) {
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, precise, false);
   RADIO_SetParam(ctx, PARAM_FREQUENCY, frequency, false);
   RADIO_ApplySettings(ctx);
-  if (precise) {
-    TIMER_DelayUs(scan.scanDelayUs);
-  }
+  TIMER_DelayUs(precise ? scan.scanDelayUs : 50);
   return RADIO_GetRSSI(ctx);
 }
 
@@ -113,7 +111,6 @@ static void NextFrequency() {
   LOOT_Replace(&vfo->msm, vfo->msm.f);
   SetTimeout(&scan.scanListenTimeout, 0);
   SetTimeout(&scan.stayAtTimeout, 0);
-  scan.scanCycles++;
   UpdateCPS();
 }
 
@@ -182,6 +179,7 @@ void SCAN_Init(bool multiband) {
 // =============================
 static void HandleAnalyserMode() {
   vfo->msm.rssi = MeasureSignal(vfo->msm.f, false);
+  scan.scanCycles++;
   SP_AddPoint(&vfo->msm);
   NextFrequency();
 }
@@ -198,6 +196,7 @@ static void UpdateSquelchAndRssi(bool isAnalyserMode) {
     return;
   }
   vfo->msm.rssi = MeasureSignal(vfo->msm.f, !isAnalyserMode);
+  scan.scanCycles++;
 
   if (!scan.squelchLevel && vfo->msm.rssi) {
     scan.squelchLevel = vfo->msm.rssi - 1;

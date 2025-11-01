@@ -31,8 +31,6 @@ static void updateVal(const MenuItem *item, bool up) {
   }
 }
 
-static void updateValueAlt(bool inc) {}
-
 static const ParamType paramsBK4819[] = {
     PARAM_RADIO,         //
     PARAM_GAIN,          //

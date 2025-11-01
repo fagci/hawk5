@@ -132,7 +132,7 @@ bool TEXTINPUT_key(KEY_Code_t key, Key_State_t state) {
         return true;
       }
       if (currentRow) {
-        if (key - KEY_1 < strlen(currentRow)) {
+        if (key - KEY_1 < (int)strlen(currentRow)) {
           if (strlen(inputField) < gTextInputSize) {
             insert(currentRow[key - KEY_1]);
           }

@@ -6,8 +6,6 @@
 #include "system.h"
 
 void Main(void) {
-  SYSTICK_Init();
-
   SYS_ConfigureSysCon();
   SYS_ConfigureClocks();
   TIM0_INIT();

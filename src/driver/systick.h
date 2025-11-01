@@ -19,11 +19,6 @@
 
 #include <stdint.h>
 
-void SYSTICK_Init(void);
-void SYSTICK_DelayTicks(const uint32_t ticks);
-void SYSTICK_DelayUs(const uint32_t Delay);
-void SYSTICK_Delay250ns(const uint32_t Delay);
-
 void TIM0_INIT();
 void TIMER_DelayTicks(uint32_t delay_in_ticks);
 void TIMER_DelayUs(const uint32_t Delay);

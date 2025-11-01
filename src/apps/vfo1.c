@@ -237,6 +237,7 @@ void VFO1_update(void) {
   if (Now() - lastRender >= 500) {
     lastRender = Now();
     gRedrawScreen = true;
+    UART_printf("%u\n", Now());
   }
 }
 

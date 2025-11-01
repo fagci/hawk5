@@ -33,8 +33,7 @@ typedef const struct {
 
 static Keyboard keyboard[5] = {
     /* Zero row  */
-    {
-     .setToZeroMask = 0xffff,
+    {.setToZeroMask = 0xffff,
      .pins =
          {
              {.key = KEY_SIDE1, .pin = GPIOA_PIN_KEYBOARD_0},
@@ -133,7 +132,7 @@ static uint16_t ReadStableGpioData(void) {
   uint8_t ii;
 
   for (ii = 0, reg = 0; ii < 3; ii++) {
-    SYSTICK_Delay250ns(1);
+    TIMER_DelayUs(1);
     reg2 = (uint16_t)GPIOA->DATA;
     if (reg != reg2) {
       reg = reg2;

@@ -88,12 +88,12 @@ static void spi_write_byte(uint8_t data) {
 
   for (uint8_t i = 0; i < 8; i++) {
     gpio_set_sda(data & 0x80);
-    SYSTICK_Delay250ns(1);
+    TIMER_DelayUs(1);
     gpio_set_scl(true);
-    SYSTICK_Delay250ns(1);
+    TIMER_DelayUs(1);
     data <<= 1;
     gpio_set_scl(false);
-    SYSTICK_Delay250ns(1);
+    TIMER_DelayUs(1);
   }
 }
 
@@ -102,16 +102,16 @@ static uint16_t spi_read_word(void) {
   PORTCON_PORTC_IE = (PORTCON_PORTC_IE & ~PORTCON_PORTC_IE_C2_MASK) |
                      PORTCON_PORTC_IE_C2_BITS_ENABLE;
   GPIOC->DIR = (GPIOC->DIR & ~GPIO_DIR_2_MASK) | GPIO_DIR_2_BITS_INPUT;
-  SYSTICK_Delay250ns(1);
+  TIMER_DelayUs(1);
 
   uint16_t value = 0;
   for (uint8_t i = 0; i < 16; i++) {
     value <<= 1;
     value |= GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_BK4819_SDA);
     gpio_set_scl(true);
-    SYSTICK_Delay250ns(1);
+    TIMER_DelayUs(1);
     gpio_set_scl(false);
-    SYSTICK_Delay250ns(1);
+    TIMER_DelayUs(1);
   }
 
   // Configure SDA back to output
@@ -127,12 +127,12 @@ static void spi_write_word(uint16_t data) {
 
   for (uint8_t i = 0; i < 16; i++) {
     gpio_set_sda(data & 0x8000);
-    SYSTICK_Delay250ns(1);
+    TIMER_DelayUs(1);
     gpio_set_scl(true);
     data <<= 1;
-    SYSTICK_Delay250ns(1);
+    TIMER_DelayUs(1);
     gpio_set_scl(false);
-    SYSTICK_Delay250ns(1);
+    TIMER_DelayUs(1);
   }
 }
 
@@ -149,7 +149,7 @@ uint16_t BK4819_ReadRegister(BK4819_REGISTER_t reg) {
   // Log("[BK] R 0x%02x", reg);
   gpio_set_scn(true);
   gpio_set_scl(false);
-  // SYSTICK_Delay250ns(1);
+  // TIMER_DelayUs(1);
   __asm volatile("nop \n"
                  "nop \n");
   gpio_set_scn(false);
@@ -158,7 +158,7 @@ uint16_t BK4819_ReadRegister(BK4819_REGISTER_t reg) {
   uint16_t value = spi_read_word();
 
   gpio_set_scn(true);
-  // SYSTICK_Delay250ns(1);
+  // TIMER_DelayUs(1);
   gpio_set_scl(true);
   gpio_set_sda(true);
 
@@ -172,7 +172,7 @@ void BK4819_WriteRegister(BK4819_REGISTER_t reg, uint16_t data) {
   // Log("[BK] W 0x%02x %u", reg, data);
   gpio_set_scn(true);
   gpio_set_scl(false);
-  // SYSTICK_Delay250ns(1);
+  // TIMER_DelayUs(1);
   __asm volatile("nop \n"
                  "nop \n");
   gpio_set_scn(false);
@@ -181,7 +181,7 @@ void BK4819_WriteRegister(BK4819_REGISTER_t reg, uint16_t data) {
   spi_write_word(data);
 
   gpio_set_scn(true);
-  // SYSTICK_Delay250ns(1);
+  // TIMER_DelayUs(1);
   gpio_set_scl(true);
   // gpio_set_sda(true);
 }

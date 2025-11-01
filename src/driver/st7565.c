@@ -24,7 +24,7 @@ bool gRedrawScreen = true;
 
 static void ST7565_Configure_GPIO_B11(void) {
   GPIO_SetBit(&GPIOB->DATA, GPIOB_PIN_ST7565_RES);
-  SYSTICK_Delay250ns(1); // 1
+  TIMER_DelayUs(1); // 1
   GPIO_ClearBit(&GPIOB->DATA, GPIOB_PIN_ST7565_RES);
   SYS_DelayMs(1); // 20
   GPIO_SetBit(&GPIOB->DATA, GPIOB_PIN_ST7565_RES);

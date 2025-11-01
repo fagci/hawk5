@@ -46,7 +46,7 @@ bool SI47XX_IsSSB() {
 void waitToSend() {
   uint8_t tmp = 0;
   do {
-    SYSTICK_Delay250ns(1);
+    TIMER_Delay250ns(1);
     SI47XX_ReadBuffer((uint8_t *)&tmp, 1);
   } while (!(tmp & STATUS_CTS));
 }
@@ -264,7 +264,7 @@ void SI47XX_PowerDown() {
 
   waitToSend();
   SI47XX_WriteBuffer(cmd, 1);
-  SYSTICK_Delay250ns(10);
+  TIMER_Delay250ns(10);
   RST_LOW;
   isSi4732On = false;
   siCurrentFreq = 0;

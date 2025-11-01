@@ -40,174 +40,7 @@ static void tuneTo(uint32_t f, uint32_t _) {
   updateBand();
 }
 
-static void handleDigitRelease(KEY_Code_t key) {
-  if (vfo->mode == MODE_CHANNEL) {
-    if (!gIsNumNavInput) {
-      NUMNAV_Init(vfo->channel_index, 0, CHANNELS_GetCountMax() - 1);
-      gNumNavCallback = setChannel;
-    }
-    NUMNAV_Input(key);
-  } else {
-    gFInputCallback = tuneTo;
-    FINPUT_setup(0, BK4819_F_MAX, UNIT_MHZ, false);
-    APPS_run(APP_FINPUT);
-    APPS_key(key, KEY_RELEASED);
-  }
-}
 
-static void handlePTTPress(KEY_Code_t key) {
-  if (!gIsNumNavInput)
-    RADIO_ToggleTX(ctx, true);
-}
-
-static void handlePTTRelease(KEY_Code_t key) {
-  if (!gIsNumNavInput)
-    RADIO_ToggleTX(ctx, false);
-}
-
-static void handleUpDown(KEY_Code_t key) {
-  bool isUp = (key == KEY_UP);
-  if (vfo->mode == MODE_CHANNEL) {
-    CHANNELS_Next(isUp);
-  } else {
-    RADIO_IncDecParam(ctx, PARAM_FREQUENCY, isUp, true);
-  }
-  updateBand();
-}
-
-static void handleSideSSB(KEY_Code_t key) {
-  if (ctx->radio_type == RADIO_SI4732 && RADIO_IsSSB(ctx)) {
-    RADIO_AdjustParam(ctx, PARAM_FREQUENCY, (key == KEY_SIDE1) ? 5 : -5, true);
-  }
-}
-
-static void handleLongBandFilter(KEY_Code_t key) {
-  gChListFilter = TYPE_FILTER_BAND;
-  APPS_run(APP_CH_LIST);
-}
-
-static void handleLongProToggle(KEY_Code_t key) {
-  if (gCurrentApp == APP_VFO1) {
-    gSettings.iAmPro = !gSettings.iAmPro;
-    SETTINGS_Save();
-  }
-}
-
-static void handleLongToggleMode(KEY_Code_t key) {
-  RADIO_SaveCurrentVFO(gRadioState);
-  RADIO_ToggleVFOMode(gRadioState, RADIO_GetCurrentVFONumber(gRadioState));
-  updateBand();
-}
-
-static void handleLongShowRSSI(KEY_Code_t key) { gShowAllRSSI = !gShowAllRSSI; }
-
-static void handleLongMultiwatch(KEY_Code_t key) {
-  RADIO_ToggleMultiwatch(gRadioState, !gRadioState->multiwatch_enabled);
-}
-
-static void handleLongIncPower(KEY_Code_t key) {
-  RADIO_IncDecParam(ctx, PARAM_POWER, true, true);
-}
-
-static void handleLongIncStep(KEY_Code_t key) {
-  RADIO_IncDecParam(ctx, PARAM_STEP, true, true);
-}
-
-static void handleLongIncOffset(KEY_Code_t key) {
-  RADIO_IncDecParam(ctx, PARAM_TX_OFFSET, true, true);
-}
-
-static void handleLongIncMod(KEY_Code_t key) {
-  RADIO_IncDecParam(ctx, PARAM_MODULATION, true, true);
-}
-
-static void handleLongGraphUnit(KEY_Code_t key) {
-  SP_NextGraphUnit(key == KEY_SIDE1);
-}
-
-static void handleReleaseF(KEY_Code_t key) {
-  RADIO_SaveVFOToStorage(gRadioState, RADIO_GetCurrentVFONumber(gRadioState),
-                         &gChEd);
-  gChNum = -1;
-  APPS_run(APP_CH_CFG);
-}
-
-static void handleReleaseStar(KEY_Code_t key) { APPS_run(APP_LOOT_LIST); }
-
-static void handleReleaseSide1(KEY_Code_t key) { gMonitorMode = !gMonitorMode; }
-
-static void handleReleaseSide2(KEY_Code_t key) {
-  GPIO_FlipBit(&GPIOC->DATA, GPIOC_PIN_FLASHLIGHT);
-}
-
-static void handleReleaseExit(KEY_Code_t key) {
-  if (gMonitorMode) {
-    gMonitorMode = false;
-  } else if (!APPS_exit()) {
-    RADIO_SaveCurrentVFO(gRadioState);
-    uint8_t vfoN = RADIO_GetCurrentVFONumber(gRadioState);
-    RADIO_SwitchVFO(gRadioState, IncDecU(vfoN, 0, gRadioState->num_vfos, true));
-    updateBand();
-  }
-}
-
-// Bindings array (grouped to reduce lines):
-static void (*longHandlers[])(KEY_Code_t) = {
-    [KEY_0] = handleLongIncMod,     //
-    [KEY_1] = handleLongBandFilter, //
-    [KEY_2] = handleLongProToggle,  //
-    [KEY_3] = handleLongToggleMode, //
-    [KEY_4] = handleLongShowRSSI,   //
-    [KEY_5] = handleLongMultiwatch, //
-    [KEY_6] = handleLongIncPower,   //
-    [KEY_7] = handleLongIncStep,    //
-    [KEY_8] = handleLongIncOffset   //
-                                    // KEY_9 long not used
-};
-
-static const KeyBinding vfoBindings[] = {
-    {KEY_PTT, KEY_PRESSED, handlePTTRelease},
-    {KEY_PTT, KEY_RELEASED, handlePTTRelease},
-    {KEY_UP, KEY_PRESSED, handleUpDown},
-    {KEY_DOWN, KEY_PRESSED, handleUpDown},
-    {KEY_UP, KEY_LONG_PRESSED_CONT, handleUpDown},
-    {KEY_DOWN, KEY_LONG_PRESSED_CONT, handleUpDown},
-    {KEY_SIDE1, KEY_PRESSED, handleSideSSB},
-    {KEY_SIDE2, KEY_PRESSED, handleSideSSB},
-    {KEY_SIDE1, KEY_LONG_PRESSED_CONT, handleSideSSB},
-    {KEY_SIDE2, KEY_LONG_PRESSED_CONT, handleSideSSB},
-    {KEY_SIDE1, KEY_LONG_PRESSED, handleLongGraphUnit},
-    {KEY_SIDE2, KEY_LONG_PRESSED, handleLongGraphUnit},
-    {KEY_F, KEY_RELEASED, handleReleaseF},
-    {KEY_STAR, KEY_RELEASED, handleReleaseStar},
-    {KEY_SIDE1, KEY_RELEASED, handleReleaseSide1},
-    {KEY_SIDE2, KEY_RELEASED, handleReleaseSide2},
-    {KEY_EXIT, KEY_RELEASED, handleReleaseExit},
-    {KEY_INVALID, KEY_RELEASED, NULL} // Sentinel
-};
-
-bool VFO1_key(KEY_Code_t key, Key_State_t state) {
-  if (REGSMENU_Key(key, state))
-    return true;
-
-  if (state == KEY_RELEASED && key <= KEY_9) {
-    handleDigitRelease(key);
-    return true;
-  }
-
-  if (state == KEY_LONG_PRESSED && key <= KEY_8) { // For 0-8 long
-    longHandlers[key](key);
-    return true;
-  }
-
-  for (const KeyBinding *b = vfoBindings; b->action; b++) {
-    if (b->key == key && b->state == state) {
-      b->action(key);
-      return true;
-    }
-  }
-  return false;
-}
 
 void VFO1_init(void) {
   gLastActiveLoot = NULL;
@@ -237,11 +70,10 @@ void VFO1_update(void) {
   if (Now() - lastRender >= 500) {
     lastRender = Now();
     gRedrawScreen = true;
-    UART_printf("%u\n", Now());
   }
 }
 
-/* bool VFO1_key(KEY_Code_t key, Key_State_t state) {
+bool VFO1_key(KEY_Code_t key, Key_State_t state) {
   if (REGSMENU_Key(key, state)) {
     return true;
   }
@@ -388,7 +220,7 @@ void VFO1_update(void) {
     }
   }
   return false;
-} */
+}
 
 static void renderTxRxState(uint8_t y, bool isTx) {
   if (isTx) {
@@ -503,7 +335,7 @@ void VFO1_render(void) {
   if (gMonitorMode) {
     SPECTRUM_Y = BASE + 2;
     SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
-    if (gSettings.showLevelInVFO) {
+    if (false && gSettings.showLevelInVFO) {
       char *graphMeasurementNames[] = {
           [GRAPH_RSSI] = "RSSI",           //
           [GRAPH_PEAK_RSSI] = "Peak RSSI", //

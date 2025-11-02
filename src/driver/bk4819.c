@@ -10,6 +10,11 @@
 #include "audio.h"
 #include "bk4819-regs.h"
 
+#define SHORT_DELAY()                                                          \
+  __asm volatile("nop\n nop\n nop\n nop\n nop\n"                               \
+                 "nop\n nop\n nop\n nop\n nop\n"                               \
+                 "nop\n nop\n nop\n"); // ~13 NOPs для ~0.27 мкс @48MHz
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -88,12 +93,12 @@ static void spi_write_byte(uint8_t data) {
 
   for (uint8_t i = 0; i < 8; i++) {
     gpio_set_sda(data & 0x80);
-    TIMER_DelayTicks(1);
+    SHORT_DELAY();
     gpio_set_scl(true);
-    TIMER_DelayTicks(1);
+    SHORT_DELAY();
     data <<= 1;
     gpio_set_scl(false);
-    TIMER_DelayTicks(1);
+    SHORT_DELAY();
   }
 }
 
@@ -109,9 +114,9 @@ static uint16_t spi_read_word(void) {
     value <<= 1;
     value |= GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_BK4819_SDA);
     gpio_set_scl(true);
-    TIMER_DelayTicks(1);
+    SHORT_DELAY();
     gpio_set_scl(false);
-    TIMER_DelayTicks(1);
+    SHORT_DELAY();
   }
 
   // Configure SDA back to output
@@ -127,12 +132,12 @@ static void spi_write_word(uint16_t data) {
 
   for (uint8_t i = 0; i < 16; i++) {
     gpio_set_sda(data & 0x8000);
-    TIMER_DelayTicks(1);
+    SHORT_DELAY();
     gpio_set_scl(true);
     data <<= 1;
-    TIMER_DelayTicks(1);
+    SHORT_DELAY();
     gpio_set_scl(false);
-    TIMER_DelayTicks(1);
+    SHORT_DELAY();
   }
 }
 

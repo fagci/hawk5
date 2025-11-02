@@ -15,6 +15,7 @@
 #include "scheduler.h"
 #include "settings.h"
 #include "ui/graphics.h"
+#include "ui/spectrum.h"
 #include "ui/statusline.h"
 #include <string.h>
 
@@ -29,6 +30,7 @@ static uint32_t notificationTimeoutAt;
 static uint32_t secondTimer;
 static uint32_t appsRenderTimer;
 static uint32_t appsKeyboardTimer;
+static uint32_t radioTimer;
 
 static uint32_t lastUartDataTime;
 
@@ -45,7 +47,6 @@ static void appRender() {
     return;
   }
 
-  appsRenderTimer = Now();
   gRedrawScreen = false;
 
   UI_ClearScreen();
@@ -60,12 +61,27 @@ static void appRender() {
   STATUSLINE_render(); // coz of APPS_render calls STATUSLINE_SetText
 
   ST7565_Blit();
+  appsRenderTimer = Now();
 }
 
 static void systemUpdate() {
   // RADIO_Update();
   BATTERY_UpdateBatteryInfo();
   BACKLIGHT_Update();
+}
+
+void radioUpdate() {
+  bool isNotScan = gCurrentApp != APP_SCANER && gCurrentApp != APP_BAND_SCAN;
+  if (isNotScan) {
+    RADIO_UpdateMultiwatch(gRadioState);
+    RADIO_CheckAndSaveVFO(gRadioState);
+    if (isNotScan && Now() - radioTimer >= SQL_DELAY) {
+      RADIO_UpdateSquelch(gRadioState);
+      SP_ShiftGraph(-1);
+      SP_AddGraphPoint(&vfo->msm);
+      radioTimer = Now();
+    }
+  }
 }
 
 static bool resetNeeded() {
@@ -175,6 +191,9 @@ void SYS_Main() {
   for (;;) {
 
     SETTINGS_UpdateSave();
+
+    radioUpdate();
+
     APPS_update();
 
     if (Now() - appsKeyboardTimer >= 14) {
@@ -194,5 +213,7 @@ void SYS_Main() {
       UART_HandleCommand();
       lastUartDataTime = Now();
     }
+
+    __WFI();
   }
 }

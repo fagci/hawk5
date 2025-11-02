@@ -51,21 +51,10 @@ void VFO1_init(void) {
 }
 
 static uint32_t lastRender;
-static uint32_t lastSqCheck;
 
 static const Step liveStep = STEP_5_0kHz;
 
 void VFO1_update(void) {
-  RADIO_UpdateMultiwatch(gRadioState);
-  RADIO_CheckAndSaveVFO(gRadioState);
-
-  if (!gSettings.mWatch && Now() - lastSqCheck >= SQL_DELAY) {
-    RADIO_UpdateSquelch(gRadioState);
-    SP_ShiftGraph(-1);
-    SP_AddGraphPoint(&vfo->msm);
-    lastSqCheck = Now();
-  }
-
   if (Now() - lastRender >= 500) {
     lastRender = Now();
     gRedrawScreen = true;
@@ -334,7 +323,7 @@ void VFO1_render(void) {
   if (gMonitorMode) {
     SPECTRUM_Y = BASE + 2;
     SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
-    if (gSettings.showLevelInVFO) {
+    if (false && gSettings.showLevelInVFO) {
       char *graphMeasurementNames[] = {
           [GRAPH_RSSI] = "RSSI",           //
           [GRAPH_PEAK_RSSI] = "Peak RSSI", //

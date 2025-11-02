@@ -1,30 +1,20 @@
-/* Copyright 2023 Dual Tachyon
- * https://github.com/DualTachyon
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *     Unless required by applicable law or agreed to in writing, software
- *     distributed under the License is distributed on an "AS IS" BASIS,
- *     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *     See the License for the specific language governing permissions and
- *     limitations under the License.
- */
-
-#ifndef DRIVER_SYSTICK_H
-#define DRIVER_SYSTICK_H
+#ifndef SYSTICK_H
+#define SYSTICK_H
 
 #include <stdint.h>
 
-void TIM0_INIT();
-void TIMER_DelayTicks(uint32_t delay_in_ticks);
-void TIMER_Delay250ns(const uint32_t Delay);
-void TIMER_DelayUs(const uint32_t Delay);
-void TIMER_DelayMs(uint32_t delay_ms);
+void TIM0_INIT(void);
+void HandlerTIMER_BASE0(void);
 
-uint32_t TIMER_GetMsSinceBoot(void);
+void TIM1_INIT(void);          // Новая
+void HandlerTIMER_BASE1(void); // Новая
+
+uint32_t TIMER_GetMsSinceBoot(void);  // Через TIMER0
+uint32_t TIMER1_GetMsSinceBoot(void); // Через TIMER1 (новая)
+
+void TIMER_DelayMs(uint32_t ms);
+void TIMER_DelayTicks(uint32_t ticks);
+void TIMER_DelayUs(uint32_t us);
+void TIMER_Delay250ns(uint32_t count);
 
 #endif

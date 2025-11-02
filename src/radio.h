@@ -219,6 +219,9 @@ uint8_t RADIO_GetSNR(const VFOContext *ctx);
 uint8_t RADIO_GetNoise(const VFOContext *ctx);
 uint8_t RADIO_GetGlitch(const VFOContext *ctx);
 
+void RADIO_FastSquelchUpdate();
+void RADIO_SlowRSSIUpdate();
+
 extern RadioState *gRadioState;
 extern ExtendedVFOContext *vfo;
 extern VFOContext *ctx;

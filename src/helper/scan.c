@@ -230,7 +230,6 @@ void SCAN_Check(bool isAnalyserMode) {
   }
 
   RADIO_UpdateMultiwatch(gRadioState);
-  // RADIO_CheckAndSaveVFO(gRadioState);
 
   if (isAnalyserMode) {
     HandleAnalyserMode();

@@ -71,11 +71,10 @@ static void systemUpdate() {
 }
 
 void radioUpdate() {
-  bool isNotScan = gCurrentApp != APP_SCANER && gCurrentApp != APP_BAND_SCAN;
-  if (isNotScan) {
+  if (gCurrentApp != APP_SCANER && gCurrentApp != APP_BAND_SCAN) {
     RADIO_UpdateMultiwatch(gRadioState);
     RADIO_CheckAndSaveVFO(gRadioState);
-    if (isNotScan && Now() - radioTimer >= SQL_DELAY) {
+    if (Now() - radioTimer >= SQL_DELAY) {
       RADIO_UpdateSquelch(gRadioState);
       SP_ShiftGraph(-1);
       SP_AddGraphPoint(&vfo->msm);
@@ -214,6 +213,6 @@ void SYS_Main() {
       lastUartDataTime = Now();
     }
 
-    __WFI();
+    // __WFI();
   }
 }

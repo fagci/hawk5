@@ -1449,6 +1449,11 @@ static void RADIO_UpdateMeasurement(ExtendedVFOContext *vfo) {
 }
 
 void RADIO_UpdateSquelch(RadioState *state) {
+  if (ctx->tx_state.is_active) {
+    vfo->is_open = vfo->msm.open = false;
+    RADIO_SwitchAudioToVFO(state, state->active_vfo_index);
+    return;
+  }
   RADIO_UpdateMeasurement(&state->vfos[state->active_vfo_index]);
   if (vfo->msm.open != vfo->is_open) {
     gRedrawScreen = true; // TODO: mv
@@ -1774,6 +1779,4 @@ const ExtendedVFOContext *RADIO_GetCurrentVFOConst(const RadioState *state) {
   return (current != 0xFF) ? &state->vfos[current] : NULL;
 }
 
-
 void RADIO_FastSquelchUpdate() { vfo->is_open = RADIO_CheckSquelch(ctx); }
-

@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 #define TIMERBASE0_ADD 0x40064000
-#define TIMERBASE1_ADD 0x40064400
+#define TIMERBASE1_ADD 0x40064800
 
 // === TIMER0 Registers ===
 #define TIMERBASE0_EN_ADD         (0x00 + TIMERBASE0_ADD)

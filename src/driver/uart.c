@@ -20,6 +20,16 @@ static uint8_t UART_DMA_Buffer[256];
 
 static bool bIsInLockScreen = false;
 
+// UART protocol magic bytes
+enum {
+  UART_MAGIC_START_1 = 0xAB,
+  UART_MAGIC_START_2 = 0xCD,
+  UART_MAGIC_END_1 = 0xDC,
+  UART_MAGIC_END_2 = 0xBA,
+  UART_MAGIC_HEADER = 0xCDAB,
+  UART_MAGIC_FOOTER = 0xBADC
+};
+
 void UART_Init(void) {
   uint32_t Delta;
   uint32_t Positive;
@@ -87,7 +97,9 @@ void UART_Send(const void *pBuffer, uint32_t Size) {
   }
 }
 
-#define DMA_INDEX(x, y) (((x) + (y)) % sizeof(UART_DMA_Buffer))
+static inline uint16_t DMA_INDEX(uint16_t x, uint16_t y) {
+  return (x + y) % sizeof(UART_DMA_Buffer);
+}
 
 typedef struct {
   uint16_t ID;
@@ -162,14 +174,6 @@ typedef struct {
 
 typedef struct {
   Header_t Header;
-  struct {
-    uint16_t Voltage;
-    uint16_t Current;
-  } Data;
-} REPLY_0529_t;
-
-typedef struct {
-  Header_t Header;
   uint32_t Response[4];
 } CMD_052D_t;
 
@@ -185,35 +189,6 @@ typedef struct {
   Header_t Header;
   uint32_t Timestamp;
 } CMD_052F_t;
-
-typedef struct {
-  Header_t Header;
-  uint8_t RegNum;
-} CMD_0601_t;
-
-typedef struct {
-  Header_t Header;
-  struct {
-    uint16_t Val;
-    uint8_t v1;
-    uint8_t v2;
-  } Data;
-} REPLY_0601_t;
-
-typedef struct {
-  Header_t Header;
-  uint8_t RegNum;
-  uint16_t RegValue;
-} CMD_0602_t;
-
-typedef struct {
-  Header_t Header;
-  struct {
-    uint16_t Val;
-    uint8_t v1;
-    uint8_t v2;
-  } Data;
-} REPLY_0602_t;
 
 static const uint8_t Obfuscation[16] = {0x16, 0x6C, 0x14, 0xE6, 0x2E, 0x91,
                                         0x0D, 0x40, 0x21, 0x35, 0xD5, 0x40,
@@ -233,29 +208,27 @@ static bool bIsEncrypted = true;
 
 static Header_t Header;
 static Footer_t Footer;
-static uint8_t *pBytes;
-static void SendReply(void *pReply, uint16_t Size) {
-  uint16_t i;
 
+// Helper function for XOR obfuscation
+static void XorObfuscate(uint8_t *data, uint16_t size) {
+  for (uint16_t i = 0; i < size; i++) {
+    data[i] ^= Obfuscation[i % 16];
+  }
+}
+
+static void SendReply(void *pReply, uint16_t Size) {
   if (bIsEncrypted) {
-    pBytes = (uint8_t *)pReply;
-    for (i = 0; i < Size; i++) {
-      pBytes[i] ^= Obfuscation[i % 16];
-    }
+    XorObfuscate((uint8_t *)pReply, Size);
   }
 
-  Header.ID = 0xCDAB;
+  Header.ID = UART_MAGIC_HEADER;
   Header.Size = Size;
   UART_Send(&Header, sizeof(Header));
   UART_Send(pReply, Size);
-  if (bIsEncrypted) {
-    Footer.Padding[0] = Obfuscation[(Size + 0) % 16] ^ 0xFF;
-    Footer.Padding[1] = Obfuscation[(Size + 1) % 16] ^ 0xFF;
-  } else {
-    Footer.Padding[0] = 0xFF;
-    Footer.Padding[1] = 0xFF;
-  }
-  Footer.ID = 0xBADC;
+  
+  Footer.Padding[0] = bIsEncrypted ? (Obfuscation[Size % 16] ^ 0xFF) : 0xFF;
+  Footer.Padding[1] = bIsEncrypted ? (Obfuscation[(Size + 1) % 16] ^ 0xFF) : 0xFF;
+  Footer.ID = UART_MAGIC_FOOTER;
 
   UART_Send(&Footer, sizeof(Footer));
 }
@@ -272,7 +245,8 @@ static void SendVersion(void) {
   SendReply(&Reply, sizeof(Reply));
 }
 
-static void CMD_0514(const uint8_t *pBuffer) {
+// Combined handler for 0x0514 and 0x052F (same logic)
+static void CMD_051X_VersionRequest(const uint8_t *pBuffer) {
   const CMD_0514_t *pCmd = (const CMD_0514_t *)pBuffer;
 
   Timestamp = pCmd->Timestamp;
@@ -280,20 +254,9 @@ static void CMD_0514(const uint8_t *pBuffer) {
   SendVersion();
 }
 
-// static void log_hex(const uint8_t *buffer, uint32_t size, char *output) {
-//   for (uint32_t i = 0; i < size; i++) {
-//     sprintf(output + (i * 3), "%02X ", buffer[i]);
-//   }
-// }
-
 static void CMD_051B(const uint8_t *pBuffer) {
   const CMD_051B_t *pCmd = (const CMD_051B_t *)pBuffer;
   REPLY_051B_t Reply;
-  // char hex_output[sizeof(CMD_051B_t) * 3 + 1] = {0};
-  // log_hex(pBuffer, sizeof(CMD_051B_t), hex_output);
-  // Log("%s", hex_output);
-  // Log("CMD_051B: %d %d %d %d %d %d", pCmd->Header.ID, pCmd->Header.Size,
-  // pCmd->Offset, pCmd->Size, pCmd->Timestamp, Timestamp);
 
   if (pCmd->Timestamp != Timestamp) {
     return;
@@ -359,34 +322,6 @@ static void CMD_052D(const uint8_t *pBuffer) {
   SendReply(&Reply, sizeof(Reply));
 }
 
-static void CMD_052F(const uint8_t *pBuffer) {
-  const CMD_052F_t *pCmd = (const CMD_052F_t *)pBuffer;
-
-  Timestamp = pCmd->Timestamp;
-  GPIO_ClearBit(&GPIOB->DATA, GPIOB_PIN_BACKLIGHT);
-
-  SendVersion();
-}
-
-uint64_t xtou64(const char *str) {
-  uint64_t res = 0;
-  char c;
-
-  while ((c = *str++)) {
-    char v = ((c & 0xF) + (c >> 6)) | ((c >> 3) & 0x8);
-    res = (res << 4) | (uint64_t)v;
-  }
-
-  return res;
-}
-
-void PrintCh(uint16_t chNum, CH *ch) {
-  UART_printf("%s%d,%s,%lu,%lu,%d,%d,%d,%d,%d\r\n",
-              ch->meta.type == TYPE_CH ? "CH" : "BAND", chNum, ch->name,
-              ch->rxF, ch->txF, ch->modulation, ch->bw, ch->scanlists,
-              ch->code.tx.type, ch->code.tx.value);
-}
-
 bool UART_IsCommandAvailable(void) {
   uint16_t DmaLength;
   uint16_t CommandLength;
@@ -394,7 +329,6 @@ bool UART_IsCommandAvailable(void) {
   uint16_t TailIndex;
   uint16_t Size;
   uint16_t CRC;
-  uint16_t i;
 
   DmaLength = DMA_CH0->ST & 0xFFFU;
   while (1) {
@@ -403,7 +337,7 @@ bool UART_IsCommandAvailable(void) {
     }
 
     while (gUART_WriteIndex != DmaLength &&
-           UART_DMA_Buffer[gUART_WriteIndex] != 0xABU) {
+           UART_DMA_Buffer[gUART_WriteIndex] != UART_MAGIC_START_1) {
       gUART_WriteIndex = DMA_INDEX(gUART_WriteIndex, 1);
     }
 
@@ -419,7 +353,7 @@ bool UART_IsCommandAvailable(void) {
     if (CommandLength < 8u) {
       return 0;
     }
-    if (UART_DMA_Buffer[DMA_INDEX(gUART_WriteIndex, 1)] == 0xCD) {
+    if (UART_DMA_Buffer[DMA_INDEX(gUART_WriteIndex, 1)] == UART_MAGIC_START_2) {
       break;
     }
     gUART_WriteIndex = DMA_INDEX(gUART_WriteIndex, 1);
@@ -436,8 +370,8 @@ bool UART_IsCommandAvailable(void) {
   }
   Index = DMA_INDEX(Index, 2);
   TailIndex = DMA_INDEX(Index, Size + 2);
-  if (UART_DMA_Buffer[TailIndex] != 0xDC ||
-      UART_DMA_Buffer[DMA_INDEX(TailIndex, 1)] != 0xBA) {
+  if (UART_DMA_Buffer[TailIndex] != UART_MAGIC_END_1 ||
+      UART_DMA_Buffer[DMA_INDEX(TailIndex, 1)] != UART_MAGIC_END_2) {
     gUART_WriteIndex = DmaLength;
     return false;
   }
@@ -469,9 +403,7 @@ bool UART_IsCommandAvailable(void) {
   }
 
   if (bIsEncrypted) {
-    for (i = 0; i < Size + 2; i++) {
-      UART_Command.Buffer[i] ^= Obfuscation[i % 16];
-    }
+    XorObfuscate(UART_Command.Buffer, Size + 2);
   }
 
   CRC = UART_Command.Buffer[Size] | (UART_Command.Buffer[Size + 1] << 8);
@@ -486,7 +418,8 @@ void UART_HandleCommand(void) {
   BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_GREEN, true);
   switch (UART_Command.Header.ID) {
   case 0x0514:
-    CMD_0514(UART_Command.Buffer);
+  case 0x052F:
+    CMD_051X_VersionRequest(UART_Command.Buffer);
     break;
 
   case 0x051B:
@@ -505,10 +438,6 @@ void UART_HandleCommand(void) {
     CMD_052D(UART_Command.Buffer);
     break;
 
-  case 0x052F:
-    CMD_052F(UART_Command.Buffer);
-    break;
-
   case 0x05DD:
     NVIC_SystemReset();
     break;
@@ -517,14 +446,6 @@ void UART_HandleCommand(void) {
 }
 
 void LogUart(const char *const str) { UART_Send(str, strlen(str)); }
-
-void UART_printf(const char *str, ...) {
-  char text[128];
-  va_list va;
-  va_start(va, str);
-  UART_Send(text, vsnprintf(text, sizeof(text), str, va));
-  va_end(va);
-}
 
 // #define DEBUG 1
 
@@ -535,7 +456,7 @@ void Log(const char *pattern, ...) {
   va_start(args, pattern);
   vsnprintf(text, sizeof(text), pattern, args);
   va_end(args);
-  UART_printf("%+10u %s\n", Now(), text);
+  printf("%+10u %s\n", Now(), text);
 }
 void LogC(LogColor c, const char *pattern, ...) {
   char text[128];
@@ -543,7 +464,7 @@ void LogC(LogColor c, const char *pattern, ...) {
   va_start(args, pattern);
   vsnprintf(text, sizeof(text), pattern, args);
   va_end(args);
-  UART_printf("%+10u \033[%um%s\033[%um\n", Now(), c, text, LOG_C_RESET);
+  printf("%+10u \033[%um%s\033[%um\n", Now(), c, text, LOG_C_RESET);
 }
 #else
 void Log(const char *pattern, ...) { (void)pattern; }

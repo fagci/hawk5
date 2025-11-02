@@ -62,7 +62,6 @@ typedef enum {
 
 void UART_Init(void);
 void UART_Send(const void *pBuffer, uint32_t Size);
-void UART_printf(const char *str, ...);
 
 bool UART_IsCommandAvailable(void);
 void UART_HandleCommand(void);

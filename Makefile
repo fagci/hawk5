@@ -147,6 +147,7 @@ $(TARGET): $(OBJS) | $(BIN_DIR)
 	$(LD) $(LDFLAGS) $^ -o $@
 	@echo ""
 	$(SIZE) $@
+	arm-none-eabi-nm --size-sort -r $(BIN_DIR)/$(PROJECT_NAME) | head -10
 	@echo ""
 
 # Компиляция C файлов

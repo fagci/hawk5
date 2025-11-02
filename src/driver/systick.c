@@ -7,30 +7,30 @@
 // НАСТРОЙКИ
 // =============================================================================
 
-#define TIMER0_CLK_HZ 4000000UL // 48МГц / 12 = 4 МГц
-#define TIMER0_TICKS_PER_US 4UL // 1 мкс = 4 тика
+#define TIMER_CLK_HZ 4000000UL     // 48МГц / 12 = 4 МГц
+#define TIMER_TICKS_PER_US 4UL     // 1 мкс = 4 тика
+#define TIMER_TICKS_PER_MS 4000UL  // 1 мс = 4000 тиков
 
 // =============================================================================
 // ГЛОБАЛЬНЫЕ
 // =============================================================================
 
 static volatile uint32_t timer0_overflow_cnt = 0;
+static volatile uint32_t timer1_delay_remaining = 0;
 
 // =============================================================================
 // TIMER0 — 64-битный uptime (основной счётчик времени)
 // =============================================================================
 
-
-
 void TIMER0_InitAsUptimeCounter(void) {
   TIMERBASE0_EN = 0;
-  TIMERBASE0_DIV = 12;          // 4 МГц
-  TIMERBASE0_LOW_LOAD = 0xFFFF; // Максимум ~65536 для LOW
-  TIMERBASE0_IE = 1; // Прерывание при переполнении LOW
-  TIMERBASE0_IF = 1;
-  NVIC_EnableIRQ(5);
+  TIMERBASE0_DIV = 12 - 1;      // 48 МГц / 12 = 4 МГц
+  TIMERBASE0_LOW_LOAD = 0xFFFF; // Максимум для 16-бит счётчика
+  TIMERBASE0_IF = 1;            // Сброс флага
+  TIMERBASE0_IE = 1;            // Включить прерывание
   timer0_overflow_cnt = 0;
-  TIMERBASE0_EN = 1; // Старт
+  NVIC_EnableIRQ(Interrupt5_IRQn);
+  TIMERBASE0_EN = 1;
 }
 
 void HandlerTIMER_BASE0(void) {
@@ -50,83 +50,106 @@ uint64_t GetUptimeUs(void) {
     overflow2 = timer0_overflow_cnt;
   } while (overflow1 != overflow2);
 
-  // Общее количество тиков = (количество переполнений * 65536) + текущий
-  // счетчик
-  uint64_t total_ticks = ((uint64_t)overflow1 * 65536ULL) + cnt;
+  // Общее количество тиков = (количество переполнений * 65536) + текущий счетчик
+  uint64_t total_ticks = ((uint64_t)overflow1 << 16) + cnt;
 
   // Конвертируем в микросекунды (4 тика = 1 мкс)
-  return total_ticks / TIMER0_TICKS_PER_US;
+  return total_ticks / TIMER_TICKS_PER_US;
+}
+
+uint64_t GetUptimeMs(void) { 
+  return GetUptimeUs() / 1000; 
+}
+
+uint32_t GetUptimeSec(void) { 
+  return (uint32_t)(GetUptimeUs() / 1000000); 
 }
 
 // =============================================================================
-// TIMER1 — только для задержек (не использует IRQ)
+// TIMER1 — для задержек с прерыванием каждую 1 мс
 // =============================================================================
 
 void TIMER1_InitForDelay(void) {
   TIMERBASE1_EN = 0;
-  TIMERBASE1_DIV = 12;          // 4 МГц
-  TIMERBASE1_LOW_LOAD = 0xFFFF; // Максимум для LOW таймера
-  TIMERBASE1_IE = 0;
+  TIMERBASE1_DIV = 48000 - 1;                 // 48 МГц / 48000 = 1 кГц
+  TIMERBASE1_LOW_LOAD = 1 - 1;                // 1 тик = 1 мс при 1 кГц
+  TIMERBASE1_IF = 1;                          // Сброс флага
+  TIMERBASE1_IE = 1;                          // Включить прерывание
+  timer1_delay_remaining = 0;
+  NVIC_EnableIRQ(Interrupt6_IRQn);
   TIMERBASE1_EN = 1;
 }
 
-void TIMER_DelayTicks(uint32_t ticks) {
-  if (ticks == 0)
-    return;
-
-  // Для больших задержек делаем несколько итераций
-  while (ticks > 0) {
-    uint32_t delay_chunk = (ticks > 60000) ? 60000 : ticks;
-
-    uint32_t start = TIMERBASE1_LOW_CNT;
-    uint32_t target = start + delay_chunk;
-
-    // Обработка переполнения LOW (~65536)
-    if (target >= 65536) {
-      target -= 65536;
-      // Ждем переполнения
-      while (TIMERBASE1_LOW_CNT >= start)
-        ;
-      // Теперь ждем target после переполнения
-      while (TIMERBASE1_LOW_CNT < target)
-        ;
-    } else {
-      // Нет переполнения
-      while (TIMERBASE1_LOW_CNT < target)
-        ;
+void HandlerTIMER_BASE1(void) {
+  if (TIMERBASE1_IF & 1) {
+    if (timer1_delay_remaining > 0) {
+      timer1_delay_remaining--;
     }
-
-    ticks -= delay_chunk;
+    TIMERBASE1_IF = 1;
   }
 }
+
+void TIMER_DelayMs(uint32_t ms) {
+  if (ms == 0) return;
+  
+  timer1_delay_remaining = ms;
+  
+  // Ждём завершения
+  while (timer1_delay_remaining > 0) {
+    __WFI();  // Энергосбережение - ждём прерывания
+  }
+}
+
+// =============================================================================
+// МИКРОСЕКУНДНЫЕ ЗАДЕРЖКИ (через TIMER0 uptime)
+// =============================================================================
 
 void TIMER_DelayUs(uint32_t us) {
-  if (us == 0)
-    return;
-  TIMER_DelayTicks(us * TIMER0_TICKS_PER_US);
-}
-void TIMER_DelayMs(uint32_t ms) {
-  uint32_t ticks = ms * 1000 * TIMER0_TICKS_PER_US;
-  printf("Delay %lu ms = %lu ticks\n", ms, ticks);
-  TIMER_DelayTicks(ticks);
-}
+  if (us == 0) return;
 
-/* void TIMER_DelayMs(uint32_t ms) {
-  while (ms >= 1000) {
-    TIMER_DelayUs(1000000);
-    ms -= 1000;
-  }
-  if (ms > 0) {
-    TIMER_DelayUs(ms * 1000);
-  }
-} */
+  uint64_t start = GetUptimeUs();
+  uint64_t target = start + us;
 
-void TIMER_Delay250ns(uint32_t count) { TIMER_DelayTicks(count); }
+  while (GetUptimeUs() < target) {
+    // Активное ожидание для точности
+  }
+}
 
 // =============================================================================
-// ФУНКЦИИ ВРЕМЕНИ (через TIMER0)
+// ЗАДЕРЖКИ В ТИКАХ (250 нс, если 4 МГц)
 // =============================================================================
 
-uint64_t GetUptimeMs(void) { return GetUptimeUs() / 1000; }
+void TIMER_DelayTicks(uint32_t ticks) {
+  if (ticks == 0) return;
 
-uint32_t GetUptimeSec(void) { return (uint32_t)(GetUptimeUs() / 1000000); }
+  // Используем TIMER1 для подсчёта тиков
+  uint32_t start = TIMERBASE1_LOW_CNT;
+  
+  // Для больших задержек делаем несколько итераций
+  while (ticks > 0) {
+    uint32_t delay_chunk = (ticks > 4000) ? 4000 : ticks;
+    uint32_t current = TIMERBASE1_LOW_CNT;
+    uint32_t target = (current + delay_chunk) % TIMER_TICKS_PER_MS;
+    
+    // Ждём пока счётчик достигнет цели
+    while (1) {
+      current = TIMERBASE1_LOW_CNT;
+      
+      // Проверка с учётом переполнения
+      if (target > (start % TIMER_TICKS_PER_MS)) {
+        // Нет переполнения
+        if (current >= target) break;
+      } else {
+        // Было переполнение
+        if (current >= target && current < (start % TIMER_TICKS_PER_MS)) break;
+      }
+    }
+    
+    ticks -= delay_chunk;
+    start = TIMERBASE1_LOW_CNT;
+  }
+}
+
+void TIMER_Delay250ns(uint32_t count) { 
+  TIMER_DelayTicks(count); 
+}

@@ -247,7 +247,6 @@ void VFO1_render(void) {
   uint8_t vfoN = RADIO_GetCurrentVFONumber(gRadioState);
 
   if (gIsNumNavInput) {
-    STATUSLINE_SetText("Select: %s", gNumNavInput);
   } else if ((!gSettings.mWatch || vfo->is_open)) { // NOTE mwatch is temporary
     STATUSLINE_RenderRadioSettings();
   } else {

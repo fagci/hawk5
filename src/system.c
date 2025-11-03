@@ -214,6 +214,6 @@ void SYS_Main() {
       lastUartDataTime = Now();
     }
 
-    __WFI();
+    // __WFI();
   }
 }

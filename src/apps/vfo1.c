@@ -308,11 +308,11 @@ void VFO1_render(void) {
     }
   } */
 
-  /* if (gSettings.iAmPro && !isTxFDifferent) {
+  if (gSettings.iAmPro && !isTxFDifferent) {
     uint32_t lambda = 29979246 / (ctx->frequency / 100);
     PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "L=%u/%ucm", lambda,
                  lambda / 4);
-  } */
+  }
 
   if (isTxFDifferent) {
     PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "TX: %s",

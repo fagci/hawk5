@@ -5,6 +5,7 @@
 #include "driver/eeprom.h"
 #include "driver/keyboard.h"
 #include "driver/st7565.h"
+#include "driver/systick.h"
 #include "driver/uart.h"
 #include "external/CMSIS_5/Device/ARM/ARMCM0/Include/ARMCM0.h"
 #include "helper/bands.h"
@@ -65,7 +66,6 @@ static void appRender() {
 }
 
 static void systemUpdate() {
-  // RADIO_Update();
   BATTERY_UpdateBatteryInfo();
   BACKLIGHT_Update();
 }
@@ -73,7 +73,9 @@ static void systemUpdate() {
 void radioUpdate() {
   if (gCurrentApp != APP_SCANER && gCurrentApp != APP_BAND_SCAN) {
     RADIO_UpdateMultiwatch(gRadioState);
-    RADIO_CheckAndSaveVFO(gRadioState);
+    if (gRadioState) {
+      RADIO_CheckAndSaveVFO(gRadioState);
+    }
     if (Now() - radioTimer >= SQL_DELAY) {
       RADIO_UpdateSquelch(gRadioState);
       SP_ShiftGraph(-1);
@@ -161,7 +163,6 @@ void initDisplay() {
 }
 
 void SYS_Main() {
-
   BATTERY_UpdateBatteryInfo();
 
   SystemMessages n = KEYBOARD_GetKey();
@@ -213,6 +214,6 @@ void SYS_Main() {
       lastUartDataTime = Now();
     }
 
-    // __WFI();
+    __WFI();
   }
 }

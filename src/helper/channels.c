@@ -1,6 +1,7 @@
 #include "channels.h"
 #include "../driver/eeprom.h"
 #include "../driver/uart.h"
+#include "../external/printf/printf.h"
 #include "../helper/lootlist.h"
 #include "../helper/measurements.h"
 #include "../radio.h"
@@ -11,8 +12,7 @@
 uint16_t gScanlistSize = 0;
 uint16_t gScanlist[SCANLIST_MAX] = {0};
 CHType gScanlistType = TYPE_CH;
-const char *CH_TYPE_NAMES[6] = {"EMPTY", "CH",     "BAND",
-                                "VFO",   "FOLDER", "MELODY"};
+const char *CH_TYPE_NAMES[6] = {"EMPTY", "CH", "BAND", "VFO", "FLD", "SND"};
 const char *TX_POWER_NAMES[4] = {"ULow", "Low", "Mid", "High"};
 const char *TX_OFFSET_NAMES[4] = {"None", "+", "-", "Freq"};
 const char *TX_CODE_TYPES[4] = {"None", "CT", "DCS", "-DCS"};

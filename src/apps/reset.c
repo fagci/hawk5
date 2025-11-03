@@ -158,6 +158,7 @@ VFO vfos[9] = {
 static bool resetFull() {
   if (stats.settings < total.settings) {
     SETTINGS_Save();
+    printf("SE SAV\n");
     // Log("[i] settings saved!");
     stats.settings++;
     stats.bytes += SETTINGS_SIZE;

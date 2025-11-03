@@ -298,7 +298,7 @@ void VFO1_render(void) {
   uint32_t txF = RADIO_GetParam(ctx, PARAM_TX_FREQUENCY_FACT);
   bool isTxFDifferent = txF != RADIO_GetParam(ctx, PARAM_FREQUENCY);
 
-  if (gSettings.iAmPro) {
+  /* if (gSettings.iAmPro) {
     if (vfo->msm.open) {
       int32_t hz = afc_to_deviation_hz(BK4819_ReadRegister(0x6D));
 
@@ -306,13 +306,13 @@ void VFO1_render(void) {
         PrintSmallEx(40, 21, POS_R, C_FILL, "%+d", hz);
       }
     }
-  }
+  } */
 
-  if (gSettings.iAmPro && !isTxFDifferent) {
+  /* if (gSettings.iAmPro && !isTxFDifferent) {
     uint32_t lambda = 29979246 / (ctx->frequency / 100);
     PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "L=%u/%ucm", lambda,
                  lambda / 4);
-  }
+  } */
 
   if (isTxFDifferent) {
     PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "TX: %s",

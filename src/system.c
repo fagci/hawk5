@@ -71,11 +71,10 @@ static void systemUpdate() {
 }
 
 void radioUpdate() {
-  if (gCurrentApp != APP_SCANER && gCurrentApp != APP_BAND_SCAN) {
+  if (gRadioState && gCurrentApp != APP_SCANER &&
+      gCurrentApp != APP_BAND_SCAN) {
     RADIO_UpdateMultiwatch(gRadioState);
-    if (gRadioState) {
-      RADIO_CheckAndSaveVFO(gRadioState);
-    }
+    RADIO_CheckAndSaveVFO(gRadioState);
     if (Now() - radioTimer >= SQL_DELAY) {
       RADIO_UpdateSquelch(gRadioState);
       SP_ShiftGraph(-1);

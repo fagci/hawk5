@@ -13,8 +13,6 @@ typedef struct {
 
 typedef enum {
   GRAPH_RSSI,
-  GRAPH_PEAK_RSSI,
-  GRAPH_AGC_RSSI,
   GRAPH_NOISE,
   GRAPH_GLITCH,
   GRAPH_SNR,

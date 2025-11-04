@@ -307,12 +307,6 @@ void SP_AddGraphPoint(const Measurement *msm) {
   uint16_t v = msm->rssi;
 
   switch (graphMeasurement) {
-  case GRAPH_PEAK_RSSI:
-    v = msm->lnaPeakRssi;
-    break;
-  case GRAPH_AGC_RSSI:
-    v = msm->rssiAgc;
-    break;
   case GRAPH_NOISE:
     v = msm->noise;
     break;

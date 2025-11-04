@@ -20,8 +20,10 @@
 #include "finput.h"
 
 static char String[16];
+static uint32_t lastRender;
+static const Step liveStep = STEP_5_0kHz;
 
-static void updateBand() {
+static void updateBand(void) {
   uint32_t f = RADIO_GetParam(ctx, PARAM_FREQUENCY);
   if (!BANDS_InRange(f, gCurrentBand) ||
       gCurrentBand.meta.type == TYPE_BAND_DETACHED) {
@@ -50,14 +52,162 @@ void VFO1_init(void) {
   updateBand();
 }
 
-static uint32_t lastRender;
-
-static const Step liveStep = STEP_5_0kHz;
-
 void VFO1_update(void) {
   if (Now() - lastRender >= 500) {
     lastRender = Now();
     gRedrawScreen = true;
+  }
+}
+
+static bool handleNumNav(KEY_Code_t key) {
+  if (gIsNumNavInput) {
+    NUMNAV_Input(key);
+    return true;
+  }
+
+  if (key <= KEY_9) {
+    NUMNAV_Init(vfo->channel_index, 0, CHANNELS_GetCountMax() - 1);
+    gNumNavCallback = setChannel;
+    return false;
+  }
+
+  return false;
+}
+
+static bool handleFrequencyChange(KEY_Code_t key) {
+  if (key != KEY_UP && key != KEY_DOWN)
+    return false;
+
+  if (vfo->mode == MODE_CHANNEL) {
+    CHANNELS_Next(key == KEY_UP);
+  } else {
+    RADIO_IncDecParam(ctx, PARAM_FREQUENCY, key == KEY_UP, true);
+  }
+  updateBand();
+  return true;
+}
+
+static bool handleSSBFineTune(KEY_Code_t key) {
+  if (ctx->radio_type != RADIO_SI4732 || !RADIO_IsSSB(ctx))
+    return false;
+  if (key != KEY_SIDE1 && key != KEY_SIDE2)
+    return false;
+
+  RADIO_AdjustParam(ctx, PARAM_FREQUENCY, key == KEY_SIDE1 ? 5 : -5, true);
+  // TODO: SAVE
+  return true;
+}
+
+static bool handleLongPress(KEY_Code_t key) {
+  uint8_t vfoN = RADIO_GetCurrentVFONumber(gRadioState);
+
+  switch (key) {
+  case KEY_1:
+    gChListFilter = TYPE_FILTER_BAND;
+    APPS_run(APP_CH_LIST);
+    return true;
+
+  case KEY_2:
+    if (gCurrentApp == APP_VFO1) {
+      gSettings.iAmPro = !gSettings.iAmPro;
+      SETTINGS_Save();
+      return true;
+    }
+    return false;
+
+  case KEY_3:
+    RADIO_SaveCurrentVFO(gRadioState);
+    RADIO_ToggleVFOMode(gRadioState, vfoN);
+    updateBand();
+    return true;
+
+  case KEY_4:
+    gShowAllRSSI = !gShowAllRSSI;
+    return true;
+
+  case KEY_5:
+    RADIO_ToggleMultiwatch(gRadioState, !gRadioState->multiwatch_enabled);
+    return true;
+
+  case KEY_6:
+    RADIO_IncDecParam(ctx, PARAM_POWER, true, true);
+    return true;
+
+  case KEY_7:
+    RADIO_IncDecParam(ctx, PARAM_STEP, true, true);
+    return true;
+
+  case KEY_8:
+    RADIO_IncDecParam(ctx, PARAM_TX_OFFSET, true, true);
+    return true;
+
+  case KEY_0:
+    RADIO_IncDecParam(ctx, PARAM_MODULATION, true, true);
+    return true;
+
+  case KEY_SIDE1:
+  case KEY_SIDE2:
+    SP_NextGraphUnit(key == KEY_SIDE1);
+    return true;
+
+  default:
+    return false;
+  }
+}
+
+static bool handleRelease(KEY_Code_t key, Key_State_t state) {
+  uint8_t vfoN = RADIO_GetCurrentVFONumber(gRadioState);
+
+  switch (key) {
+  case KEY_0:
+  case KEY_1:
+  case KEY_2:
+  case KEY_3:
+  case KEY_4:
+  case KEY_5:
+  case KEY_6:
+  case KEY_7:
+  case KEY_8:
+  case KEY_9:
+    gFInputCallback = tuneTo;
+    FINPUT_setup(0, BK4819_F_MAX, UNIT_MHZ, false);
+    APPS_run(APP_FINPUT);
+    APPS_key(key, state);
+    return true;
+
+  case KEY_F:
+    RADIO_SaveVFOToStorage(gRadioState, vfoN, &gChEd);
+    gChNum = -1;
+    APPS_run(APP_CH_CFG);
+    return true;
+
+  case KEY_STAR:
+    APPS_run(APP_LOOT_LIST);
+    return true;
+
+  case KEY_SIDE1:
+    gMonitorMode = !gMonitorMode;
+    return true;
+
+  case KEY_SIDE2:
+    GPIO_FlipBit(&GPIOC->DATA, GPIOC_PIN_FLASHLIGHT);
+    return true;
+
+  case KEY_EXIT:
+    if (gMonitorMode) {
+      gMonitorMode = false;
+      return true;
+    }
+    if (!APPS_exit()) {
+      RADIO_SaveCurrentVFO(gRadioState);
+      RADIO_SwitchVFO(gRadioState,
+                      IncDecU(vfoN, 0, gRadioState->num_vfos, true));
+      updateBand();
+    }
+    return true;
+
+  default:
+    return false;
   }
 }
 
@@ -66,147 +216,37 @@ bool VFO1_key(KEY_Code_t key, Key_State_t state) {
     return true;
   }
 
-  uint8_t vfoN = RADIO_GetCurrentVFONumber(gRadioState);
-
-  if (state == KEY_RELEASED && vfo->mode == MODE_CHANNEL) {
-    if (!gIsNumNavInput && key <= KEY_9) {
-      NUMNAV_Init(vfo->channel_index, 0, CHANNELS_GetCountMax() - 1);
-      gNumNavCallback = setChannel;
-    }
-    if (gIsNumNavInput) {
-      NUMNAV_Input(key);
+  // Обработка NUM NAV в режиме канала
+  if (state == KEY_RELEASED && vfo->mode == MODE_CHANNEL && !gIsNumNavInput) {
+    if (handleNumNav(key)) {
       return true;
     }
   }
 
+  // PTT
   if (key == KEY_PTT && !gIsNumNavInput) {
     RADIO_ToggleTX(ctx, state != KEY_RELEASED);
     return true;
   }
 
-  // pressed or hold continue
+  // Обработка нажатий и удержаний
   if (state == KEY_RELEASED || state == KEY_LONG_PRESSED_CONT) {
-    const bool isSsb = RADIO_IsSSB(ctx);
-    switch (key) {
-    case KEY_UP:
-    case KEY_DOWN:
-      if (vfo->mode == MODE_CHANNEL) {
-        CHANNELS_Next(key == KEY_UP);
-      } else {
-        RADIO_IncDecParam(ctx, PARAM_FREQUENCY, key == KEY_UP, true);
-      }
-      updateBand();
+    if (handleFrequencyChange(key))
       return true;
-    case KEY_SIDE1:
-    case KEY_SIDE2:
-      if (ctx->radio_type == RADIO_SI4732 && isSsb) {
-        RADIO_AdjustParam(ctx, PARAM_FREQUENCY, key == KEY_SIDE1 ? 5 : -5,
-                          true);
-        // TODO: SAVE
-        return true;
-      }
-      break;
-    default:
-      break;
-    }
+    if (handleSSBFineTune(key))
+      return true;
   }
 
+  // Длинные нажатия
   if (state == KEY_LONG_PRESSED) {
-    switch (key) {
-    case KEY_1:
-      gChListFilter = TYPE_FILTER_BAND;
-      APPS_run(APP_CH_LIST);
-      return true;
-    case KEY_2:
-      if (gCurrentApp == APP_VFO1) {
-        gSettings.iAmPro = !gSettings.iAmPro;
-        SETTINGS_Save();
-        return true;
-      }
-      return false;
-    case KEY_3:
-      RADIO_SaveCurrentVFO(gRadioState);
-      RADIO_ToggleVFOMode(gRadioState, vfoN);
-      updateBand();
-      // VFO1_init();
-      return true;
-    case KEY_4:
-      gShowAllRSSI = !gShowAllRSSI;
-      return true;
-    case KEY_5:
-      RADIO_ToggleMultiwatch(gRadioState, !gRadioState->multiwatch_enabled);
-      return true;
-    case KEY_6:
-      RADIO_IncDecParam(ctx, PARAM_POWER, true, true);
-      return true;
-    case KEY_7:
-      RADIO_IncDecParam(ctx, PARAM_STEP, true, true);
-      return true;
-    case KEY_8:
-      RADIO_IncDecParam(ctx, PARAM_TX_OFFSET, true, true);
-      return true;
-    case KEY_0:
-      RADIO_IncDecParam(ctx, PARAM_MODULATION, true, true);
-      return true;
-    case KEY_SIDE1:
-    case KEY_SIDE2:
-      SP_NextGraphUnit(key == KEY_SIDE1);
-      return true;
-    case KEY_EXIT:
-      break;
-    default:
-      break;
-    }
+    return handleLongPress(key);
   }
 
+  // Отпускания
   if (state == KEY_RELEASED) {
-    switch (key) {
-    case KEY_0:
-    case KEY_1:
-    case KEY_2:
-    case KEY_3:
-    case KEY_4:
-    case KEY_5:
-    case KEY_6:
-    case KEY_7:
-    case KEY_8:
-    case KEY_9:
-      gFInputCallback = tuneTo;
-      FINPUT_setup(0, BK4819_F_MAX, UNIT_MHZ, false);
-      APPS_run(APP_FINPUT);
-      APPS_key(key, state);
-      return true;
-    case KEY_F:
-      RADIO_SaveVFOToStorage(gRadioState,
-                             RADIO_GetCurrentVFONumber(gRadioState), &gChEd);
-      gChNum = -1;
-      APPS_run(APP_CH_CFG);
-      return true;
-    case KEY_STAR:
-      APPS_run(APP_LOOT_LIST);
-      return true;
-    case KEY_SIDE1:
-      gMonitorMode = !gMonitorMode;
-      return true;
-    case KEY_SIDE2:
-      GPIO_FlipBit(&GPIOC->DATA, GPIOC_PIN_FLASHLIGHT);
-      break;
-    case KEY_EXIT:
-      if (gMonitorMode) {
-        gMonitorMode = false;
-        return true;
-      }
-      if (!APPS_exit()) {
-        RADIO_SaveCurrentVFO(gRadioState);
-        RADIO_SwitchVFO(gRadioState,
-                        IncDecU(vfoN, 0, gRadioState->num_vfos, true));
-        updateBand();
-      }
-      return true;
-    default:
-      break;
-    }
+    return handleRelease(key, state);
   }
+
   return false;
 }
 
@@ -241,51 +281,36 @@ int32_t afc_to_deviation_hz(uint16_t reg_6d) {
   return ((int64_t)(int16_t)reg_6d * 1000LL) / 291LL;
 }
 
-void VFO1_render(void) {
-  const uint8_t BASE = 40;
-
-  uint8_t vfoN = RADIO_GetCurrentVFONumber(gRadioState);
-
+static void renderStatusLine(void) {
   if (gIsNumNavInput) {
-  } else if ((!gSettings.mWatch || vfo->is_open)) { // NOTE mwatch is temporary
+    return;
+  }
+
+  if (!gSettings.mWatch || vfo->is_open) {
     STATUSLINE_RenderRadioSettings();
   } else {
     STATUSLINE_SetText("Radio: %s",
                        RADIO_GetParamValueString(ctx, PARAM_RADIO));
   }
+}
 
-  uint32_t f = RADIO_GetParam(
-      ctx, ctx->tx_state.is_active ? PARAM_TX_FREQUENCY_FACT : PARAM_FREQUENCY);
-  const char *mod = RADIO_GetParamValueString(ctx, PARAM_MODULATION);
-
+static void renderBandInfo(uint8_t BASE) {
   if (vfo->mode == MODE_CHANNEL) {
     PrintMediumEx(LCD_XCENTER, BASE - 16, POS_C, C_FILL, "%s", ctx->name);
   } else {
+    const char *format =
+        (gCurrentBand.meta.type == TYPE_BAND_DETACHED) ? "*%s" : "%s:%u";
+    uint32_t channel = CHANNELS_GetChannel(&gCurrentBand, ctx->frequency) + 1;
+
     if (gCurrentBand.meta.type == TYPE_BAND_DETACHED) {
-      PrintSmallEx(32, 12, POS_L, C_FILL, "*%s", gCurrentBand.name);
+      PrintSmallEx(32, 12, POS_L, C_FILL, format, gCurrentBand.name);
     } else {
-      PrintSmallEx(32, 12, POS_L, C_FILL, false ? "=%s:%u" : "%s:%u",
-                   gCurrentBand.name,
-                   CHANNELS_GetChannel(&gCurrentBand, ctx->frequency) + 1);
+      PrintSmallEx(32, 12, POS_L, C_FILL, format, gCurrentBand.name, channel);
     }
   }
+}
 
-  /* PrintSmallEx(0, 24, POS_L, C_FILL, "POW %u",
-               (BK4819_ReadRegister(0x7E) >> 6) & 0b111111); */
-
-  // Шаг, полоса, уровень SQL, мощность, субтоны, названия каналов.
-
-  renderTxRxState(BASE - 4,
-                  ctx->tx_state.is_active || ctx->tx_state.last_error);
-  if (!ctx->tx_state.last_error) {
-    UI_BigFrequency(BASE, f);
-  }
-  PrintMediumEx(LCD_WIDTH - 1, BASE - 12, POS_R, C_FILL, mod);
-  renderChannelName(21, vfo->channel_index);
-  const uint32_t step = StepFrequencyTable[ctx->step];
-  PrintSmallEx(LCD_WIDTH, BASE + 6, POS_R, C_FILL, "%d.%02d", step / KHZ,
-               step % KHZ);
-
+static void renderCodes(uint8_t BASE) {
   if (ctx->code.type) {
     PrintSmallEx(0, BASE - 6, POS_L, C_FILL, "R%s",
                  RADIO_GetParamValueString(ctx, PARAM_RX_CODE));
@@ -294,19 +319,12 @@ void VFO1_render(void) {
     PrintSmallEx(0, BASE, POS_L, C_FILL, "T%s",
                  RADIO_GetParamValueString(ctx, PARAM_RX_CODE));
   }
+}
 
+static void renderExtraInfo(uint8_t BASE) {
   uint32_t txF = RADIO_GetParam(ctx, PARAM_TX_FREQUENCY_FACT);
-  bool isTxFDifferent = txF != RADIO_GetParam(ctx, PARAM_FREQUENCY);
-
-  /* if (gSettings.iAmPro) {
-    if (vfo->msm.open) {
-      int32_t hz = afc_to_deviation_hz(BK4819_ReadRegister(0x6D));
-
-      if (hz != 0) {
-        PrintSmallEx(40, 21, POS_R, C_FILL, "%+d", hz);
-      }
-    }
-  } */
+  uint32_t rxF = RADIO_GetParam(ctx, PARAM_FREQUENCY);
+  bool isTxFDifferent = (txF != rxF);
 
   if (gSettings.iAmPro && !isTxFDifferent) {
     uint32_t lambda = 29979246 / (ctx->frequency / 100);
@@ -318,66 +336,99 @@ void VFO1_render(void) {
     PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "TX: %s",
                  RADIO_GetParamValueString(ctx, PARAM_TX_FREQUENCY_FACT));
   }
+}
+
+static void renderLootInfo(void) {
+  if (!gLastActiveLoot)
+    return;
+
+  const uint32_t ago = (Now() - gLastActiveLoot->lastTimeOpen) / 1000;
+
+  if (gLastActiveLoot->ct != 255) {
+    PrintRTXCode(String, CODE_TYPE_CONTINUOUS_TONE, gLastActiveLoot->ct);
+    PrintSmallEx(0, LCD_HEIGHT - 1, POS_L, C_FILL, "%s", String);
+  } else if (gLastActiveLoot->cd != 255) {
+    PrintRTXCode(String, CODE_TYPE_DIGITAL, gLastActiveLoot->cd);
+    PrintSmallEx(0, LCD_HEIGHT - 1, POS_L, C_FILL, "%s", String);
+  }
+
+  UI_DrawLoot(gLastActiveLoot, LCD_XCENTER, LCD_HEIGHT - 1, POS_C);
+
+  if (ago) {
+    PrintSmallEx(LCD_WIDTH, LCD_HEIGHT - 1, POS_R, C_FILL, "%u:%02u", ago / 60,
+                 ago % 60);
+  }
+}
+
+static void renderMonitorMode(uint8_t BASE) {
+  SPECTRUM_Y = BASE + 2;
+  SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
+
+  if (gSettings.showLevelInVFO) {
+    static char *graphMeasurementNames[] = {
+        [GRAPH_RSSI] = "RSSI",
+        [GRAPH_NOISE] = "Noise",
+        [GRAPH_GLITCH] = "Glitch",
+        [GRAPH_SNR] = "SNR",
+    };
+
+    static const struct {
+      uint8_t min;
+      uint8_t max;
+    } graphRanges[] = {
+        [GRAPH_RSSI] = {RSSI_MIN, RSSI_MAX},
+        [GRAPH_NOISE] = {0, 255},
+        [GRAPH_GLITCH] = {0, 255},
+        [GRAPH_SNR] = {0, 30},
+        [GRAPH_COUNT] = {RSSI_MIN, RSSI_MAX},
+    };
+
+    SP_RenderGraph(graphRanges[graphMeasurement].min,
+                   graphRanges[graphMeasurement].max);
+    PrintSmallEx(0, SPECTRUM_Y + 5, POS_L, C_FILL, "%s %+3u",
+                 graphMeasurementNames[graphMeasurement],
+                 SP_GetLastGraphValue());
+  } else {
+    UI_RSSIBar(BASE + 1);
+  }
+}
+
+void VFO1_render(void) {
+  const uint8_t BASE = 40;
+
+  renderStatusLine();
+
+  uint32_t f = RADIO_GetParam(
+      ctx, ctx->tx_state.is_active ? PARAM_TX_FREQUENCY_FACT : PARAM_FREQUENCY);
+  const char *mod = RADIO_GetParamValueString(ctx, PARAM_MODULATION);
+
+  renderBandInfo(BASE);
+  renderTxRxState(BASE - 4,
+                  ctx->tx_state.is_active || ctx->tx_state.last_error);
+
+  if (!ctx->tx_state.last_error) {
+    UI_BigFrequency(BASE, f);
+  }
+
+  PrintMediumEx(LCD_WIDTH - 1, BASE - 12, POS_R, C_FILL, mod);
+  renderChannelName(21, vfo->channel_index);
+
+  const uint32_t step = StepFrequencyTable[ctx->step];
+  PrintSmallEx(LCD_WIDTH, BASE + 6, POS_R, C_FILL, "%d.%02d", step / KHZ,
+               step % KHZ);
+
+  renderCodes(BASE);
+  renderExtraInfo(BASE);
+  renderLootInfo();
 
   if (gMonitorMode) {
-    SPECTRUM_Y = BASE + 2;
-    SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
-    if (gSettings.showLevelInVFO) {
-      char *graphMeasurementNames[] = {
-          [GRAPH_RSSI] = "RSSI",           //
-          [GRAPH_PEAK_RSSI] = "Peak RSSI", //
-          [GRAPH_AGC_RSSI] = "AGC RSSI",   //
-          [GRAPH_NOISE] = "Noise",         //
-          [GRAPH_GLITCH] = "Glitch",       //
-          [GRAPH_SNR] = "SNR",             //
-      };
-      switch (graphMeasurement) {
-      case GRAPH_RSSI:
-      case GRAPH_COUNT:
-        SP_RenderGraph(RSSI_MIN, RSSI_MAX);
-        break;
-      case GRAPH_NOISE:
-      case GRAPH_GLITCH:
-        SP_RenderGraph(0, 256);
-        break;
-      case GRAPH_SNR:
-        SP_RenderGraph(0, 30);
-        break;
-      case GRAPH_PEAK_RSSI:
-        SP_RenderGraph(15, 88);
-        break;
-      case GRAPH_AGC_RSSI:
-        SP_RenderGraph(25, 128);
-        break;
-      }
-      PrintSmallEx(0, SPECTRUM_Y + 5, POS_L, C_FILL, "%s %+3u",
-                   graphMeasurementNames[graphMeasurement],
-                   SP_GetLastGraphValue());
-    } else {
-      UI_RSSIBar(BASE + 1);
-    }
+    renderMonitorMode(BASE);
   } else {
     if (vfo->msm.open) {
       UI_RSSIBar(BASE + 1);
     }
     if (ctx->tx_state.is_active) {
       UI_TxBar(BASE + 1);
-    }
-  }
-
-  if (gLastActiveLoot) {
-    const uint32_t ago = (Now() - gLastActiveLoot->lastTimeOpen) / 1000;
-    if (gLastActiveLoot->ct != 255) {
-      PrintRTXCode(String, CODE_TYPE_CONTINUOUS_TONE, gLastActiveLoot->ct);
-      PrintSmallEx(0, LCD_HEIGHT - 1, POS_L, C_FILL, "%s", String);
-    } else if (gLastActiveLoot->cd != 255) {
-      PrintRTXCode(String, CODE_TYPE_DIGITAL, gLastActiveLoot->cd);
-      PrintSmallEx(0, LCD_HEIGHT - 1, POS_L, C_FILL, "%s", String);
-    }
-    UI_DrawLoot(gLastActiveLoot, LCD_XCENTER, LCD_HEIGHT - 1, POS_C);
-    if (ago) {
-      PrintSmallEx(LCD_WIDTH, LCD_HEIGHT - 1, POS_R, C_FILL, "%u:%02u",
-                   ago / 60, ago % 60);
     }
   }
 

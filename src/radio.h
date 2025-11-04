@@ -29,7 +29,6 @@ extern const uint16_t StepFrequencyTable[15];
 // Параметры
 typedef const enum {
   PARAM_RADIO,
-  PARAM_FREQUENCY,
   PARAM_PRECISE_F_CHANGE,
   PARAM_STEP,
   PARAM_POWER,
@@ -63,7 +62,10 @@ typedef const enum {
   PARAM_GLITCH,
   PARAM_SNR,
 
-  PARAM_COUNT
+  // IMPORTANT FOR SI47xx (know modulation before f set)
+  PARAM_FREQUENCY,
+
+  PARAM_COUNT,
 } ParamType;
 
 typedef enum {

@@ -1,4 +1,5 @@
 #include "si473x.h"
+#include "../external/printf/printf.h"
 #include "../inc/dp32g030/gpio.h"
 #include "../misc.h"
 #include "../settings.h"
@@ -25,18 +26,51 @@ bool isSi4732On = false;
 
 static uint16_t fDiv() { return si4732mode == SI47XX_FM ? 1000 : 100; }
 
-void SI47XX_ReadBuffer(uint8_t *buf, uint8_t size) {
+/* bool SI47XX_ReadBuffer(uint8_t *buf, uint8_t size) {
   I2C_Start();
-  I2C_Write(SI47XX_I2C_ADDR + 1);
-  I2C_ReadBuffer(buf, size);
+  if (I2C_Write(SI47XX_I2C_ADDR + 1) != 0) {
+    I2C_Stop();
+    printf("SI R A nok\n");
+    return false;
+  }
+  if (I2C_ReadBuffer(buf, size) != 0) {
+    I2C_Stop();
+    printf("SI R D nok\n");
+    return false;
+  }
   I2C_Stop();
+  return true;
+} */
+
+bool SI47XX_ReadBuffer(uint8_t *buf, uint8_t size) {
+  uint8_t retries = 5;
+  while (retries--) {
+    I2C_Start();
+    if (I2C_Write(SI47XX_I2C_ADDR + 1) == 0) {
+      if (I2C_ReadBuffer(buf, size) == 0) {
+        I2C_Stop();
+        return true;
+      }
+    }
+    I2C_Stop();
+    SYS_DelayMs(1); // Short retry delay
+  }
+  // printf("SI R ERR\n");
+  return false;
 }
 
-void SI47XX_WriteBuffer(uint8_t *buf, uint8_t size) {
+bool SI47XX_WriteBuffer(uint8_t *buf, uint8_t size) {
   I2C_Start();
-  I2C_Write(SI47XX_I2C_ADDR);
-  I2C_WriteBuffer(buf, size);
+  if (I2C_Write(SI47XX_I2C_ADDR) != 0) {
+    I2C_Stop();
+    return false;
+  }
+  if (I2C_WriteBuffer(buf, size) != 0) {
+    I2C_Stop();
+    return false;
+  }
   I2C_Stop();
+  return true;
 }
 
 bool SI47XX_IsSSB() {
@@ -50,6 +84,22 @@ void waitToSend() {
     SI47XX_ReadBuffer((uint8_t *)&tmp, 1);
   } while (!(tmp & STATUS_CTS));
 }
+
+/* void waitToSend() {
+  uint8_t tmp = 0;
+  uint16_t attempts = 500; // ~500 мс max при delay 1 мс
+  do {
+    SYS_DelayMs(1); // Увеличьте до 1 мс — reduce traffic, allow CTS settle
+    if (!SI47XX_ReadBuffer(&tmp, 1))
+      continue; // Если failed, retry
+    if (--attempts == 0) {
+      printf("CTS timeout after %u ms\n", 500);
+      // Optional: I2C_Recover();  // Вызовите recovery
+      return;
+    }
+  } while (!(tmp & STATUS_CTS));
+  printf("CTS ok: 0x%02X\n", tmp);
+} */
 
 #include "../ui/graphics.h" // X_X
 void SI47XX_downloadPatch() {
@@ -158,13 +208,22 @@ void SI47XX_SetAutomaticGainControl(uint8_t AGCDIS, uint8_t AGCIDX) {
 }
 
 void SI47XX_PowerUp() {
+  // printf("SI PU\n");
+  /* RST_LOW;
+  SYS_DelayMs(10); */
   RST_HIGH;
+  // SYS_DelayMs(50);
+
   uint8_t cmd[3] = {CMD_POWER_UP, FLG_XOSCEN | FUNC_FM, OUT_ANALOG};
   if (si4732mode == SI47XX_AM) {
     cmd[1] = FLG_XOSCEN | FUNC_AM;
   }
   waitToSend();
-  SI47XX_WriteBuffer(cmd, 3);
+
+  if (!SI47XX_WriteBuffer(cmd, 3)) {
+    // printf("SI PU failed\n");
+    return;
+  }
   SYS_DelayMs(500);
 
   isSi4732On = true;
@@ -181,7 +240,9 @@ void SI47XX_PowerUp() {
     SI47XX_SetProperty(PROP_AM_AGC_RELEASE_RATE, 20);
     setAvcAmMaxGain(40);
   }
-  SI47XX_SetFreq(siCurrentFreq);
+  if (siCurrentFreq != 0) {
+    SI47XX_SetFreq(siCurrentFreq);
+  }
 }
 
 void SI47XX_SsbSetup(SI47XX_SsbFilterBW AUDIOBW, uint8_t SBCUTFLT,
@@ -198,6 +259,7 @@ void SI47XX_SsbSetup(SI47XX_SsbFilterBW AUDIOBW, uint8_t SBCUTFLT,
 }
 
 void SI47XX_PatchPowerUp() {
+  // printf("SI PPU\n");
   RST_HIGH;
   uint8_t cmd[3] = {CMD_POWER_UP, 0b00110001, OUT_ANALOG};
   waitToSend();
@@ -259,6 +321,7 @@ uint32_t SI47XX_getFrequency(bool *valid) {
 }
 
 void SI47XX_PowerDown() {
+  // printf("SI PD\n");
   AUDIO_ToggleSpeaker(false);
   uint8_t cmd[1] = {CMD_POWER_DOWN};
 
@@ -287,6 +350,10 @@ void SI47XX_SwitchMode(SI47XX_MODE mode) {
 }
 
 void SI47XX_SetFreq(uint16_t freq) {
+  if (freq == 0) {
+    // printf("SI f=0 skip\n");
+    return; // Защита от установки нулевой частоты
+  }
   if (siCurrentFreq == freq) {
     return;
   }
@@ -316,7 +383,6 @@ void SI47XX_SetFreq(uint16_t freq) {
   waitToSend();
   SI47XX_WriteBuffer(cmd, size);
   siCurrentFreq = freq;
-  Log("SI f=%u", siCurrentFreq);
 }
 
 void SI47XX_SetAMFrontendAGC(uint8_t minGainIdx, uint8_t attnBackup) {

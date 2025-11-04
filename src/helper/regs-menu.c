@@ -51,6 +51,7 @@ static const ParamType paramsSI[] = {
     PARAM_SQUELCH_VALUE, //
     PARAM_MODULATION,    //
     PARAM_STEP,          //
+    PARAM_VOLUME,        //
 };
 
 static const ParamType paramsBK1080[] = {

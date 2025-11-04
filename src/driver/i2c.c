@@ -7,7 +7,7 @@
 #include "systick.h"
 
 static inline void i2c_delay(void) {
-  for (volatile uint32_t i = 0; i < 2; i++) {
+  for (volatile uint32_t i = 0; i < 4; i++) {
     __NOP();
   }
 }

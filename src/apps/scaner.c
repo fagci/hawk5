@@ -75,6 +75,7 @@ void SCANER_update(void) {
 
 static bool pttWasLongPressed = false;
 bool SCANER_key(KEY_Code_t key, Key_State_t state) {
+  return false;
   if (state == KEY_RELEASED && REGSMENU_Key(key, state)) {
     return true;
   }
@@ -227,6 +228,7 @@ static void renderAnalyzerUI() {
 }
 
 void SCANER_render(void) {
+  return;
   const uint32_t step = StepFrequencyTable[RADIO_GetParam(ctx, PARAM_STEP)];
 
   STATUSLINE_RenderRadioSettings();

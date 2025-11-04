@@ -24,7 +24,7 @@
 
 #define RADIO_SAVE_DELAY_MS 1000
 
-// #define DEBUG_PARAMS 1
+#define DEBUG_PARAMS 1
 
 bool gShowAllRSSI = false;
 bool gMonitorMode = false;
@@ -559,7 +559,7 @@ static bool setParamSI4732(VFOContext *ctx, ParamType p) {
     }
     return true;
   case PARAM_VOLUME:
-    SI47XX_SetVolume(ctx->volume);
+    SI47XX_SetVolume(ConvertDomain(ctx->volume, 0, 100, 0, 63));
     return true;
   case PARAM_RADIO:
   case PARAM_PRECISE_F_CHANGE:
@@ -1008,6 +1008,11 @@ void RADIO_ApplySettings(VFOContext *ctx) {
     LogC(LOG_C_BRIGHT_MAGENTA, "[RADIO] =%s",
          RADIO_GetParamValueString(ctx, PARAM_RADIO));
     ctx->dirty[PARAM_RADIO] = false;
+
+    if (ctx->radio_type != RADIO_BK4819) {
+      printf("RADIO IS BC\n");
+      rxTurnOn(ctx);
+    }
   }
 
   const bool needSetupToneDetection =
@@ -1046,7 +1051,6 @@ void RADIO_ApplySettings(VFOContext *ctx) {
       continue;
     }
     ctx->dirty[p] = false;
-
 #ifdef DEBUG_PARAMS
     LogC(LOG_C_BRIGHT_WHITE, "[SET] %-12s -> %s", PARAM_NAMES[p],
          RADIO_GetParamValueString(ctx, p));
@@ -1248,8 +1252,8 @@ bool RADIO_SwitchVFO(RadioState *state, uint8_t vfo_index) {
 }
 
 static void setCommonParamsFromCh(VFOContext *ctx, const VFO *storage) {
-  RADIO_SetParam(ctx, PARAM_BANDWIDTH, storage->bw, false);
   RADIO_SetParam(ctx, PARAM_FREQUENCY, storage->rxF, false);
+  RADIO_SetParam(ctx, PARAM_BANDWIDTH, storage->bw, false);
   RADIO_SetParam(ctx, PARAM_GAIN, storage->gainIndex, false);
   RADIO_SetParam(ctx, PARAM_MODULATION, storage->modulation, false);
   RADIO_SetParam(ctx, PARAM_POWER, storage->power, false);

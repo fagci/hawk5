@@ -322,7 +322,7 @@ void VFO1_render(void) {
   if (gMonitorMode) {
     SPECTRUM_Y = BASE + 2;
     SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
-    if (false && gSettings.showLevelInVFO) {
+    if (gSettings.showLevelInVFO) {
       char *graphMeasurementNames[] = {
           [GRAPH_RSSI] = "RSSI",           //
           [GRAPH_PEAK_RSSI] = "Peak RSSI", //

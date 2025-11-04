@@ -5,6 +5,7 @@
 #include "../helper/lootlist.h"
 #include "../helper/measurements.h"
 #include "../radio.h"
+#include "../scheduler.h"
 #include "../system.h"
 #include <stddef.h>
 #include <string.h>
@@ -81,6 +82,9 @@ int16_t CHANNELS_GetCurrentScanlistCH() {
 void CHANNELS_LoadCurrentScanlistCH() {
   RADIO_LoadChannelToVFO(gRadioState, RADIO_GetCurrentVFONumber(gRadioState),
                          CHANNELS_GetCurrentScanlistCH());
+  RADIO_ApplySettings(ctx);
+  ctx->save_to_eeprom = true;
+  ctx->last_save_time = Now();
 }
 
 void CHANNELS_Next(bool next) {

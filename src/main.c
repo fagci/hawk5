@@ -31,6 +31,9 @@ void Main(void) {
   } */
 
   EEPROM_Init(); // Автоматически определит параметры
+  /* EEPROM_Test(0);
+  for (;;) {
+  } */
 
   printf("hawk5\n");
 

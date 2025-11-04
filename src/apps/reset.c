@@ -1,12 +1,9 @@
 #include "reset.h"
 #include "../driver/eeprom.h"
 #include "../driver/st7565.h"
-#include "../driver/uart.h"
 #include "../external/CMSIS_5/Device/ARM/ARMCM0/Include/ARMCM0.h"
 #include "../helper/channels.h"
-#include "../helper/measurements.h"
 #include "../radio.h"
-#include "../scheduler.h"
 #include "../settings.h"
 #include "../ui/graphics.h"
 #include "../ui/statusline.h"
@@ -19,160 +16,92 @@ typedef enum {
   RESET_UNKNOWN,
 } ResetType;
 
-typedef struct {
-  uint32_t bytes;
-  uint16_t channels;
-  uint8_t bands;
-  uint8_t vfos;
-  uint8_t settings;
-} Stats;
+static char *RESET_TYPE_NAMES[] = {"0xFF", "FULL", "CHANNELS", "BANDS"};
 
-typedef struct {
-  uint32_t eepromSize;
-  uint32_t bytes;
+static struct {
+  uint32_t totalBytes;
+  uint32_t doneBytes;
   uint16_t pageSize;
-  uint16_t channels;
-  uint16_t mr;
-  uint8_t bands;
-  uint8_t vfos;
-  uint8_t settings;
-} Total;
+  uint16_t maxChannels;
+  uint16_t currentItem;
+  ResetType type;
+} resetState;
 
-static char *RESET_TYPE_NAMES[] = {
-    "0xFF",
-    "FULL",
-    "CHANNELS",
-    "BANDS",
+static VFO defaultVfos[9] = {
+    {.rxF = 14550000,
+     .meta.type = TYPE_VFO,
+     .gainIndex = AUTO_GAIN_INDEX,
+     .radio = RADIO_BK4819},
+    {.rxF = 17230000,
+     .meta.type = TYPE_VFO,
+     .gainIndex = AUTO_GAIN_INDEX,
+     .radio = RADIO_BK4819},
+    {.rxF = 25355000,
+     .meta.type = TYPE_VFO,
+     .gainIndex = AUTO_GAIN_INDEX,
+     .radio = RADIO_BK4819},
+    {.rxF = 40065000,
+     .meta.type = TYPE_VFO,
+     .gainIndex = AUTO_GAIN_INDEX,
+     .radio = RADIO_BK4819},
+    {.rxF = 43392500,
+     .meta.type = TYPE_VFO,
+     .gainIndex = AUTO_GAIN_INDEX,
+     .radio = RADIO_BK4819},
+    {.rxF = 43780000,
+     .meta.type = TYPE_VFO,
+     .gainIndex = AUTO_GAIN_INDEX,
+     .radio = RADIO_BK4819},
+    {.rxF = 86800000,
+     .meta.type = TYPE_VFO,
+     .gainIndex = AUTO_GAIN_INDEX,
+     .radio = RADIO_BK4819},
+    {.rxF = 25220000,
+     .meta.type = TYPE_CH,
+     .gainIndex = ARRAY_SIZE(GAIN_TABLE) - 1,
+     .radio = RADIO_BK4819,
+     .name = "Test CH"},
+    {.rxF = 10440000,
+     .meta.type = TYPE_VFO,
+     .gainIndex = AUTO_GAIN_INDEX,
+     .radio = RADIO_BK4819},
 };
 
-static Stats stats;
-static Total total;
-static ResetType resetType = RESET_UNKNOWN;
+static void startReset(ResetType type) {
+  resetState.type = type;
+  resetState.doneBytes = 0;
+  resetState.currentItem = 0;
 
-static void selectEeprom(EEPROMType t) {
-  gSettings.eepromType = t;
-
-  total.eepromSize = SETTINGS_GetEEPROMSize();
-  total.pageSize = SETTINGS_GetPageSize();
-  total.mr = CHANNELS_GetCountMax();
-
-  total.settings = 1;
-  total.vfos = 9;
-  total.bands = 0; // default bands
-  total.channels = total.mr - total.vfos - total.bands;
-}
-
-static void startReset(ResetType t) {
-  resetType = t;
-
-  stats.settings = total.settings;
-  stats.vfos = total.vfos;
-  stats.bands = total.bands;
-  stats.channels = total.channels;
-
-  stats.bytes = 0;
-
-  switch (resetType) {
-  case RESET_0xFF:
-    total.bytes = total.eepromSize;
-    return;
-  case RESET_BANDS:
-    stats.bands = 0;
-    break;
-  case RESET_CHANNELS:
-    stats.channels = 0;
-    break;
-  case RESET_FULL:
-    stats.settings = 0;
-    stats.vfos = 0;
-    stats.bands = 0;
-    stats.channels = 0;
-    break;
-  default:
-    break;
+  if (type == RESET_0xFF) {
+    resetState.totalBytes = SETTINGS_GetEEPROMSize();
+  } else {
+    uint16_t items = (type == RESET_FULL) ? (1 + 9 + resetState.maxChannels - 9)
+                     : (type == RESET_CHANNELS) ? (resetState.maxChannels - 9)
+                                                : 0;
+    resetState.totalBytes = items * CH_SIZE;
   }
-  total.bytes = (total.settings - stats.settings) * SETTINGS_SIZE +
-                (total.vfos - stats.vfos) * CH_SIZE +
-                (total.bands - stats.bands) * CH_SIZE +
-                (total.channels - stats.channels) * CH_SIZE;
 }
 
-VFO vfos[9] = {
-    {
-        .rxF = 10440000,
-        .meta.type = TYPE_VFO,
-        .gainIndex = AUTO_GAIN_INDEX,
-        .radio = RADIO_BK1080,
-    },
-    {
-        .rxF = 14550000,
-        .meta.type = TYPE_VFO,
-        .gainIndex = AUTO_GAIN_INDEX,
-        .radio = RADIO_BK4819,
-    },
-    {
-        .rxF = 17230000,
-        .meta.type = TYPE_VFO,
-        .gainIndex = AUTO_GAIN_INDEX,
-        .radio = RADIO_BK4819,
-    },
-    {
-        .rxF = 25355000,
-        .meta.type = TYPE_VFO,
-        .gainIndex = AUTO_GAIN_INDEX,
-        .radio = RADIO_BK4819,
-    },
-    {
-        .rxF = 40065000,
-        .meta.type = TYPE_VFO,
-        .gainIndex = AUTO_GAIN_INDEX,
-        .radio = RADIO_BK4819,
-    },
-    {
-        .rxF = 43392500,
-        .meta.type = TYPE_VFO,
-        .gainIndex = AUTO_GAIN_INDEX,
-        .radio = RADIO_BK4819,
-    },
-    {
-        .rxF = 43780000,
-        .meta.type = TYPE_VFO,
-        .gainIndex = AUTO_GAIN_INDEX,
-        .radio = RADIO_BK4819,
-    },
-    {
-        .rxF = 86800000,
-        .meta.type = TYPE_VFO,
-        .gainIndex = AUTO_GAIN_INDEX,
-        .radio = RADIO_BK4819,
-    },
-    {
-        .rxF = 25220000,
-        .meta.type = TYPE_CH,
-        .gainIndex = ARRAY_SIZE(GAIN_TABLE) - 1,
-        .radio = RADIO_BK4819,
-        .name = "Test CH",
-    },
-};
+static bool processReset(void) {
+  if (resetState.type == RESET_0xFF) {
+    uint16_t page = resetState.doneBytes / resetState.pageSize;
+    EEPROM_ClearPage(page);
+    resetState.doneBytes += resetState.pageSize;
+    return resetState.doneBytes >= resetState.totalBytes;
+  }
 
-static bool resetFull() {
-  if (stats.settings < total.settings) {
+  if (resetState.type == RESET_FULL && resetState.currentItem == 0) {
     SETTINGS_Save();
-    printf("SE SAV\n");
-    // Log("[i] settings saved!");
-    stats.settings++;
-    stats.bytes += SETTINGS_SIZE;
+    resetState.doneBytes += SETTINGS_SIZE;
+    resetState.currentItem++;
     return false;
   }
 
-  if (stats.vfos < total.vfos) {
-    VFO vfo = vfos[stats.vfos];
-    // memset(&vfo, 0, sizeof);
-
+  if (resetState.type == RESET_FULL && resetState.currentItem < 10) {
+    VFO vfo = defaultVfos[resetState.currentItem - 1];
     if (vfo.meta.type == TYPE_VFO) {
-      sprintf(vfo.name, "%s", "VFO-%c", 'A' + stats.vfos);
+      sprintf(vfo.name, "VFO-%c", 'A' + resetState.currentItem - 1);
     }
-
     vfo.channel = 0;
     vfo.modulation = MOD_FM;
     vfo.bw = BK4819_FILTER_BW_12k;
@@ -184,58 +113,39 @@ static bool resetFull() {
     vfo.meta.readonly = false;
     vfo.squelch.value = 4;
     vfo.step = STEP_25_0kHz;
-    CHANNELS_Save(total.mr - total.vfos + stats.vfos, &vfo);
-    stats.vfos++;
-    stats.bytes += CH_SIZE;
+    CHANNELS_Save(resetState.maxChannels - 9 + resetState.currentItem - 1,
+                  &vfo);
+    resetState.doneBytes += CH_SIZE;
+    resetState.currentItem++;
     return false;
   }
 
-  if (stats.bands < total.bands) {
+  if (resetState.currentItem < resetState.maxChannels - 9) {
+    CHANNELS_Delete(resetState.currentItem -
+                    (resetState.type == RESET_FULL ? 10 : 0));
+    resetState.doneBytes += CH_SIZE;
+    resetState.currentItem++;
     return false;
   }
 
-  if (stats.channels < total.channels) {
-    CHANNELS_Delete(stats.channels);
-    stats.channels++;
-    stats.bytes += CH_SIZE;
-    return false;
-  }
   return true;
 }
 
-static bool unreborn(void) {
-  const uint16_t PAGE = stats.bytes / total.pageSize;
-  EEPROM_ClearPage(PAGE);
-  stats.bytes += total.pageSize;
-  return stats.bytes >= total.bytes;
-}
-
 void RESET_Init(void) {
-  resetType = RESET_UNKNOWN;
-  gSettings.eepromType = EEPROM_UNKNOWN;
+  resetState.type = RESET_UNKNOWN;
   gSettings.keylock = false;
+  gSettings.eepromType = EEPROM_DetectType();
+  resetState.pageSize = SETTINGS_GetPageSize();
+  resetState.maxChannels = CHANNELS_GetCountMax();
 }
 
 void RESET_Update(void) {
-  if (gSettings.eepromType == EEPROM_UNKNOWN || resetType == RESET_UNKNOWN) {
+  if (gSettings.eepromType == EEPROM_UNKNOWN ||
+      resetState.type == RESET_UNKNOWN) {
     return;
   }
 
-  bool status = true;
-
-  switch (resetType) {
-  case RESET_0xFF:
-    status = unreborn();
-    break;
-  case RESET_BANDS:
-  case RESET_CHANNELS:
-  case RESET_FULL:
-    status = resetFull();
-    break;
-  default:
-    break;
-  }
-  if (!status) {
+  if (!processReset()) {
     gRedrawScreen = true;
     return;
   }
@@ -244,25 +154,20 @@ void RESET_Update(void) {
 }
 
 void RESET_Render(void) {
-  if (gSettings.eepromType == EEPROM_UNKNOWN) {
-    for (uint8_t i = 0; i < ARRAY_SIZE(EEPROM_TYPE_NAMES); ++i) {
-      PrintMedium(2, 18 + i * 8, "%u: %s", i + 1, EEPROM_TYPE_NAMES[i]);
-    }
-    return;
-  }
+  STATUSLINE_SetText("%s", EEPROM_TYPE_NAMES[gSettings.eepromType]);
 
-  if (resetType == RESET_UNKNOWN) {
-    for (uint8_t i = 0; i < ARRAY_SIZE(RESET_TYPE_NAMES); ++i) {
+  if (resetState.type == RESET_UNKNOWN) {
+    for (uint8_t i = 0; i < ARRAY_SIZE(RESET_TYPE_NAMES); i++) {
       PrintMedium(2, 18 + i * 8, "%u: %s", i, RESET_TYPE_NAMES[i]);
     }
     return;
   }
 
   STATUSLINE_SetText("%s: %s", EEPROM_TYPE_NAMES[gSettings.eepromType],
-                     RESET_TYPE_NAMES[resetType]);
+                     RESET_TYPE_NAMES[resetState.type]);
 
-  uint8_t progress = ConvertDomain(stats.bytes, 0, total.bytes, 0, 100);
-
+  uint8_t progress =
+      ConvertDomain(resetState.doneBytes, 0, resetState.totalBytes, 0, 100);
   const uint8_t TOP = 28;
 
   DrawRect(13, TOP, 102, 9, C_FILL);
@@ -271,24 +176,11 @@ void RESET_Render(void) {
 }
 
 bool RESET_key(KEY_Code_t k, Key_State_t state) {
-  if (state == KEY_RELEASED) {
-    if (gSettings.eepromType == EEPROM_UNKNOWN) {
-      if (k > KEY_0) {
-        uint8_t t = k - 1;
-        if (t < ARRAY_SIZE(EEPROM_TYPE_NAMES)) {
-          selectEeprom(t);
-          return true;
-        }
-      }
-      return false;
-    }
-    if (resetType == RESET_UNKNOWN) {
-      uint8_t t = k - KEY_0;
-      if (t < ARRAY_SIZE(RESET_TYPE_NAMES)) {
-        startReset(t);
-        return true;
-      }
-      return false;
+  if (state == KEY_RELEASED && resetState.type == RESET_UNKNOWN) {
+    uint8_t t = k - KEY_0;
+    if (t < ARRAY_SIZE(RESET_TYPE_NAMES)) {
+      startReset(t);
+      return true;
     }
   }
   return false;

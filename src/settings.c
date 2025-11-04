@@ -33,12 +33,12 @@ const char *MW_NAMES[4] = {
     [MW_EXTRA] = "Extra",
 };
 const char *EEPROM_TYPE_NAMES[6] = {
-    "BL24C64 #", // 010
-    "BL24C128",  // 011
-    "BL24C256",  // 100
-    "BL24C512",  // 101
-    "BL24C1024", // 110
-    "M24M02",    // 111
+    [EEPROM_BL24C64] = "BL24C64 #",   //
+    [EEPROM_BL24C128] = "BL24C128",   //
+    [EEPROM_BL24C256] = "BL24C256",   //
+    [EEPROM_BL24C512] = "BL24C512",   //
+    [EEPROM_BL24C1024] = "BL24C1024", //
+    [EEPROM_M24M02] = "M24M02",       //
 };
 uint32_t SCAN_TIMEOUTS[15] = {
     0,         100,       200,           300,           400,
@@ -88,11 +88,21 @@ Settings gSettings = {
 };
 
 const uint32_t EEPROM_SIZES[6] = {
-    8192, 16384, 32768, 65536, 131072, 262144,
+    [EEPROM_BL24C64] = 8192,     //
+    [EEPROM_BL24C128] = 16384,   //
+    [EEPROM_BL24C256] = 32768,   //
+    [EEPROM_BL24C512] = 65536,   //
+    [EEPROM_BL24C1024] = 131072, //
+    [EEPROM_M24M02] = 262144,    //
 };
 
 const uint16_t PAGE_SIZES[6] = {
-    32, 64, 64, 128, 128, 256,
+    [EEPROM_BL24C64] = 32,    //
+    [EEPROM_BL24C128] = 64,   //
+    [EEPROM_BL24C256] = 64,   //
+    [EEPROM_BL24C512] = 128,  //
+    [EEPROM_BL24C1024] = 128, //
+    [EEPROM_M24M02] = 256,    //
 };
 
 void SETTINGS_Save(void) {

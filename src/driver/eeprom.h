@@ -1,6 +1,7 @@
 #ifndef DRIVER_EEPROM_H
 #define DRIVER_EEPROM_H
 
+#include "../settings.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -15,5 +16,6 @@ bool EEPROM_Detect(uint8_t device_addr);
 uint16_t EEPROM_GetPageSize(void);
 uint32_t EEPROM_DetectSize(void);
 void EEPROM_Init(void);
+EEPROMType EEPROM_DetectType(void);
 
 #endif

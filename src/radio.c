@@ -1072,6 +1072,10 @@ bool RADIO_StartTX(VFOContext *ctx) {
 
   uint8_t power = ctx->tx_state.power_level;
 
+  // HACK
+  vfo->is_open = false;
+  RADIO_EnableAudioRouting(gRadioState, false);
+
   BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, false);
 
   uint32_t txF = getRealTxFreq(ctx);
@@ -1424,6 +1428,9 @@ static bool isBroadcastReceiver(const VFOContext *ctx) {
 }
 
 bool RADIO_CheckSquelch(VFOContext *ctx) {
+  if (ctx->tx_state.is_active) {
+    return false;
+  }
   if (gMonitorMode) {
     return true;
   }

@@ -26,25 +26,34 @@ static void doCalibrate(uint32_t v, uint32_t _) {
 
 static bool calibrate(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
   (void)item;
-  if (state == KEY_RELEASED && key == KEY_MENU) {
-    gFInputValue1 = BATTERY_GetPreciseVoltage(
-                        SETTINGS_GetValue(SETTING_BATTERYCALIBRATION)) /
-                    100;
-    gFInputCallback = doCalibrate;
-    FINPUT_setup(500, 860, UNIT_VOLTS, false);
-    APPS_run(APP_FINPUT);
-    return true;
+  
+  if (state != KEY_RELEASED || key != KEY_MENU) {
+    return false;
   }
-  return false;
+  
+  uint32_t currentVoltage = BATTERY_GetPreciseVoltage(
+      SETTINGS_GetValue(SETTING_BATTERYCALIBRATION));
+  
+  gFInputValue1 = currentVoltage / 100;
+  gFInputCallback = doCalibrate;
+  FINPUT_setup(500, 860, UNIT_VOLTS, false);
+  APPS_run(APP_FINPUT);
+  return true;
 }
 
+// SQL submenu
 static const MenuItem sqlMenuItems[] = {
     {"Open t", SETTING_SQLOPENTIME, getValS, updateValS},
     {"Close t", SETTING_SQLCLOSETIME, getValS, updateValS},
 };
 
-static Menu sqlMenu = {"SQL", sqlMenuItems, ARRAY_SIZE(sqlMenuItems)};
+static Menu sqlMenu = {
+    .title = "SQL",
+    .items = sqlMenuItems,
+    .num_items = ARRAY_SIZE(sqlMenuItems)
+};
 
+// Scan submenu
 static const MenuItem scanMenuItems[] = {
     {"SQL", .submenu = &sqlMenu},
     {"FC t", SETTING_FCTIME, getValS, updateValS},
@@ -53,8 +62,13 @@ static const MenuItem scanMenuItems[] = {
     {"Skip X_X", SETTING_SKIPGARBAGEFREQUENCIES, getValS, updateValS},
 };
 
-static Menu scanMenu = {"Scan", scanMenuItems, ARRAY_SIZE(scanMenuItems)};
+static Menu scanMenu = {
+    .title = "Scan",
+    .items = scanMenuItems,
+    .num_items = ARRAY_SIZE(scanMenuItems)
+};
 
+// Display submenu
 static const MenuItem displayMenuItems[] = {
     {"Contrast", SETTING_CONTRAST, getValS, updateValS},
     {"BL max", SETTING_BRIGHTNESS_H, getValS, updateValS},
@@ -65,9 +79,13 @@ static const MenuItem displayMenuItems[] = {
     {"Level in VFO", SETTING_SHOWLEVELINVFO, getValS, updateValS},
 };
 
-static Menu displayMenu = {"Display", displayMenuItems,
-                           ARRAY_SIZE(displayMenuItems)};
+static Menu displayMenu = {
+    .title = "Display",
+    .items = displayMenuItems,
+    .num_items = ARRAY_SIZE(displayMenuItems)
+};
 
+// Radio submenu
 static const MenuItem radioMenuItems[] = {
     {"DTMF decode", SETTING_DTMFDECODE, getValS, updateValS},
     {"Filter bound", SETTING_BOUND240_280, getValS, updateValS},
@@ -80,16 +98,26 @@ static const MenuItem radioMenuItems[] = {
     {"Freq corr", SETTING_FREQ_CORRECTION, getValS, updateValS},
 };
 
-static Menu radioMenu = {"Radio", radioMenuItems, ARRAY_SIZE(radioMenuItems)};
+static Menu radioMenu = {
+    .title = "Radio",
+    .items = radioMenuItems,
+    .num_items = ARRAY_SIZE(radioMenuItems)
+};
 
+// Battery submenu
 static const MenuItem batMenuItems[] = {
     {"Bat type", SETTING_BATTERYTYPE, getValS, updateValS},
     {"Bat style", SETTING_BATTERYSTYLE, getValS, updateValS},
     {"BAT cal", SETTING_BATTERYCALIBRATION, getValS, .action = calibrate},
 };
 
-static Menu batteryMenu = {"Battery", batMenuItems, ARRAY_SIZE(batMenuItems)};
+static Menu batteryMenu = {
+    .title = "Battery",
+    .items = batMenuItems,
+    .num_items = ARRAY_SIZE(batMenuItems)
+};
 
+// Main menu
 static const MenuItem menuItems[] = {
     {"Scan", .submenu = &scanMenu},
     {"Radio", .submenu = &radioMenu},
@@ -98,11 +126,6 @@ static const MenuItem menuItems[] = {
     {"Beep", SETTING_BEEP, getValS, updateValS},
     {"Main app", SETTING_MAINAPP, getValS, updateValS},
     {"Lock PTT", SETTING_PTT_LOCK, getValS, updateValS},
-    /*
-    {"Upconv", M_UPCONVERTER, 0},
-    {"Level in VFO", M_LEVEL_IN_VFO, 2},
-    {"Mutliwatch", M_MWATCH, 4},
-    {"Reset", M_RESET, 2}, */
 };
 
 static Menu settingsMenu = {
@@ -111,14 +134,16 @@ static Menu settingsMenu = {
     .num_items = ARRAY_SIZE(menuItems),
 };
 
-void SETTINGS_init(void) { MENU_Init(&settingsMenu); }
+void SETTINGS_init(void) {
+  MENU_Init(&settingsMenu);
+}
+
 void SETTINGS_deinit(void) {}
 
 bool SETTINGS_key(KEY_Code_t key, Key_State_t state) {
-  if (MENU_HandleInput(key, state)) {
-    return true;
-  }
-  return false;
+  return MENU_HandleInput(key, state);
 }
 
-void SETTINGS_render(void) { MENU_Render(); }
+void SETTINGS_render(void) {
+  MENU_Render();
+}

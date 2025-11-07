@@ -24,7 +24,7 @@
 
 #define RADIO_SAVE_DELAY_MS 1000
 
-#define DEBUG_PARAMS 1
+// #define DEBUG_PARAMS 1
 
 bool gShowAllRSSI = false;
 bool gMonitorMode = false;
@@ -339,6 +339,7 @@ static void toggleBK4819(bool on) {
 }
 
 static void rxTurnOff(Radio r) {
+  Log("RX OFF %s", RADIO_NAMES[r]);
   switch (r) {
   case RADIO_BK4819:
     BK4819_Idle();
@@ -347,10 +348,12 @@ static void rxTurnOff(Radio r) {
     BK1080_Mute(true);
     break;
   case RADIO_SI4732:
-    if (gSettings.si4732PowerOff) {
-      SI47XX_PowerDown();
-    } else {
-      SI47XX_SetVolume(0);
+    if (isSi4732On) {
+      if (gSettings.si4732PowerOff) {
+        SI47XX_PowerDown();
+      } else {
+        SI47XX_SetVolume(0);
+      }
     }
     break;
   default:
@@ -405,6 +408,8 @@ static void toggleBK1080SI4732(bool on) {
 void RADIO_SwitchAudioToVFO(RadioState *state, uint8_t vfo_index) {
   if (vfo_index >= state->num_vfos)
     return;
+
+  Log("SW AUD");
 
   const ExtendedVFOContext *vfo = &state->vfos[vfo_index];
 
@@ -676,6 +681,30 @@ void RADIO_Init(VFOContext *ctx, Radio radio_type) {
   }
 }
 
+static void RADIO_UpdateCurrentBand(VFOContext *ctx) {
+  switch (ctx->radio_type) {
+  case RADIO_BK4819:
+    ctx->current_band = &bk4819_bands[0];
+    break;
+  case RADIO_SI4732:
+    // Выбираем диапазон на основе частоты и модуляции
+    if (ctx->frequency >= SI47XX_FM_F_MIN &&
+        ctx->frequency <= SI47XX_FM_F_MAX) {
+      ctx->current_band = &si4732_bands[2]; // FM
+    } else if (ctx->modulation == SI47XX_LSB || ctx->modulation == SI47XX_USB) {
+      ctx->current_band = &si4732_bands[1]; // SSB
+    } else {
+      ctx->current_band = &si4732_bands[0]; // AM
+    }
+    break;
+  case RADIO_BK1080:
+    ctx->current_band = &bk4819_bands[0]; // TODO: добавить свой диапазон
+    break;
+  default:
+    break;
+  }
+}
+
 // Проверка параметра для текущего диапазона
 bool RADIO_IsParamValid(VFOContext *ctx, ParamType param, uint32_t value) {
   const FreqBand *band = ctx->current_band;
@@ -719,14 +748,6 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
   uint32_t old_value = RADIO_GetParam(ctx, param);
 
   switch (param) {
-  case PARAM_TX_FREQUENCY_FACT:
-  case PARAM_TX_STATE:
-  case PARAM_RSSI:
-  case PARAM_NOISE:
-  case PARAM_GLITCH:
-  case PARAM_SNR:
-    return;
-
   case PARAM_RX_CODE:
     ctx->code.value = value;
     break;
@@ -765,9 +786,11 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
 
   case PARAM_FREQUENCY:
     ctx->frequency = value;
+    RADIO_UpdateCurrentBand(ctx);
     break;
   case PARAM_MODULATION:
     ctx->modulation = (ModulationType)value;
+    RADIO_UpdateCurrentBand(ctx);
     break;
   case PARAM_BANDWIDTH:
     ctx->bandwidth = (uint16_t)value;
@@ -804,10 +827,17 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
     break;
   case PARAM_RADIO:
     ctx->radio_type = value;
+    RADIO_UpdateCurrentBand(ctx);
     for (uint8_t i = 0; i < PARAM_COUNT; ++i) {
       ctx->dirty[i] = true;
     }
     break;
+  case PARAM_TX_FREQUENCY_FACT:
+  case PARAM_TX_STATE:
+  case PARAM_RSSI:
+  case PARAM_NOISE:
+  case PARAM_GLITCH:
+  case PARAM_SNR:
   case PARAM_COUNT:
     return;
   }
@@ -1145,7 +1175,9 @@ void RADIO_InitState(RadioState *state, uint8_t num_vfos) {
   state->primary_vfo_index = state->active_vfo_index = gSettings.activeVFO;
 
   for (uint8_t i = 0; i < state->num_vfos; i++) {
-    RADIO_Init(&state->vfos[i].context, RADIO_BK4819); // Default to BK4819
+    // RADIO_Init(&state->vfos[i].context, RADIO_BK4819); // Default to BK4819
+    memset(&state->vfos[i].context, 0, sizeof(VFOContext));
+    RADIO_UpdateCurrentBand(&state->vfos[i].context);
     state->vfos[i].mode = MODE_VFO;
     state->vfos[i].channel_index = 0;
     state->vfos[i].is_active =
@@ -1252,8 +1284,8 @@ bool RADIO_SwitchVFO(RadioState *state, uint8_t vfo_index) {
 }
 
 static void setCommonParamsFromCh(VFOContext *ctx, const VFO *storage) {
-  RADIO_SetParam(ctx, PARAM_FREQUENCY, storage->rxF, false);
   RADIO_SetParam(ctx, PARAM_BANDWIDTH, storage->bw, false);
+  RADIO_SetParam(ctx, PARAM_FREQUENCY, storage->rxF, false);
   RADIO_SetParam(ctx, PARAM_GAIN, storage->gainIndex, false);
   RADIO_SetParam(ctx, PARAM_MODULATION, storage->modulation, false);
   RADIO_SetParam(ctx, PARAM_POWER, storage->power, false);
@@ -1657,16 +1689,6 @@ void RADIO_UpdateAudioRouting(RadioState *state) {
   }
 }
 
-static const char *RADIO_GetModulationName(const VFOContext *ctx) {
-  if (ctx->radio_type == RADIO_BK4819) {
-    return MOD_NAMES_BK4819[ctx->modulation];
-  }
-  if (ctx->radio_type == RADIO_SI4732) {
-    return MOD_NAMES_SI47XX[ctx->modulation];
-  }
-  return "WFM";
-}
-
 const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
   static char buf[16] = "unk";
   uint32_t v = RADIO_GetParam(ctx, param);
@@ -1676,7 +1698,13 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
     break;
 
   case PARAM_MODULATION:
-    return RADIO_GetModulationName(ctx);
+    if (ctx->radio_type == RADIO_BK4819) {
+      return MOD_NAMES_BK4819[ctx->modulation];
+    }
+    if (ctx->radio_type == RADIO_SI4732) {
+      return MOD_NAMES_SI47XX[ctx->modulation];
+    }
+    return "WFM";
   case PARAM_TX_STATE:
     return TX_STATE_NAMES[ctx->tx_state.last_error];
   case PARAM_BANDWIDTH:

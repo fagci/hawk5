@@ -364,7 +364,7 @@ static void renderMonitorMode(uint8_t BASE) {
   SPECTRUM_Y = BASE + 2;
   SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
 
-  if (gSettings.showLevelInVFO) {
+  if (false && gSettings.showLevelInVFO) {
     static char *graphMeasurementNames[] = {
         [GRAPH_RSSI] = "RSSI",
         [GRAPH_NOISE] = "Noise",

@@ -652,6 +652,94 @@ static void updateContext() {
   ctx = &vfo->context;
 }
 
+static void RADIO_ApplyCorrections(VFOContext *ctx, bool save_to_eeprom) {
+  const FreqBand *band = ctx->current_band;
+  if (!band)
+    return; // Нет band — ничего не корректируем
+
+  // Корректировка частоты (если вне диапазона)
+  if (!RADIO_IsParamValid(ctx, PARAM_FREQUENCY, ctx->frequency)) {
+    LogC(LOG_C_YELLOW,
+         "[RADIO] CORRECT: Frequency %u out of band, adjusting to nearest "
+         "boundary",
+         ctx->frequency);
+    if (ctx->frequency < band->min_freq) {
+      ctx->frequency = band->min_freq;
+    } else if (ctx->frequency > band->max_freq) {
+      ctx->frequency = band->max_freq;
+    }
+    ctx->dirty[PARAM_FREQUENCY] = true; // Помечаем как dirty для применения
+    if (save_to_eeprom) {
+      ctx->save_to_eeprom = true;
+      ctx->last_save_time = Now();
+    }
+  }
+
+  // Корректировка модуляции (если не доступна)
+  if (!RADIO_IsParamValid(ctx, PARAM_MODULATION, ctx->modulation)) {
+    if (ARRAY_SIZE(band->available_mods) > 0) {
+      uint32_t default_mod = band->available_mods[0];
+      LogC(
+          LOG_C_YELLOW,
+          "[RADIO] CORRECT: Modulation %u invalid for band, setting to %u (%s)",
+          ctx->modulation, default_mod,
+          RADIO_GetParamValueString(
+              ctx, PARAM_MODULATION)); // Используем новую мод для строки
+      ctx->modulation = default_mod;
+      ctx->dirty[PARAM_MODULATION] = true;
+      if (save_to_eeprom) {
+        ctx->save_to_eeprom = true;
+        ctx->last_save_time = Now();
+      }
+    }
+  }
+
+  // Корректировка bandwidth (если не доступна)
+  if (!RADIO_IsParamValid(ctx, PARAM_BANDWIDTH, ctx->bandwidth)) {
+    if (ARRAY_SIZE(band->available_bandwidths) > 0) {
+      uint32_t default_bw = band->available_bandwidths[0];
+      LogC(LOG_C_YELLOW,
+           "[RADIO] CORRECT: Bandwidth %u invalid for band, setting to %u (%s)",
+           ctx->bandwidth, default_bw,
+           RADIO_GetParamValueString(ctx, PARAM_BANDWIDTH));
+      ctx->bandwidth = default_bw;
+      ctx->dirty[PARAM_BANDWIDTH] = true;
+      if (save_to_eeprom) {
+        ctx->save_to_eeprom = true;
+        ctx->last_save_time = Now();
+      }
+    }
+  }
+
+  // Можно добавить корректировки для других params, если нужно (e.g., gain,
+  // step) Например, для gain: if (!RADIO_IsParamValid(ctx, PARAM_GAIN,
+  // ctx->gain)) { ... set default ... }
+}
+
+static void RADIO_UpdateCurrentBand(VFOContext *ctx) {
+  switch (ctx->radio_type) {
+  case RADIO_BK4819:
+    ctx->current_band = &bk4819_bands[0];
+    break;
+  case RADIO_SI4732:
+    // Выбираем диапазон на основе частоты и модуляции
+    if (ctx->frequency >= SI47XX_FM_F_MIN &&
+        ctx->frequency <= SI47XX_FM_F_MAX) {
+      ctx->current_band = &si4732_bands[2]; // FM
+    } else if (ctx->modulation == SI47XX_LSB || ctx->modulation == SI47XX_USB) {
+      ctx->current_band = &si4732_bands[1]; // SSB
+    } else {
+      ctx->current_band = &si4732_bands[0]; // AM
+    }
+    break;
+  case RADIO_BK1080:
+    ctx->current_band = &bk4819_bands[0]; // TODO: добавить свой диапазон
+    break;
+  default:
+    break;
+  }
+}
+
 // Инициализация VFO
 void RADIO_Init(VFOContext *ctx, Radio radio_type) {
   memset(ctx, 0, sizeof(VFOContext));
@@ -679,30 +767,8 @@ void RADIO_Init(VFOContext *ctx, Radio radio_type) {
   default:
     break;
   }
-}
-
-static void RADIO_UpdateCurrentBand(VFOContext *ctx) {
-  switch (ctx->radio_type) {
-  case RADIO_BK4819:
-    ctx->current_band = &bk4819_bands[0];
-    break;
-  case RADIO_SI4732:
-    // Выбираем диапазон на основе частоты и модуляции
-    if (ctx->frequency >= SI47XX_FM_F_MIN &&
-        ctx->frequency <= SI47XX_FM_F_MAX) {
-      ctx->current_band = &si4732_bands[2]; // FM
-    } else if (ctx->modulation == SI47XX_LSB || ctx->modulation == SI47XX_USB) {
-      ctx->current_band = &si4732_bands[1]; // SSB
-    } else {
-      ctx->current_band = &si4732_bands[0]; // AM
-    }
-    break;
-  case RADIO_BK1080:
-    ctx->current_band = &bk4819_bands[0]; // TODO: добавить свой диапазон
-    break;
-  default:
-    break;
-  }
+  RADIO_UpdateCurrentBand(ctx);
+  RADIO_ApplyCorrections(ctx, false);
 }
 
 // Проверка параметра для текущего диапазона
@@ -786,11 +852,9 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
 
   case PARAM_FREQUENCY:
     ctx->frequency = value;
-    RADIO_UpdateCurrentBand(ctx);
     break;
   case PARAM_MODULATION:
     ctx->modulation = (ModulationType)value;
-    RADIO_UpdateCurrentBand(ctx);
     break;
   case PARAM_BANDWIDTH:
     ctx->bandwidth = (uint16_t)value;
@@ -827,7 +891,6 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
     break;
   case PARAM_RADIO:
     ctx->radio_type = value;
-    RADIO_UpdateCurrentBand(ctx);
     for (uint8_t i = 0; i < PARAM_COUNT; ++i) {
       ctx->dirty[i] = true;
     }
@@ -840,6 +903,12 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
   case PARAM_SNR:
   case PARAM_COUNT:
     return;
+  }
+
+  if (param == PARAM_RADIO || param == PARAM_FREQUENCY ||
+      param == PARAM_MODULATION) {
+    RADIO_UpdateCurrentBand(ctx);
+    RADIO_ApplyCorrections(ctx, save_to_eeprom);
   }
 
 #ifdef DEBUG_PARAMS
@@ -1315,6 +1384,9 @@ static void setCommonParamsFromCh(VFOContext *ctx, const VFO *storage) {
 
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
   RADIO_SetParam(ctx, PARAM_VOLUME, 100, false);
+
+  RADIO_UpdateCurrentBand(ctx);
+  RADIO_ApplyCorrections(ctx, false);
 }
 
 // Load VFO settings from EEPROM storage

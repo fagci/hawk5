@@ -102,10 +102,10 @@ const char *MOD_NAMES_BK4819[8] = {
 };
 
 const char *MOD_NAMES_SI47XX[8] = {
-    [SI47XX_AM] = "AM",
-    [SI47XX_FM] = "FM",
-    [SI47XX_LSB] = "LSB",
-    [SI47XX_USB] = "USB",
+    [SI47XX_AM] = "siAM",
+    [SI47XX_FM] = "siFM",
+    [SI47XX_LSB] = "siLSB",
+    [SI47XX_USB] = "siUSB",
 };
 
 const char *BW_NAMES_BK4819[10] = {
@@ -155,6 +155,8 @@ static const FreqBand bk4819_bands[] = {
     {
         .min_freq = BK4819_F_MIN,
         .max_freq = BK4819_F_MAX,
+        .num_available_mods = 4,
+        .num_available_bandwidths = 10,
         .available_mods = {MOD_FM, MOD_AM, MOD_LSB, MOD_USB},
         .available_bandwidths =
             {
@@ -178,6 +180,8 @@ static const FreqBand si4732_bands[] = {
     {
         .min_freq = SI47XX_F_MIN,
         .max_freq = SI47XX_F_MAX,
+        .num_available_mods = 3,
+        .num_available_bandwidths = 7,
         .available_mods = {SI47XX_AM, SI47XX_LSB, SI47XX_USB},
         .available_bandwidths =
             {
@@ -193,6 +197,8 @@ static const FreqBand si4732_bands[] = {
     {
         .min_freq = SI47XX_F_MIN,
         .max_freq = SI47XX_F_MAX,
+        .num_available_mods = 2,
+        .num_available_bandwidths = 6,
         .available_mods = {SI47XX_LSB, SI47XX_USB},
         .available_bandwidths =
             {
@@ -207,6 +213,8 @@ static const FreqBand si4732_bands[] = {
     {
         .min_freq = SI47XX_FM_F_MIN,
         .max_freq = SI47XX_FM_F_MAX,
+        .num_available_mods = 1,
+        .num_available_bandwidths = 0,
         .available_mods = {SI47XX_FM},
         .available_bandwidths = {},
     },
@@ -677,7 +685,7 @@ static void RADIO_ApplyCorrections(VFOContext *ctx, bool save_to_eeprom) {
 
   // Корректировка модуляции (если не доступна)
   if (!RADIO_IsParamValid(ctx, PARAM_MODULATION, ctx->modulation)) {
-    if (ARRAY_SIZE(band->available_mods) > 0) {
+    if (band->num_available_mods > 0) {
       uint32_t default_mod = band->available_mods[0];
       LogC(
           LOG_C_YELLOW,
@@ -696,7 +704,7 @@ static void RADIO_ApplyCorrections(VFOContext *ctx, bool save_to_eeprom) {
 
   // Корректировка bandwidth (если не доступна)
   if (!RADIO_IsParamValid(ctx, PARAM_BANDWIDTH, ctx->bandwidth)) {
-    if (ARRAY_SIZE(band->available_bandwidths) > 0) {
+    if (band->num_available_bandwidths > 0) {
       uint32_t default_bw = band->available_bandwidths[0];
       LogC(LOG_C_YELLOW,
            "[RADIO] CORRECT: Bandwidth %u invalid for band, setting to %u (%s)",
@@ -783,9 +791,9 @@ bool RADIO_IsParamValid(VFOContext *ctx, ParamType param, uint32_t value) {
   case PARAM_TX_FREQUENCY:
     return (value >= band->min_freq && value <= band->max_freq);
   case PARAM_MODULATION:
-    return value < ARRAY_SIZE(band->available_mods);
+    return value < band->num_available_mods;
   case PARAM_BANDWIDTH:
-    return value < ARRAY_SIZE(band->available_bandwidths);
+    return value < band->num_available_bandwidths;
   case PARAM_GAIN:
     if (ctx->radio_type == RADIO_BK4819) {
       return value < ARRAY_SIZE(GAIN_TABLE);
@@ -1028,10 +1036,10 @@ bool RADIO_AdjustParam(VFOContext *ctx, ParamType param, uint32_t inc,
     ma = 2;
     break;
   case PARAM_MODULATION:
-    ma = ARRAY_SIZE(band->available_mods);
+    ma = band->num_available_mods;
     break;
   case PARAM_BANDWIDTH:
-    ma = ARRAY_SIZE(band->available_bandwidths);
+    ma = band->num_available_bandwidths;
     break;
   case PARAM_STEP:
     ma = STEP_COUNT;

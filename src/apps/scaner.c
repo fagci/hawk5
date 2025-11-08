@@ -67,11 +67,12 @@ void SCANER_update(void) {
 static bool handleLongPress(KEY_Code_t key) {
   uint32_t step = StepFrequencyTable[RADIO_GetParam(ctx, PARAM_STEP)];
   Band _b;
-  
+
   switch (key) {
   case KEY_6:
-    if (!gLastActiveLoot) return false;
-    
+    if (!gLastActiveLoot)
+      return false;
+
     _b = gCurrentBand;
     _b.rxF = gLastActiveLoot->f - step * 64;
     _b.txF = _b.rxF + step * 128;
@@ -79,12 +80,12 @@ static bool handleLongPress(KEY_Code_t key) {
     SCAN_setBand(*BANDS_RangePeek());
     CUR_Reset();
     return true;
-    
+
   case KEY_0:
     gChListFilter = TYPE_FILTER_BAND;
     APPS_run(APP_CH_LIST);
     return true;
-    
+
   case KEY_PTT:
     if (gSettings.keylock) {
       pttWasLongPressed = true;
@@ -93,7 +94,7 @@ static bool handleLongPress(KEY_Code_t key) {
       return true;
     }
     return false;
-    
+
   default:
     return false;
   }
@@ -103,22 +104,23 @@ static bool handleRepeatableKeys(KEY_Code_t key) {
   switch (key) {
   case KEY_1:
   case KEY_7:
-    SCAN_SetDelay(AdjustU(SCAN_GetDelay(), 0, 10000, key == KEY_1 ? 100 : -100));
+    SCAN_SetDelay(
+        AdjustU(SCAN_GetDelay(), 0, 10000, key == KEY_1 ? 100 : -100));
     return true;
-    
+
   case KEY_3:
   case KEY_9:
     RADIO_IncDecParam(ctx, PARAM_STEP, key == KEY_3, false);
     gCurrentBand.step = RADIO_GetParam(ctx, PARAM_STEP);
     SCAN_setBand(gCurrentBand);
     return true;
-    
+
   case KEY_UP:
   case KEY_DOWN:
     CUR_Move(key == KEY_UP);
     cursorRangeTimeout = Now() + 2000;
     return true;
-    
+
   default:
     return false;
   }
@@ -131,7 +133,7 @@ static bool handleLongPressCont(KEY_Code_t key) {
     CUR_Size(key == KEY_2);
     cursorRangeTimeout = Now() + 2000;
     return true;
-    
+
   default:
     return false;
   }
@@ -157,7 +159,7 @@ static bool handlePTTRelease(void) {
     APPS_run(APP_VFO1);
     return true;
   }
-  
+
   // Блокировка: короткое нажатие = blacklist
   if (gSettings.keylock && !pttWasLongPressed) {
     pttWasLongPressed = false;
@@ -165,34 +167,34 @@ static bool handlePTTRelease(void) {
     SCAN_Next();
     return true;
   }
-  
+
   return false;
 }
 
 static bool handleRelease(KEY_Code_t key) {
   uint32_t step = StepFrequencyTable[RADIO_GetParam(ctx, PARAM_STEP)];
-  
+
   switch (key) {
   case KEY_4:
     toggleAnalyserMode();
     return true;
-    
+
   case KEY_5:
     gFInputCallback = setRange;
     FINPUT_setup(0, BK4819_F_MAX, UNIT_MHZ, true);
     APPS_run(APP_FINPUT);
     return true;
-    
+
   case KEY_SIDE1:
     LOOT_BlacklistLast();
     SCAN_Next();
     return true;
-    
+
   case KEY_SIDE2:
     LOOT_WhitelistLast();
     SCAN_Next();
     return true;
-    
+
   case KEY_STAR:
     APPS_run(APP_LOOT_LIST);
     return true;
@@ -202,7 +204,7 @@ static bool handleRelease(KEY_Code_t key) {
     SCAN_setBand(*BANDS_RangePeek());
     CUR_Reset();
     return true;
-    
+
   case KEY_8:
     BANDS_RangePop();
     SCAN_setBand(*BANDS_RangePeek());
@@ -211,13 +213,14 @@ static bool handleRelease(KEY_Code_t key) {
 
   case KEY_PTT:
     return handlePTTRelease();
-    
+
   default:
     return false;
   }
 }
 
 bool SCANER_key(KEY_Code_t key, Key_State_t state) {
+  return false;
   if (state == KEY_RELEASED && REGSMENU_Key(key, state)) {
     return true;
   }
@@ -249,41 +252,46 @@ bool SCANER_key(KEY_Code_t key, Key_State_t state) {
 
 static void renderAnalyzerUI(void) {
   VMinMax mm = SP_GetMinMax();
-  PrintSmallEx(LCD_WIDTH, 18, POS_R, C_FILL, "%3u %+3d", mm.vMax, Rssi2DBm(mm.vMax));
-  PrintSmallEx(LCD_WIDTH, 24, POS_R, C_FILL, "%3u %+3d", mm.vMin, Rssi2DBm(mm.vMin));
+  PrintSmallEx(LCD_WIDTH, 18, POS_R, C_FILL, "%3u %+3d", mm.vMax,
+               Rssi2DBm(mm.vMax));
+  PrintSmallEx(LCD_WIDTH, 24, POS_R, C_FILL, "%3u %+3d", mm.vMin,
+               Rssi2DBm(mm.vMin));
 }
 
 static void renderTopInfo(void) {
   const uint32_t step = StepFrequencyTable[RADIO_GetParam(ctx, PARAM_STEP)];
-  
+
   if (gLastActiveLoot) {
     UI_DrawLoot(gLastActiveLoot, LCD_XCENTER, 14, POS_C);
   }
 
   PrintSmallEx(0, 12, POS_L, C_FILL, "%uus", SCAN_GetDelay());
-  PrintSmallEx(LCD_WIDTH, 12, POS_R, C_FILL, "%u.%02uk", step / 100, step % 100);
-  
+  PrintSmallEx(LCD_WIDTH, 12, POS_R, C_FILL, "%u.%02uk", step / 100,
+               step % 100);
+
   if (BANDS_RangeIndex() > 0) {
     PrintSmallEx(0, 18, POS_L, C_FILL, "Zoom %u", BANDS_RangeIndex() + 1);
   }
-  
+
   PrintSmallEx(0, 24, POS_L, C_FILL, "CPS %u", SCAN_GetCps());
 }
 
 static void renderBottomFreq(uint32_t step) {
   Band r = CUR_GetRange(&gCurrentBand, step);
   bool showCurRange = (Now() < cursorRangeTimeout);
-  
+
   uint32_t leftF = showCurRange ? r.rxF : gCurrentBand.rxF;
-  uint32_t centerF = showCurRange ? CUR_GetCenterF(step) : RADIO_GetParam(ctx, PARAM_FREQUENCY);
+  uint32_t centerF = showCurRange ? CUR_GetCenterF(step)
+                                  : RADIO_GetParam(ctx, PARAM_FREQUENCY);
   uint32_t rightF = showCurRange ? r.txF : gCurrentBand.txF;
-  
+
   FSmall(1, LCD_HEIGHT - 2, POS_L, leftF);
   FSmall(LCD_XCENTER, LCD_HEIGHT - 2, POS_C, centerF);
   FSmall(LCD_WIDTH - 1, LCD_HEIGHT - 2, POS_R, rightF);
 }
 
 void SCANER_render(void) {
+  return;
   const uint32_t step = StepFrequencyTable[RADIO_GetParam(ctx, PARAM_STEP)];
 
   STATUSLINE_RenderRadioSettings();

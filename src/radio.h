@@ -116,6 +116,8 @@ typedef struct {
 
   uint16_t bandwidth; // Полоса пропускания
   uint16_t dev;
+  uint8_t modulation_index;
+  uint8_t bandwidth_index;
   Radio radio_type;
   ModulationType modulation;    // Текущая модуляция
   uint8_t volume;               // Громкость

@@ -7,6 +7,7 @@
 #include "../helper/measurements.h"
 #include "../helper/numnav.h"
 #include "../helper/regs-menu.h"
+#include "../helper/scan.h"
 #include "../inc/dp32g030/gpio.h"
 #include "../radio.h"
 #include "../scheduler.h"
@@ -49,10 +50,12 @@ void VFO1_init(void) {
     setChannel(vfo->channel_index);
   }
   updateBand();
+
+  SCAN_SetMode(SCAN_MODE_SINGLE);
+  SCAN_Init(false);
 }
 
-void VFO1_update(void) {
-}
+void VFO1_update(void) {}
 
 static bool handleNumNav(KEY_Code_t key) {
   if (gIsNumNavInput) {
@@ -352,6 +355,10 @@ static void renderLootInfo(void) {
   if (ago) {
     PrintSmallEx(LCD_WIDTH, LCD_HEIGHT - 1, POS_R, C_FILL, "%u:%02u", ago / 60,
                  ago % 60);
+  }
+
+  if (gRadioState->multiwatch_enabled) {
+    PrintMediumEx(LCD_XCENTER, LCD_HEIGHT - 9, POS_C, C_FILL, "M");
   }
 }
 

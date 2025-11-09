@@ -1,17 +1,15 @@
 #include "system.h"
 #include "apps/apps.h"
-#include "board.h"
 #include "driver/backlight.h"
 #include "driver/eeprom.h"
 #include "driver/keyboard.h"
 #include "driver/st7565.h"
-#include "driver/systick.h"
 #include "driver/uart.h"
 #include "external/CMSIS_5/Device/ARM/ARMCM0/Include/ARMCM0.h"
 #include "helper/bands.h"
 #include "helper/battery.h"
 #include "helper/menu.h"
-#include "misc.h"
+#include "helper/scan.h"
 #include "radio.h"
 #include "scheduler.h"
 #include "settings.h"
@@ -190,7 +188,7 @@ void SYS_Main() {
 
     SETTINGS_UpdateSave();
 
-    radioUpdate();
+    SCAN_Check();
 
     APPS_update();
 

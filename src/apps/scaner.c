@@ -51,10 +51,12 @@ void SCANER_init(void) {
   gCurrentBand.step = RADIO_GetParam(ctx, PARAM_STEP);
   BANDS_RangeClear();
   BANDS_RangePush(gCurrentBand);
+
+  SCAN_SetMode(SCAN_MODE_ANALYSER);
   SCAN_Init(false);
 }
 
-void SCANER_update(void) { SCAN_Check(isAnalyserMode); }
+void SCANER_update(void) {}
 
 static bool handleLongPress(KEY_Code_t key) {
   uint32_t step = StepFrequencyTable[RADIO_GetParam(ctx, PARAM_STEP)];

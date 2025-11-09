@@ -15,6 +15,7 @@
 // Состояние сканирования
 // =============================
 typedef struct {
+  ScanMode mode;
   uint32_t scanDelayUs; // Задержка измерения (микросек)
   uint32_t stayAtTimeout; // Таймаут удержания на частоте
   uint32_t scanListenTimeout; // Таймаут прослушивания
@@ -31,7 +32,8 @@ typedef struct {
 } ScanState;
 
 static ScanState scan = {
-    .scanDelayUs = 1500,
+    .mode = SCAN_MODE_FREQUENCY,
+    .scanDelayUs = 1200,
     .squelchLevel = 0,
     .thinking = false,
     .wasThinkingEarlier = false,
@@ -112,6 +114,33 @@ static void NextFrequency() {
   UpdateCPS();
 }
 
+static void NextStep() {
+  switch (scan.mode) {
+  case SCAN_MODE_SINGLE:
+    // Остаемся на текущей частоте
+    // Только обновляем squelch
+    break;
+
+  case SCAN_MODE_CHANNEL:
+    // Переход к следующему каналу
+    CHANNELS_Next(true);
+    CHANNELS_LoadCurrentScanlistCH();
+    LOOT_Replace(&vfo->msm, vfo->msm.f);
+    break;
+
+  case SCAN_MODE_FREQUENCY:
+  case SCAN_MODE_ANALYSER:
+    // Переход к следующей частоте (шаг)
+    NextFrequency();
+    break;
+  }
+
+  SetTimeout(&scan.scanListenTimeout, 0);
+  SetTimeout(&scan.stayAtTimeout, 0);
+  scan.scanCycles++;
+  UpdateCPS();
+}
+
 static void NextWithTimeout() {
   if (scan.lastListenState != vfo->is_open) {
     scan.lastListenState = vfo->is_open;
@@ -134,6 +163,37 @@ static void NextWithTimeout() {
 // =============================
 // API функций
 // =============================
+
+// API для установки режима
+void SCAN_SetMode(ScanMode mode) {
+  scan.mode = mode;
+
+  // Сброс состояния при смене режима
+  scan.scanCycles = 0;
+  scan.squelchLevel = 0;
+  scan.thinking = false;
+  SetTimeout(&scan.stayAtTimeout, 0);
+  SetTimeout(&scan.scanListenTimeout, 0);
+
+  // Специфичная инициализация для режима
+  switch (mode) {
+  case SCAN_MODE_SINGLE:
+    // Не двигаемся с частоты, только мониторим
+    break;
+  case SCAN_MODE_CHANNEL:
+    // Загрузим первый канал из списка
+    CHANNELS_LoadCurrentScanlistCH();
+    break;
+  case SCAN_MODE_FREQUENCY:
+  case SCAN_MODE_ANALYSER:
+    // Установим границы диапазона
+    ApplyBandSettings();
+    break;
+  }
+}
+
+ScanMode SCAN_GetMode(void) { return scan.mode; }
+
 uint32_t SCAN_GetCps() { return scan.currentCps; }
 
 void SCAN_setBand(Band b) {
@@ -222,7 +282,71 @@ static void UpdateSquelchAndRssi(bool isAnalyserMode) {
   SP_AddPoint(&vfo->msm);
 }
 
-void SCAN_Check(bool isAnalyserMode) {
+void SCAN_Check() {
+  RADIO_UpdateMultiwatch(gRadioState);
+
+  // Режим анализатора — упрощенная логика
+  if (scan.mode == SCAN_MODE_ANALYSER) {
+    vfo->msm.rssi = MeasureSignal(vfo->msm.f, false);
+    SP_AddPoint(&vfo->msm);
+    NextStep();
+    return;
+  }
+
+  // Одиночная частота — только мониторинг
+  if (scan.mode == SCAN_MODE_SINGLE) {
+    /* RADIO_UpdateSquelch(gRadioState);
+    vfo->msm.rssi = MeasureSignal(vfo->msm.f, true);
+    vfo->msm.open = vfo->is_open;
+    gRedrawScreen = true; */
+
+    static uint32_t radioTimer;
+    RADIO_CheckAndSaveVFO(gRadioState);
+    if (Now() - radioTimer >= SQL_DELAY) {
+      RADIO_UpdateSquelch(gRadioState);
+      SP_ShiftGraph(-1);
+      SP_AddGraphPoint(&vfo->msm);
+      radioTimer = Now();
+    }
+
+    return;
+  }
+
+  // Общая логика для канального и частотного режимов
+  if (vfo->msm.open) {
+    RADIO_UpdateSquelch(gRadioState);
+    vfo->msm.open = vfo->is_open;
+    gRedrawScreen = true;
+  } else {
+    UpdateSquelchAndRssi(scan.mode == SCAN_MODE_ANALYSER);
+  }
+
+  // Проверка на "думание" о squelch
+  if (vfo->msm.open && !vfo->is_open) {
+    scan.thinking = true;
+    scan.wasThinkingEarlier = true;
+    TIMER_DelayUs(SQL_DELAY * 1000);
+    RADIO_UpdateSquelch(gRadioState);
+    vfo->msm.open = vfo->is_open;
+    scan.thinking = false;
+
+    if (!vfo->msm.open) {
+      scan.squelchLevel++;
+    }
+  }
+
+  LOOT_Update(&vfo->msm);
+
+  // Автокоррекция squelch
+  if (vfo->is_open && !vfo->msm.open) {
+    scan.squelchLevel = SP_GetNoiseFloor();
+  }
+
+  // Переход к следующей частоте/каналу с учетом таймаутов
+  NextWithTimeout();
+}
+
+/* void SCAN_Check(bool isAnalyserMode) {
   static uint32_t lastFreqChangeTime = 0;
   static uint32_t stuckCounter = 0;
 
@@ -290,7 +414,7 @@ void SCAN_Check(bool isAnalyserMode) {
   }
 
   NextWithTimeout();
-}
+} */
 
 void SCAN_SetDelay(uint32_t delay) { scan.scanDelayUs = delay; }
 uint32_t SCAN_GetDelay() { return scan.scanDelayUs; }

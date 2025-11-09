@@ -1705,7 +1705,7 @@ static void RADIO_UpdateMeasurement(ExtendedVFOContext *vfo) {
   vfo->msm.glitch = BK4819_GetGlitch();
   vfo->msm.snr = RADIO_GetSNR(ctx);
   vfo->msm.open = RADIO_CheckSquelch(ctx);
-  if (!gMonitorMode) {
+  if (!gMonitorMode && ctx->radio_type == RADIO_BK4819) {
     LOOT_Update(&vfo->msm);
   }
 }

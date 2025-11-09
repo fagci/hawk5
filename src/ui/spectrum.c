@@ -100,7 +100,7 @@ static uint16_t MinRSSI(const uint16_t *array, size_t n) {
   return min;
 }
 
-/* VMinMax SP_GetMinMax() {
+VMinMax SP_GetMinMax() {
   const uint16_t rssiMin = MinRSSI(rssiHistory, filledPoints);
   const uint16_t rssiMax = Max(rssiHistory, filledPoints);
   const uint16_t rssiDiff = rssiMax - rssiMin;
@@ -108,8 +108,8 @@ static uint16_t MinRSSI(const uint16_t *array, size_t n) {
       .vMin = rssiMin,
       .vMax = rssiMax + Clamp(rssiDiff, 40, rssiDiff),
   };
-} */
-#define _MIN(a, b) (((a) < (b)) ? (a) : (b))
+}
+/* #define _MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define _MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 VMinMax SP_GetMinMax() {
@@ -128,7 +128,7 @@ VMinMax SP_GetMinMax() {
   }
 
   return (VMinMax){.vMin = vMin, .vMax = vMax};
-}
+} */
 
 /* void SP_Render(const Band *p, VMinMax v) {
   if (p) {
@@ -174,7 +174,7 @@ t; } smoothed[i] = vals[1];  // Median
   }
 } */
 
-/* void SP_Render(const Band *p, VMinMax v) {
+void SP_Render(const Band *p, VMinMax v) {
   if (p) {
     UI_DrawTicks(S_BOTTOM, p);
   }
@@ -191,9 +191,9 @@ t; } smoothed[i] = vals[1];  // Median
       oY = yVal;
     }
   }
-} */
+}
 
-void SP_Render(const Band *p, VMinMax v) {
+/* void SP_Render(const Band *p, VMinMax v) {
   if (p) {
     UI_DrawTicks(S_BOTTOM, p);
   }
@@ -245,7 +245,7 @@ void SP_Render(const Band *p, VMinMax v) {
     uint8_t yVal = ConvertDomain(values[i], v.vMin, v.vMax, 0, SPECTRUM_H);
     DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
   }
-}
+} */
 
 void SP_RenderArrow(uint32_t f) {
   uint8_t cx = SP_F2X(f);

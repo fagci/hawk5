@@ -17,16 +17,13 @@ static uint32_t timeout = 0;
 
 void BANDSCAN_init(void) {
   CHANNELS_LoadScanlist(TYPE_FILTER_BAND, gSettings.currentScanlist);
+  SCAN_SetMode(SCAN_MODE_FREQUENCY);
   SCAN_Init(true);
 }
 
 void BANDSCAN_deinit(void) {}
 
-void BANDSCAN_update(void) {
-  if (gScanlistSize) {
-    SCAN_Check(false);
-  }
-}
+void BANDSCAN_update(void) {}
 
 bool BANDSCAN_key(KEY_Code_t key, Key_State_t state) {
   if (state == KEY_RELEASED && REGSMENU_Key(key, state)) {

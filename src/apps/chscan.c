@@ -4,6 +4,7 @@
 #include "../driver/uart.h"
 #include "../helper/channels.h"
 #include "../helper/lootlist.h"
+#include "../helper/scan.h"
 #include "../radio.h"
 #include "../scheduler.h"
 #include "../ui/components.h"
@@ -40,22 +41,13 @@ static void nextWithTimeout() {
 
 void CHSCAN_init(void) {
   CHANNELS_LoadScanlist(TYPE_FILTER_CH, gSettings.currentScanlist);
-  CHANNELS_LoadCurrentScanlistCH();
+  SCAN_SetMode(SCAN_MODE_CHANNEL);
+  SCAN_Init(false);
 }
 
 void CHSCAN_deinit(void) {}
 
-void CHSCAN_update(void) {
-  RADIO_UpdateMultiwatch(gRadioState);
-  RADIO_CheckAndSaveVFO(gRadioState);
-
-  if (!gSettings.mWatch && Now() - lastSqCheck >= SQL_DELAY) {
-    RADIO_UpdateSquelch(gRadioState);
-    lastSqCheck = Now();
-  }
-
-  nextWithTimeout();
-}
+void CHSCAN_update(void) {}
 
 bool CHSCAN_key(KEY_Code_t key, Key_State_t state) {
   bool longHeld = state == KEY_LONG_PRESSED;

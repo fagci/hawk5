@@ -18,25 +18,36 @@ static inline void i2c_delay(void) {
 
 static inline void i2c_delay_short(void) {
   // ~600 нс для HIGH периода SCL
-  for (volatile uint32_t i = 0; i < 3; i++) {
+  /* for (volatile uint32_t i = 0; i < 3; i++) {
     __NOP();
-  }
+  } */
+  __asm volatile("nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n");
 }
 
 static inline void i2c_delay_long(void) {
   // ~1300 нс для LOW периода SCL
-  for (volatile uint32_t i = 0; i < 6; i++) {
+  /* for (volatile uint32_t i = 0; i < 6; i++) {
     __NOP();
-  }
-}
+  } */
 
-static inline void scl_hi_wait(void) {
-  GPIO_SetBit(&GPIOA->DATA, GPIOA_PIN_I2C_SCL);
-  // Ждём пока slave отпустит SCL (clock stretching)
-  uint32_t timeout = 10000;
-  while (!GPIO_CheckBit(&GPIOA->DATA, GPIOA_PIN_I2C_SCL) && timeout--) {
-    __NOP();
-  }
+  __asm volatile("nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n");
 }
 
 /* === Управление состоянием SDA === */
@@ -156,7 +167,7 @@ int I2C_Write(uint8_t Data) {
   // Читаем ACK
   sda_in();
   // i2c_delay_short();
-  scl_hi_wait();
+  scl_hi();
   i2c_delay_short();
 
   if (!sda_read()) {
@@ -176,9 +187,9 @@ uint8_t I2C_Read(bool bFinal) {
   for (uint8_t i = 0; i < 8; i++) {
     Data <<= 1;
 
-    do {
-      scl_hi();
-    } while (!scl_read());
+    scl_hi();
+    while (!scl_read())
+      continue;
     i2c_delay_short();
 
     if (sda_read()) {
@@ -196,6 +207,7 @@ uint8_t I2C_Read(bool bFinal) {
   scl_hi();
   i2c_delay_short();
   scl_lo();
+  i2c_delay_long();
 
   return Data;
 }

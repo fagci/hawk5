@@ -10,6 +10,8 @@
 #include "inc/dp32g030/gpio.h"
 #include "system.h"
 
+static const char *APP_NAME = "hawk5";
+
 void Main(void) {
   SYS_ConfigureClocks();
   SYS_ConfigureSysCon();

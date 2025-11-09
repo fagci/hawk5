@@ -65,6 +65,5 @@ CH LOOT_ToCh(const Loot *loot);
 
 extern Loot *gLastActiveLoot;
 extern int16_t gLastActiveLootIndex;
-extern const char *CH_TYPE_NAMES[6];
 
 #endif

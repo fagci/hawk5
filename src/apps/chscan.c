@@ -12,11 +12,11 @@
 
 CH activeCh;
 
-static bool lastListenState;
+static uint32_t lastSqCheck;
+static uint32_t lastRender;
 static uint32_t timeout = 0;
+static bool lastListenState;
 static bool isWaiting;
-
-static VFOContext ctxBkp;
 
 static void nextWithTimeout() {
   if (lastListenState != vfo->is_open) {
@@ -45,9 +45,6 @@ void CHSCAN_init(void) {
 }
 
 void CHSCAN_deinit(void) {}
-
-static uint32_t lastSqCheck;
-static uint32_t lastRender;
 
 void CHSCAN_update(void) {
   RADIO_UpdateMultiwatch(gRadioState);

@@ -154,32 +154,10 @@ typedef struct {
 typedef struct {
   Header_t Header;
   struct {
-    uint16_t RSSI;
-    uint8_t ExNoiseIndicator;
-    uint8_t GlitchIndicator;
-  } Data;
-} REPLY_0527_t;
-
-typedef struct {
-  Header_t Header;
-  struct {
     uint16_t Voltage;
     uint16_t Current;
   } Data;
 } REPLY_0529_t;
-
-typedef struct {
-  Header_t Header;
-  uint32_t Response[4];
-} CMD_052D_t;
-
-typedef struct {
-  Header_t Header;
-  struct {
-    bool bIsLocked;
-    uint8_t Padding[3];
-  } Data;
-} REPLY_052D_t;
 
 typedef struct {
   Header_t Header;
@@ -280,20 +258,9 @@ static void CMD_0514(const uint8_t *pBuffer) {
   SendVersion();
 }
 
-// static void log_hex(const uint8_t *buffer, uint32_t size, char *output) {
-//   for (uint32_t i = 0; i < size; i++) {
-//     sprintf(output + (i * 3), "%02X ", buffer[i]);
-//   }
-// }
-
 static void CMD_051B(const uint8_t *pBuffer) {
   const CMD_051B_t *pCmd = (const CMD_051B_t *)pBuffer;
   REPLY_051B_t Reply;
-  // char hex_output[sizeof(CMD_051B_t) * 3 + 1] = {0};
-  // log_hex(pBuffer, sizeof(CMD_051B_t), hex_output);
-  // Log("%s", hex_output);
-  // Log("CMD_051B: %d %d %d %d %d %d", pCmd->Header.ID, pCmd->Header.Size,
-  // pCmd->Offset, pCmd->Size, pCmd->Timestamp, Timestamp);
 
   if (pCmd->Timestamp != Timestamp) {
     return;
@@ -336,29 +303,6 @@ static void CMD_051D(const uint8_t *pBuffer) {
   SendReply(&Reply, sizeof(Reply));
 }
 
-static void CMD_0527(void) {
-  REPLY_0527_t Reply;
-
-  Reply.Header.ID = 0x0528;
-  Reply.Header.Size = sizeof(Reply.Data);
-  Reply.Data.RSSI = BK4819_ReadRegister(BK4819_REG_67) & 0x01FF;
-  Reply.Data.ExNoiseIndicator = BK4819_ReadRegister(BK4819_REG_65) & 0x007F;
-  Reply.Data.GlitchIndicator = BK4819_ReadRegister(BK4819_REG_63);
-
-  SendReply(&Reply, sizeof(Reply));
-}
-
-static void CMD_052D(const uint8_t *pBuffer) {
-  (void)pBuffer;
-  REPLY_052D_t Reply;
-
-  Reply.Header.ID = 0x052E;
-  Reply.Header.Size = sizeof(Reply.Data);
-
-  Reply.Data.bIsLocked = false;
-  SendReply(&Reply, sizeof(Reply));
-}
-
 static void CMD_052F(const uint8_t *pBuffer) {
   const CMD_052F_t *pCmd = (const CMD_052F_t *)pBuffer;
 
@@ -366,25 +310,6 @@ static void CMD_052F(const uint8_t *pBuffer) {
   GPIO_ClearBit(&GPIOB->DATA, GPIOB_PIN_BACKLIGHT);
 
   SendVersion();
-}
-
-uint64_t xtou64(const char *str) {
-  uint64_t res = 0;
-  char c;
-
-  while ((c = *str++)) {
-    char v = ((c & 0xF) + (c >> 6)) | ((c >> 3) & 0x8);
-    res = (res << 4) | (uint64_t)v;
-  }
-
-  return res;
-}
-
-void PrintCh(uint16_t chNum, CH *ch) {
-  UART_printf("%s%d,%s,%lu,%lu,%d,%d,%d,%d,%d\r\n",
-              ch->meta.type == TYPE_CH ? "CH" : "BAND", chNum, ch->name,
-              ch->rxF, ch->txF, ch->modulation, ch->bw, ch->scanlists,
-              ch->code.tx.type, ch->code.tx.value);
 }
 
 bool UART_IsCommandAvailable(void) {
@@ -484,30 +409,27 @@ bool UART_IsCommandAvailable(void) {
 
 void UART_HandleCommand(void) {
   switch (UART_Command.Header.ID) {
+    // VERSION
   case 0x0514:
     CMD_0514(UART_Command.Buffer);
     break;
 
+    // EEPROM READ
   case 0x051B:
     CMD_051B(UART_Command.Buffer);
     break;
 
+    // EEPROM WRITE
   case 0x051D:
     CMD_051D(UART_Command.Buffer);
     break;
 
-  case 0x0527:
-    CMD_0527();
-    break;
-
-  case 0x052D:
-    CMD_052D(UART_Command.Buffer);
-    break;
-
+    // VERSION, BL OFF
   case 0x052F:
     CMD_052F(UART_Command.Buffer);
     break;
 
+    // RESET
   case 0x05DD:
     NVIC_SystemReset();
     break;

@@ -18,7 +18,7 @@ Band defaultBand = {
     .meta.type = TYPE_BAND_DETACHED,
     .name = "Unknown",
 
-    .radio = RADIO_BK4819,
+    // .radio = RADIO_BK4819,
     .step = STEP_25_0kHz,
     .bw = BK4819_FILTER_BW_12k,
 
@@ -31,7 +31,7 @@ Band defaultBand = {
             .value = 4,
         },
     .gainIndex = AUTO_GAIN_INDEX,
-    .allowTx = false,
+    // .allowTx = false,
 };
 
 static DBand allBands[BANDS_COUNT_MAX];
@@ -43,78 +43,31 @@ static uint8_t scanlistBandIndex;
 static Band rangesStack[RANGES_STACK_SIZE] = {0};
 static int8_t rangesStackIndex = -1;
 
-// Standard UV-K6 Power Calibration
+/**
+ * @see
+ * https://github.com/fagci/s0v4/blob/f22fdbab201ec5ecc291f4d46e36e08e2bd370bd/src/helper/bands.c#L49
+ * for different configurations
+ */
+
 static const PowerCalibration DEFAULT_POWER_CALIB = {43, 68, 140};
 
-// Modified UV-K6 Power Calibrations BFU550 A + Seperated Coils static const
-// static const PowerCalibration DEFAULT_POWER_CALIB = {41, 65, 140};
-
-// reborn orginal
-// PowerCalibration DEFAULT_POWER_CALIB = {40, 65, 140};
-
 PCal POWER_CALIBRATIONS[] = {
-    /*
-     {.s = 14400000, .e = 14799999, .c = {38, 63, 138}},         // reborn
-     original {.s = 14800000, .e = 17399999, .c = {37, 60, 130}},
-     {.s = 17400000, .e = 24499999, .c = {46, 55, 140}},
-     {.s = 24500000, .e = 26999999, .c = {58, 80, 140}},
-     {.s = 27000000, .e = 42999999, .c = {77, 95, 140}},
-     {.s = 43000000, .e = 46999999, .c = DEFAULT_POWER_CALIB},
-     {.s = 47000000, .e = 61999999, .c = {50, 100, 140}},
-
-   */
-
-    // Standard UV-K6 Power Calibration
-
-    {.s = 13500000, .e = 16499999, .c = {38, 65, 140}},
-    {.s = 16500000, .e = 20499999, .c = {36, 52, 140}},
-    {.s = 20500000, .e = 21499999, .c = {41, 64, 135}},
-    {.s = 21500000, .e = 21999999, .c = {44, 46, 50}},
-    //{.s = 22000000, .e = 23999999, .c = {0, 0, 0}},     // no power
-    // output power
-    {.s = 24000000, .e = 26499999, .c = {62, 82, 130}},
-    {.s = 26500000, .e = 26999999, .c = {65, 92, 140}},
-    {.s = 27000000, .e = 27499999, .c = {73, 103, 140}},
-    {.s = 27500000, .e = 28499999, .c = {81, 107, 140}},
-    {.s = 28500000, .e = 29499999, .c = {57, 94, 140}},
-    {.s = 29500000, .e = 30499999, .c = {74, 104, 140}},
-    {.s = 30500000, .e = 33499999, .c = {81, 107, 140}},
-    {.s = 33500000, .e = 34499999, .c = {63, 98, 140}},
-    {.s = 34500000, .e = 35499999, .c = {52, 89, 140}},
-    {.s = 35500000, .e = 36499999, .c = {46, 74, 140}},
-    //{.s = 36500000, .e = 46999999, .c = DEFAULT_POWER_CALIB},     // no
-    // need to add this line as it will drop to the default if not found ?
-    {.s = 47000000, .e = 61999999, .c = {46, 77, 140}},
-
-    /*
-
-
-       // Modified UV-K6 Power Calibrations BFU550 A + Seperated Coils
-
-      //{.s = 14400000, .e = 19499999, .c = DEFAULT_POWER_CALIB},
-        {.s = 19500000, .e = 20499999, .c = {49, 78, 140}},
-        {.s = 20500000, .e = 21499999, .c = {63, 96, 140}},
-        {.s = 21500000, .e = 21999999, .c = {82, 108, 140}},
-        {.s = 22000000, .e = 22499999, .c = {96, 115, 140}},
-        {.s = 22500000, .e = 23499999, .c = {93, 106, 120}},
-      //{.s = 23500000, .e = 23999999, .c = {0, 0, 0}},       // no power
-      output power {.s = 24000000, .e = 25499999, .c = {50, 78, 135}},
-        {.s = 25500000, .e = 26999999, .c = {48, 62, 108}},
-        {.s = 27000000, .e = 27499999, .c = {50, 73, 118}},
-        {.s = 27500000, .e = 28499999, .c = {59, 85, 130}},
-        {.s = 28500000, .e = 29499999, .c = {51, 90, 140}},
-        {.s = 29500000, .e = 30499999, .c = {74, 106, 140}},
-        {.s = 30500000, .e = 33499999, .c = {85, 109, 140}},
-        {.s = 33500000, .e = 34499999, .c = {79, 106, 140}},
-        {.s = 34500000, .e = 35499999, .c = {65, 98, 140}},
-        {.s = 35500000, .e = 38499999, .c = {48, 85, 140}},
-        {.s = 38500000, .e = 39499999, .c = {44, 68, 140}},
-        {.s = 39500000, .e = 42499999, .c = {38, 59, 140}},
-      //{.s = 42500000, .e = 46900000, .c = DEFAULT_POWER_CALIB},
-        {.s = 47000000, .e = 61999999, .c = {46, 75, 140}},
-
-    */
-
+    {.s = 135 * MHZ, .e = 165 * MHZ, .c = {38, 65, 140}},
+    {.s = 165 * MHZ, .e = 205 * MHZ, .c = {36, 52, 140}},
+    {.s = 205 * MHZ, .e = 215 * MHZ, .c = {41, 64, 135}},
+    {.s = 215 * MHZ, .e = 220 * MHZ, .c = {44, 46, 50}},
+    {.s = 220 * MHZ, .e = 240 * MHZ, .c = {0, 0, 0}},
+    {.s = 240 * MHZ, .e = 265 * MHZ, .c = {62, 82, 130}},
+    {.s = 265 * MHZ, .e = 270 * MHZ, .c = {65, 92, 140}},
+    {.s = 270 * MHZ, .e = 275 * MHZ, .c = {73, 103, 140}},
+    {.s = 275 * MHZ, .e = 285 * MHZ, .c = {81, 107, 140}},
+    {.s = 285 * MHZ, .e = 295 * MHZ, .c = {57, 94, 140}},
+    {.s = 295 * MHZ, .e = 305 * MHZ, .c = {74, 104, 140}},
+    {.s = 305 * MHZ, .e = 335 * MHZ, .c = {81, 107, 140}},
+    {.s = 335 * MHZ, .e = 345 * MHZ, .c = {63, 98, 140}},
+    {.s = 345 * MHZ, .e = 355 * MHZ, .c = {52, 89, 140}},
+    {.s = 355 * MHZ, .e = 365 * MHZ, .c = {46, 74, 140}},
+    {.s = 470 * MHZ, .e = 620 * MHZ, .c = {46, 77, 140}},
 };
 
 static int16_t bandIndexByFreq(uint32_t f, bool preciseStep) {
@@ -165,13 +118,6 @@ bool BANDS_InRange(const uint32_t f, const Band p) {
 }
 
 void BANDS_SetRadioParamsFromCurrentBand() {
-  /* radio.fixedBoundsMode = true;
-  radio.step = gCurrentBand.step;
-  radio.bw = gCurrentBand.bw;
-  radio.gainIndex = gCurrentBand.gainIndex;
-  radio.modulation = gCurrentBand.modulation;
-  radio.squelch = gCurrentBand.squelch;
-  radio.radio = gCurrentBand.radio; */
   RADIO_SetParam(ctx, PARAM_STEP, gCurrentBand.step, true);
   RADIO_SetParam(ctx, PARAM_BANDWIDTH, gCurrentBand.bw, true);
   RADIO_SetParam(ctx, PARAM_GAIN, gCurrentBand.gainIndex, true);
@@ -274,7 +220,7 @@ PowerCalibration BANDS_GetPowerCalib(uint32_t f) {
 
   for (uint8_t ci = 0; ci < ARRAY_SIZE(POWER_CALIBRATIONS); ++ci) {
     PCal cal = POWER_CALIBRATIONS[ci];
-    if (cal.s <= f && f <= cal.e) {
+    if (cal.s <= f && f < cal.e) {
       return cal.c;
     }
   }

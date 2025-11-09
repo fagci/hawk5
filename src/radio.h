@@ -10,10 +10,8 @@
 #define SQL_DELAY 50
 #define GARBAGE_FREQUENCY_MOD (13 * MHZ)
 
-#define MAX_VFOS 16
+#define MAX_VFOS 4
 
-extern bool gShowAllRSSI;
-extern bool gMonitorMode;
 extern const char *PARAM_NAMES[];
 extern const char *TX_STATE_NAMES[7];
 extern const char *FLT_BOUND_NAMES[2];
@@ -25,6 +23,9 @@ extern const char *MOD_NAMES_BK4819[8];
 extern const char *RADIO_NAMES[3];
 
 extern const uint16_t StepFrequencyTable[15];
+
+extern bool gShowAllRSSI;
+extern bool gMonitorMode;
 
 // Параметры
 typedef const enum {

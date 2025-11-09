@@ -102,10 +102,10 @@ const char *MOD_NAMES_BK4819[8] = {
 };
 
 const char *MOD_NAMES_SI47XX[8] = {
-    [SI47XX_AM] = "siAM",
-    [SI47XX_FM] = "siFM",
-    [SI47XX_LSB] = "siLSB",
-    [SI47XX_USB] = "siUSB",
+    [SI47XX_AM] = "AM",
+    [SI47XX_FM] = "FM",
+    [SI47XX_LSB] = "LSB",
+    [SI47XX_USB] = "USB",
 };
 
 const char *BW_NAMES_BK4819[10] = {
@@ -1247,7 +1247,7 @@ void RADIO_ApplySettings(VFOContext *ctx) {
     ctx->dirty[PARAM_RADIO] = false;
 
     if (ctx->radio_type != RADIO_BK4819) {
-      printf("RADIO IS BC\n");
+      // printf("RADIO IS BC\n");
       rxTurnOn(ctx);
     }
   }
@@ -1701,9 +1701,9 @@ static void RADIO_UpdateMeasurement(ExtendedVFOContext *vfo) {
   VFOContext *ctx = &vfo->context;
   vfo->msm.f = ctx->frequency;
   vfo->msm.rssi = RADIO_GetRSSI(ctx);
-  vfo->msm.snr = RADIO_GetSNR(ctx);
   vfo->msm.noise = BK4819_GetNoise();
   vfo->msm.glitch = BK4819_GetGlitch();
+  vfo->msm.snr = RADIO_GetSNR(ctx);
   vfo->msm.open = RADIO_CheckSquelch(ctx);
   if (!gMonitorMode) {
     LOOT_Update(&vfo->msm);

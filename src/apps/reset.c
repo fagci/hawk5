@@ -12,11 +12,10 @@ typedef enum {
   RESET_0xFF,
   RESET_FULL,
   RESET_CHANNELS,
-  RESET_BANDS,
   RESET_UNKNOWN,
 } ResetType;
 
-static char *RESET_TYPE_NAMES[] = {"0xFF", "FULL", "CHANNELS", "BANDS"};
+static char *RESET_TYPE_NAMES[] = {"0xFF", "FULL", "CHANNELS"};
 
 static struct {
   uint32_t totalBytes;
@@ -27,12 +26,12 @@ static struct {
   ResetType type;
 } resetState;
 
-static VFO defaultVfos[9] = {
+static VFO defaultVfos[4] = {
     {.rxF = 14550000,
      .meta.type = TYPE_VFO,
      .gainIndex = AUTO_GAIN_INDEX,
      .radio = RADIO_BK4819},
-    {.rxF = 17230000,
+    {.rxF = 43312500,
      .meta.type = TYPE_VFO,
      .gainIndex = AUTO_GAIN_INDEX,
      .radio = RADIO_BK4819},
@@ -41,27 +40,6 @@ static VFO defaultVfos[9] = {
      .gainIndex = AUTO_GAIN_INDEX,
      .radio = RADIO_BK4819},
     {.rxF = 40065000,
-     .meta.type = TYPE_VFO,
-     .gainIndex = AUTO_GAIN_INDEX,
-     .radio = RADIO_BK4819},
-    {.rxF = 43392500,
-     .meta.type = TYPE_VFO,
-     .gainIndex = AUTO_GAIN_INDEX,
-     .radio = RADIO_BK4819},
-    {.rxF = 43780000,
-     .meta.type = TYPE_VFO,
-     .gainIndex = AUTO_GAIN_INDEX,
-     .radio = RADIO_BK4819},
-    {.rxF = 86800000,
-     .meta.type = TYPE_VFO,
-     .gainIndex = AUTO_GAIN_INDEX,
-     .radio = RADIO_BK4819},
-    {.rxF = 25220000,
-     .meta.type = TYPE_CH,
-     .gainIndex = ARRAY_SIZE(GAIN_TABLE) - 1,
-     .radio = RADIO_BK4819,
-     .name = "Test CH"},
-    {.rxF = 10440000,
      .meta.type = TYPE_VFO,
      .gainIndex = AUTO_GAIN_INDEX,
      .radio = RADIO_BK4819},
@@ -102,15 +80,15 @@ static bool processReset(void) {
     if (vfo.meta.type == TYPE_VFO) {
       sprintf(vfo.name, "VFO-%c", 'A' + resetState.currentItem - 1);
     }
-    vfo.channel = 0;
-    vfo.modulation = MOD_FM;
+    // vfo.channel = 0;
+    // vfo.modulation = MOD_FM;
     vfo.bw = BK4819_FILTER_BW_12k;
-    vfo.txF = 0;
-    vfo.offsetDir = OFFSET_NONE;
-    vfo.allowTx = false;
-    vfo.code.rx.type = 0;
-    vfo.code.tx.type = 0;
-    vfo.meta.readonly = false;
+    // vfo.txF = 0;
+    // vfo.offsetDir = OFFSET_NONE;
+    // vfo.allowTx = false;
+    /* vfo.code.rx.type = 0;
+    vfo.code.tx.type = 0; */
+    // vfo.meta.readonly = false;
     vfo.squelch.value = 4;
     vfo.step = STEP_25_0kHz;
     CHANNELS_Save(resetState.maxChannels - 9 + resetState.currentItem - 1,
@@ -137,6 +115,7 @@ void RESET_Init(void) {
   gSettings.eepromType = EEPROM_DetectType();
   resetState.pageSize = SETTINGS_GetPageSize();
   resetState.maxChannels = CHANNELS_GetCountMax();
+  STATUSLINE_SetText("%s", EEPROM_TYPE_NAMES[gSettings.eepromType]);
 }
 
 void RESET_Update(void) {
@@ -154,17 +133,12 @@ void RESET_Update(void) {
 }
 
 void RESET_Render(void) {
-  STATUSLINE_SetText("%s", EEPROM_TYPE_NAMES[gSettings.eepromType]);
-
   if (resetState.type == RESET_UNKNOWN) {
     for (uint8_t i = 0; i < ARRAY_SIZE(RESET_TYPE_NAMES); i++) {
       PrintMedium(2, 18 + i * 8, "%u: %s", i, RESET_TYPE_NAMES[i]);
     }
     return;
   }
-
-  STATUSLINE_SetText("%s: %s", EEPROM_TYPE_NAMES[gSettings.eepromType],
-                     RESET_TYPE_NAMES[resetState.type]);
 
   uint8_t progress =
       ConvertDomain(resetState.doneBytes, 0, resetState.totalBytes, 0, 100);

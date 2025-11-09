@@ -51,37 +51,6 @@ static InputConfig currentConfig = {.min = 0,
                                     .allow_dot = false,
                                     .multiplier = 1};
 
-/* static uint32_t convertFromDisplayValue() {
-  uint32_t integerPart = 0;
-  uint32_t fractionalPart = 0;
-  bool isFractional = false;
-  fractionalDigits = 0;
-
-  for (uint8_t i = 0; i < cursorPos && inputBuffer[i] != '\0'; i++) {
-    if (inputBuffer[i] == '.') {
-      isFractional = true;
-    } else if (inputBuffer[i] >= '0' && inputBuffer[i] <= '9') {
-      if (isFractional) {
-        fractionalPart = fractionalPart * 10 + (inputBuffer[i] - '0');
-        fractionalDigits++;
-      } else {
-        integerPart = integerPart * 10 + (inputBuffer[i] - '0');
-      }
-    }
-  }
-
-  if (currentConfig.unit == UNIT_HZ || currentConfig.unit == UNIT_KHZ ||
-      currentConfig.unit == UNIT_MHZ || currentConfig.unit == UNIT_VOLTS) {
-    return (integerPart * currentConfig.multiplier) +
-           (fractionalPart * currentConfig.multiplier / POW[fractionalDigits]);
-  }
-
-  switch (currentConfig.unit) {
-  default:
-    return integerPart;
-  }
-} */
-
 static uint32_t convertFromDisplayValue() {
   uint32_t integerPart = 0;
   uint32_t fractionalPart = 0;
@@ -127,61 +96,6 @@ static void reset() {
   resetInputBuffer();
   blinkState = 0;
 }
-
-/* static void fillFromCurrentValue() {
-  uint32_t value =
-      (inputStage == INPUT_FIRST_VALUE) ? gFInputValue1 : gFInputValue2;
-
-  // Skip filling if value is 0 to prevent displaying initial "0"
-  if (value == 0) {
-    resetInputBuffer();
-    return;
-  }
-
-  uint32_t integerPart = 0;
-  uint32_t fractionalPart = 0;
-  fractionalDigits = 0;
-
-  switch (currentConfig.unit) {
-  case UNIT_HZ:
-    integerPart = value / (HZ);
-    fractionalPart = value % (HZ);
-    fractionalDigits = 0;
-    break;
-  case UNIT_KHZ:
-    integerPart = value / (KHZ);
-    fractionalPart = value % (KHZ);
-    fractionalDigits = 3;
-    break;
-  case UNIT_MHZ:
-    integerPart = value / (MHZ);
-    fractionalPart = value % (MHZ);
-    fractionalDigits = 5;
-    break;
-  case UNIT_VOLTS:
-    integerPart = value / 100;
-    fractionalPart = value % 100;
-    fractionalDigits = 2;
-    break;
-  default:
-    integerPart = value;
-    break;
-  }
-
-  if (fractionalDigits > 0 && fractionalPart > 0) {
-    while (fractionalPart % 10 == 0 && fractionalDigits > 0) {
-      fractionalPart /= 10;
-      fractionalDigits--;
-    }
-    snprintf(inputBuffer, MAX_INPUT_LENGTH + 1, "%lu.%0*lu", integerPart,
-             fractionalDigits, fractionalPart);
-  } else {
-    snprintf(inputBuffer, MAX_INPUT_LENGTH + 1, "%lu", integerPart);
-  }
-
-  cursorPos = strlen(inputBuffer);
-  dotEntered = strchr(inputBuffer, '.') != NULL;
-} */
 
 static void fillFromCurrentValue() {
   uint32_t value =
@@ -240,72 +154,6 @@ static void fillFromCurrentValue() {
   dotEntered = strchr(inputBuffer, '.') != NULL;
   fractionalDigits = displayFractionalDigits;
 }
-
-/* void FINPUT_setup(uint32_t min, uint32_t max, InputUnit unit, bool is_range) {
-  currentConfig.min = min;
-  currentConfig.max = max;
-  currentConfig.unit = unit;
-  currentConfig.is_range = is_range;
-  currentConfig.allow_dot =
-      (unit == UNIT_MHZ || unit == UNIT_KHZ || unit == UNIT_VOLTS);
-
-  switch (unit) {
-  case UNIT_HZ:
-    currentConfig.multiplier = HZ;
-    break;
-  case UNIT_KHZ:
-    currentConfig.multiplier = KHZ;
-    break;
-  case UNIT_MHZ:
-    currentConfig.multiplier = MHZ;
-    break;
-  case UNIT_VOLTS:
-    currentConfig.multiplier = 100;
-    break;
-  default:
-    currentConfig.multiplier = 1;
-    break;
-  }
-} */
-
-/* void FINPUT_init() {
-  uint32_t maxDisplayValue;
-  switch (currentConfig.unit) {
-  case UNIT_MHZ:
-    maxDisplayValue = currentConfig.max / MHZ;
-    break;
-  case UNIT_KHZ:
-    maxDisplayValue = currentConfig.max / KHZ;
-    break;
-  case UNIT_HZ:
-    maxDisplayValue = currentConfig.max / HZ;
-    break;
-  case UNIT_VOLTS:
-    maxDisplayValue = currentConfig.max / 100;
-    break;
-  default:
-    maxDisplayValue = currentConfig.max;
-    break;
-  }
-
-  currentConfig.max_digits = 0;
-  while (maxDisplayValue > 0) {
-    maxDisplayValue /= 10;
-    currentConfig.max_digits++;
-  }
-
-  if (currentConfig.max_digits > MAX_INPUT_LENGTH - 1) {
-    currentConfig.max_digits = MAX_INPUT_LENGTH - 1;
-  }
-
-  reset();
-  if (currentConfig.is_range && gFInputValue1 != 0) {
-    inputStage = INPUT_SECOND_VALUE;
-    fillFromCurrentValue();
-  } else {
-    fillFromCurrentValue();
-  }
-} */
 
 void FINPUT_setup(uint32_t min, uint32_t max, InputUnit unit, bool is_range) {
   // min и max уже в нативных единицах (десятках Герц)
@@ -571,7 +419,7 @@ void FINPUT_render(void) {
   }
 
   // Отображаем текущий ввод
-  PrintBigDigitsEx(LCD_WIDTH - 3, BASE_Y, POS_R, C_FILL, "%s", displayStr);
+  PrintBiggestDigitsEx(LCD_WIDTH - 3, BASE_Y, POS_R, C_FILL, "%s", displayStr);
   PrintMediumEx(LCD_WIDTH - 3, BASE_Y + 8, POS_R, C_FILL, "%s", unitSuffix);
 
   // Отображаем курсор
@@ -600,53 +448,7 @@ void FINPUT_render(void) {
     PrintSmall(0, 16, rangeStr);
   }
 
-  /* if (currentConfig.min) {
-    switch (currentConfig.unit) {
-    case UNIT_MHZ:
-      PrintSmall(0, 32, "Min: %u.%05u MHz", currentConfig.min / MHZ,
-                 currentConfig.min % MHZ);
-      break;
-    case UNIT_KHZ:
-      PrintSmall(0, 32, "Min: %u.%05u kHz", currentConfig.min / KHZ,
-                 currentConfig.min % KHZ);
-      break;
-    case UNIT_HZ:
-      PrintSmall(0, 32, "Min: %u", currentConfig.min * 10);
-      break;
-    case UNIT_VOLTS:
-      PrintSmall(0, 32, "Min: %u.%02u", currentConfig.min / 100,
-                 currentConfig.min % 100);
-      break;
-    default:
-      PrintSmall(0, 32, "Min: %u", currentConfig.min);
-      break;
-    }
-  }
-
-  if (currentConfig.max) {
-    switch (currentConfig.unit) {
-    case UNIT_MHZ:
-      PrintSmall(0, 42, "max: %u.%05u MHz", currentConfig.max / MHZ,
-                 currentConfig.max % MHZ);
-      break;
-    case UNIT_KHZ:
-      PrintSmall(0, 42, "max: %u.%05u kHz", currentConfig.max / KHZ,
-                 currentConfig.max % KHZ);
-      break;
-    case UNIT_HZ:
-      PrintSmall(0, 42, "max: %u", currentConfig.max * 10);
-      break;
-    case UNIT_VOLTS:
-      PrintSmall(0, 42, "max: %u.%02u", currentConfig.max / 100,
-                 currentConfig.max % 100);
-      break;
-    default:
-      PrintSmall(0, 42, "max: %u", currentConfig.max);
-      break;
-    }
-  } */
-
-    if (currentConfig.min) {
+  if (currentConfig.min) {
     switch (currentConfig.unit) {
     case UNIT_MHZ:
       PrintSmall(0, 32, "Min: %u.%05u MHz", currentConfig.min / 100000,

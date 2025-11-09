@@ -9,345 +9,209 @@
 #include <stdlib.h>
 #include <string.h>
 
-static Cursor cursor = {0, 0};
+static Cursor cursor;
 
-static const GFXfont *fontSmall = &TomThumb;
-static const GFXfont *fontMedium = &MuMatrix8ptRegular;
-static const GFXfont *fontMediumBold = &muHeavy8ptBold;
-static const GFXfont *fontBig = &dig_11;
-static const GFXfont *fontBiggest = &dig_14;
+static const GFXfont *const fonts[] = {&TomThumb, &MuMatrix8ptRegular,
+                                       &muHeavy8ptBold, &dig_11, &dig_14};
 
-void UI_ClearStatus(void) {
-  // memset(gFrameBuffer[0], 0, sizeof(gFrameBuffer[0]));
-  FillRect(0, 0, LCD_WIDTH, 7, C_CLEAR);
-}
-
+void UI_ClearStatus(void) { FillRect(0, 0, LCD_WIDTH, 7, C_CLEAR); }
 void UI_ClearScreen(void) {
-  /* for (uint8_t i = 1; i < 8; ++i) {
-    memset(gFrameBuffer[i], 0, sizeof(gFrameBuffer[i]));
-  } */
   FillRect(0, 7, LCD_WIDTH, LCD_HEIGHT - 7, C_CLEAR);
 }
 
 void PutPixel(uint8_t x, uint8_t y, uint8_t fill) {
-  if (x >= LCD_WIDTH || y >= LCD_HEIGHT) {
+  if (x >= LCD_WIDTH || y >= LCD_HEIGHT)
     return;
-  }
-  if (fill == 1) {
-    gFrameBuffer[y >> 3][x] |= 1 << (y & 7);
-  } else if (fill == 2) {
-    gFrameBuffer[y >> 3][x] ^= 1 << (y & 7);
-  } else {
-    gFrameBuffer[y >> 3][x] &= ~(1 << (y & 7));
-  }
+  uint8_t m = 1 << (y & 7), *p = &gFrameBuffer[y >> 3][x];
+  *p = fill ? (fill & 2 ? *p ^ m : *p | m) : *p & ~m;
 }
 
 bool GetPixel(uint8_t x, uint8_t y) {
-  return gFrameBuffer[y / 8][x] & (1 << (y & 7));
+  return gFrameBuffer[y >> 3][x] & (1 << (y & 7));
 }
 
 static void DrawALine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-                      int16_t color) {
-  int16_t steep = abs(y1 - y0) > abs(x1 - x0);
-  if (steep) {
+                      int16_t c) {
+  int16_t s = abs(y1 - y0) > abs(x1 - x0);
+  if (s) {
     SWAP(x0, y0);
     SWAP(x1, y1);
   }
-
   if (x0 > x1) {
     SWAP(x0, x1);
     SWAP(y0, y1);
   }
 
-  int16_t dx, dy;
-  dx = x1 - x0;
-  dy = abs(y1 - y0);
-
-  int16_t err = dx / 2;
-  int16_t ystep;
-
-  if (y0 < y1) {
-    ystep = 1;
-  } else {
-    ystep = -1;
-  }
-
-  for (; x0 <= x1; x0++) {
-    if (steep) {
-      PutPixel((uint8_t)y0, (uint8_t)x0, color);
-    } else {
-      PutPixel((uint8_t)x0, (uint8_t)y0, color);
-    }
-    err -= dy;
-    if (err < 0) {
-      y0 += ystep;
-      err += dx;
+  int16_t dx = x1 - x0, dy = abs(y1 - y0), e = dx >> 1, ys = y0 < y1 ? 1 : -1;
+  for (; x0 <= x1; x0++, e -= dy) {
+    PutPixel(s ? y0 : x0, s ? x0 : y0, c);
+    if (e < 0) {
+      y0 += ys;
+      e += dx;
     }
   }
 }
 
-void DrawVLine(int16_t x, int16_t y, int16_t h, Color color) {
+void DrawVLine(int16_t x, int16_t y, int16_t h, Color c) {
   if (h)
-    DrawALine(x, y, x, y + h - 1, color);
+    DrawALine(x, y, x, y + h - 1, c);
 }
 
-void DrawHLine(int16_t x, int16_t y, int16_t w, Color color) {
+void DrawHLine(int16_t x, int16_t y, int16_t w, Color c) {
   if (w)
-    DrawALine(x, y, x + w - 1, y, color);
+    DrawALine(x, y, x + w - 1, y, c);
 }
 
-void DrawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, Color color) {
+void DrawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, Color c) {
   if (x0 == x1) {
     if (y0 > y1)
       SWAP(y0, y1);
-    DrawVLine(x0, y0, y1 - y0 + 1, color);
+    DrawVLine(x0, y0, y1 - y0 + 1, c);
   } else if (y0 == y1) {
     if (x0 > x1)
       SWAP(x0, x1);
-    DrawHLine(x0, y0, x1 - x0 + 1, color);
-  } else {
-    DrawALine(x0, y0, x1, y1, color);
-  }
+    DrawHLine(x0, y0, x1 - x0 + 1, c);
+  } else
+    DrawALine(x0, y0, x1, y1, c);
 }
 
-void DrawRect(int16_t x, int16_t y, int16_t w, int16_t h, Color color) {
-  DrawHLine(x, y, w, color);
-  DrawHLine(x, y + h - 1, w, color);
-  DrawVLine(x, y, h, color);
-  DrawVLine(x + w - 1, y, h, color);
+void DrawRect(int16_t x, int16_t y, int16_t w, int16_t h, Color c) {
+  DrawHLine(x, y, w, c);
+  DrawHLine(x, y + h - 1, w, c);
+  DrawVLine(x, y, h, c);
+  DrawVLine(x + w - 1, y, h, c);
 }
 
-void FillRect(int16_t x, int16_t y, int16_t w, int16_t h, Color color) {
-  for (int16_t i = x; i < x + w; i++) {
-    DrawVLine(i, y, h, color);
-  }
+void FillRect(int16_t x, int16_t y, int16_t w, int16_t h, Color c) {
+  for (int16_t i = x, e = x + w; i < e; i++)
+    DrawVLine(i, y, h, c);
 }
 
-static void m_putchar(int16_t x, int16_t y, unsigned char c, Color color,
-                      uint8_t size_x, uint8_t size_y, const GFXfont *gfxFont) {
-  c -= gfxFont->first;
-  const GFXglyph *glyph = &gfxFont->glyph[c];
-  const uint8_t *bitmap = gfxFont->bitmap;
+static void m_putchar(int16_t x, int16_t y, uint8_t c, Color col, uint8_t sx,
+                      uint8_t sy, const GFXfont *f) {
+  const GFXglyph *g = &f->glyph[c - f->first];
+  const uint8_t *b = f->bitmap + g->bitmapOffset;
+  uint8_t w = g->width, h = g->height, bits = 0, bit = 0;
+  int8_t xo = g->xOffset, yo = g->yOffset;
 
-  uint16_t bo = glyph->bitmapOffset;
-  uint8_t w = glyph->width, h = glyph->height;
-  int8_t xo = glyph->xOffset, yo = glyph->yOffset;
-  uint8_t xx, yy, bits = 0, bit = 0;
-  int16_t xo16 = 0, yo16 = 0;
-
-  if (size_x > 1 || size_y > 1) {
-    xo16 = xo;
-    yo16 = yo;
-  }
-
-  for (yy = 0; yy < h; yy++) {
-    for (xx = 0; xx < w; xx++) {
-      if (!(bit++ & 7)) {
-        bits = bitmap[bo++];
-      }
+  for (uint8_t yy = 0; yy < h; yy++) {
+    for (uint8_t xx = 0; xx < w; xx++, bits <<= 1) {
+      if (!(bit++ & 7))
+        bits = *b++;
       if (bits & 0x80) {
-        if (size_x == 1 && size_y == 1) {
-          PutPixel(x + xo + xx, y + yo + yy, color);
-        } else {
-          FillRect(x + (xo16 + xx) * size_x, y + (yo16 + yy) * size_y, size_x,
-                   size_y, color);
-        }
+        (sx == 1 && sy == 1)
+            ? PutPixel(x + xo + xx, y + yo + yy, col)
+            : FillRect(x + (xo + xx) * sx, y + (yo + yy) * sy, sx, sy, col);
       }
-      bits <<= 1;
     }
   }
 }
 
-void charBounds(unsigned char c, int16_t *x, int16_t *y, int16_t *minx,
-                int16_t *miny, int16_t *maxx, int16_t *maxy, uint8_t textsize_x,
-                uint8_t textsize_y, bool wrap, const GFXfont *gfxFont) {
-
-  if (c == '\n') { // Newline?
-    *x = 0;        // Reset x to zero, advance y by one line
-    *y += textsize_y * gfxFont->yAdvance;
-  } else if (c != '\r') { // Not a carriage return; is normal char
-    uint8_t first = gfxFont->first, last = gfxFont->last;
-    if ((c >= first) && (c <= last)) { // Char present in this font?
-      const GFXglyph *glyph = &gfxFont->glyph[c - first];
-      uint8_t gw = glyph->width, gh = glyph->height, xa = glyph->xAdvance;
-      int8_t xo = glyph->xOffset, yo = glyph->yOffset;
-      if (wrap && ((*x + (((int16_t)xo + gw) * textsize_x)) > LCD_WIDTH)) {
-        *x = 0; // Reset x to zero, advance y by one line
-        *y += textsize_y * gfxFont->yAdvance;
-      }
-      int16_t tsx = (int16_t)textsize_x, tsy = (int16_t)textsize_y,
-              x1 = *x + xo * tsx, y1 = *y + yo * tsy, x2 = x1 + gw * tsx - 1,
-              y2 = y1 + gh * tsy - 1;
-      if (x1 < *minx)
-        *minx = x1;
-      if (y1 < *miny)
-        *miny = y1;
-      if (x2 > *maxx)
-        *maxx = x2;
-      if (y2 > *maxy)
-        *maxy = y2;
-      *x += xa * tsx;
-    }
+void charBounds(uint8_t c, int16_t *x, int16_t *y, int16_t *minx, int16_t *miny,
+                int16_t *maxx, int16_t *maxy, uint8_t tsx, uint8_t tsy,
+                bool wrap, const GFXfont *f) {
+  if (c == '\n') {
+    *x = 0;
+    *y += tsy * f->yAdvance;
+    return;
   }
+  if (c == '\r' || c < f->first || c > f->last)
+    return;
+
+  const GFXglyph *g = &f->glyph[c - f->first];
+  if (wrap && (*x + ((g->xOffset + g->width) * tsx) > LCD_WIDTH)) {
+    *x = 0;
+    *y += tsy * f->yAdvance;
+  }
+
+  int16_t x1 = *x + g->xOffset * tsx, y1 = *y + g->yOffset * tsy;
+  int16_t x2 = x1 + g->width * tsx - 1, y2 = y1 + g->height * tsy - 1;
+  if (x1 < *minx)
+    *minx = x1;
+  if (y1 < *miny)
+    *miny = y1;
+  if (x2 > *maxx)
+    *maxx = x2;
+  if (y2 > *maxy)
+    *maxy = y2;
+  *x += g->xAdvance * tsx;
 }
 
-static void getTextBounds(const char *str, int16_t x, int16_t y, int16_t *x1,
-                          int16_t *y1, uint16_t *w, uint16_t *h, bool wrap,
-                          const GFXfont *gfxFont) {
-
-  uint8_t c; // Current character
-  int16_t minx = 0x7FFF, miny = 0x7FFF, maxx = -1, maxy = -1; // Bound rect
-  // Bound rect is intentionally initialized inverted, so 1st char sets it
-
-  *x1 = x; // Initial position is value passed in
-  *y1 = y;
-  *w = *h = 0; // Initial size is zero
-
-  while ((c = *str++)) {
-    // charBounds() modifies x/y to advance for each character,
-    // and min/max x/y are updated to incrementally build bounding rect.
-    charBounds(c, &x, &y, &minx, &miny, &maxx, &maxy, 1, 1, wrap, gfxFont);
-  }
-
-  if (maxx >= minx) {     // If legit string bounds were found...
-    *x1 = minx;           // Update x1 to least X coord,
-    *w = maxx - minx + 1; // And w to bound rect width
-  }
-  if (maxy >= miny) { // Same for height
-    *y1 = miny;
-    *h = maxy - miny + 1;
-  }
+static void getTextBounds(const char *s, int16_t x, int16_t y, int16_t *x1,
+                          int16_t *y1, uint16_t *w, uint16_t *h,
+                          const GFXfont *f) {
+  int16_t minx = 0x7FFF, miny = 0x7FFF, maxx = -1, maxy = -1;
+  for (; *s; s++)
+    charBounds(*s, &x, &y, &minx, &miny, &maxx, &maxy, 1, 1, 0, f);
+  *x1 = maxx >= minx ? minx : x;
+  *y1 = maxy >= miny ? miny : y;
+  *w = maxx >= minx ? maxx - minx + 1 : 0;
+  *h = maxy >= miny ? maxy - miny + 1 : 0;
 }
 
-void write(uint8_t c, uint8_t textsize_x, uint8_t textsize_y, bool wrap,
-           Color color, const GFXfont *gfxFont) {
+void write(uint8_t c, uint8_t tsx, uint8_t tsy, bool wrap, Color col,
+           const GFXfont *f) {
   if (c == '\n') {
     cursor.x = 0;
-    cursor.y += (int16_t)textsize_y * gfxFont->yAdvance;
-  } else if (c != '\r') {
-    uint8_t first = gfxFont->first;
-    if ((c >= first) && (c <= gfxFont->last)) {
-      GFXglyph *glyph = &gfxFont->glyph[c - first];
-      uint8_t w = glyph->width, h = glyph->height;
-      if ((w > 0) && (h > 0)) { // Is there an associated bitmap?
-        int16_t xo = glyph->xOffset;
-        if (wrap && ((cursor.x + textsize_x * (xo + w)) > LCD_WIDTH)) {
-          cursor.x = 0;
-          cursor.y += (int16_t)textsize_y * gfxFont->yAdvance;
-        }
-        m_putchar(cursor.x, cursor.y, c, color, textsize_x, textsize_y,
-                  gfxFont);
-      }
-      cursor.x += glyph->xAdvance * (int16_t)textsize_x;
-    }
+    cursor.y += tsy * f->yAdvance;
+    return;
   }
+  if (c == '\r' || c < f->first || c > f->last)
+    return;
+
+  GFXglyph *g = &f->glyph[c - f->first];
+  if (g->width && g->height) {
+    if (wrap && (cursor.x + tsx * (g->xOffset + g->width) > LCD_WIDTH)) {
+      cursor.x = 0;
+      cursor.y += tsy * f->yAdvance;
+    }
+    m_putchar(cursor.x, cursor.y, c, col, tsx, tsy, f);
+  }
+  cursor.x += g->xAdvance * tsx;
 }
 
-static void printString(const GFXfont *gfxFont, uint8_t x, uint8_t y,
-                        Color color, TextPos posLCR, const char *pattern,
-                        va_list args) {
-  char String[64] = {'\0'};
-  vsnprintf(String, 63, pattern, args);
-
+static void printStr(const GFXfont *f, uint8_t x, uint8_t y, Color col,
+                     TextPos pos, const char *fmt, va_list args) {
+  char buf[64];
+  vsnprintf(buf, 64, fmt, args);
   int16_t x1, y1;
   uint16_t w, h;
-  getTextBounds(String, x, y, &x1, &y1, &w, &h, false, gfxFont);
-  if (posLCR == POS_C) {
-    x = x - w / 2;
-  } else if (posLCR == POS_R) {
-    x = x - w;
-  }
-  cursor.x = x;
+  getTextBounds(buf, x, y, &x1, &y1, &w, &h, f);
+  cursor.x = pos == POS_C ? x - (w >> 1) : pos == POS_R ? x - w : x;
   cursor.y = y;
-  for (uint8_t i = 0; i < strlen(String); i++) {
-    write(String[i], 1, 1, true, color, gfxFont);
+  for (char *p = buf; *p; p++)
+    write(*p, 1, 1, 1, col, f);
+}
+
+// Макрос для генерации функций - экономит место
+#define P(n, i)                                                                \
+  void Print##n(uint8_t x, uint8_t y, const char *f, ...) {                    \
+    va_list a;                                                                 \
+    va_start(a, f);                                                            \
+    printStr(fonts[i], x, y, C_FILL, POS_L, f, a);                             \
+    va_end(a);                                                                 \
   }
+#define PX(n, i)                                                               \
+  void Print##n##Ex(uint8_t x, uint8_t y, TextPos p, Color c, const char *f,   \
+                    ...) {                                                     \
+    va_list a;                                                                 \
+    va_start(a, f);                                                            \
+    printStr(fonts[i], x, y, c, p, f, a);                                      \
+    va_end(a);                                                                 \
+  }
+
+P(Small, 0)
+PX(Small, 0) P(Medium, 1) PX(Medium, 1) P(MediumBold, 2) PX(MediumBold, 2)
+    P(BigDigits, 3) PX(BigDigits, 3) P(BiggestDigits, 4) PX(BiggestDigits, 4)
+
+        void PrintSymbolsEx(uint8_t x, uint8_t y, TextPos p, Color c,
+                            const char *f, ...) {
+  va_list a;
+  va_start(a, f);
+  printStr(&Symbols, x, y, c, p, f, a);
+  va_end(a);
 }
 
-void PrintSmall(uint8_t x, uint8_t y, const char *pattern, ...) {
-  va_list args;
-  va_start(args, pattern);
-  printString(fontSmall, x, y, C_FILL, POS_L, pattern, args);
-  va_end(args);
-}
-
-void PrintSmallEx(uint8_t x, uint8_t y, TextPos posLCR, Color color,
-                  const char *pattern, ...) {
-  va_list args;
-  va_start(args, pattern);
-  printString(fontSmall, x, y, color, posLCR, pattern, args);
-  va_end(args);
-}
-
-void PrintMedium(uint8_t x, uint8_t y, const char *pattern, ...) {
-  va_list args;
-  va_start(args, pattern);
-  printString(fontMedium, x, y, C_FILL, POS_L, pattern, args);
-  va_end(args);
-}
-
-void PrintMediumEx(uint8_t x, uint8_t y, TextPos posLCR, Color color,
-                   const char *pattern, ...) {
-  va_list args;
-  va_start(args, pattern);
-  printString(fontMedium, x, y, color, posLCR, pattern, args);
-  va_end(args);
-}
-
-void PrintMediumBold(uint8_t x, uint8_t y, const char *pattern, ...) {
-  va_list args;
-  va_start(args, pattern);
-  printString(fontMediumBold, x, y, C_FILL, POS_L, pattern, args);
-  va_end(args);
-}
-
-void PrintMediumBoldEx(uint8_t x, uint8_t y, TextPos posLCR, Color color,
-                       const char *pattern, ...) {
-  va_list args;
-  va_start(args, pattern);
-  printString(fontMediumBold, x, y, color, posLCR, pattern, args);
-  va_end(args);
-}
-
-void PrintBigDigits(uint8_t x, uint8_t y, const char *pattern, ...) {
-  va_list args;
-  va_start(args, pattern);
-  printString(fontBig, x, y, C_FILL, POS_L, pattern, args);
-  va_end(args);
-}
-
-void PrintBigDigitsEx(uint8_t x, uint8_t y, TextPos posLCR, Color color,
-                      const char *pattern, ...) {
-  va_list args;
-  va_start(args, pattern);
-  printString(fontBig, x, y, color, posLCR, pattern, args);
-  va_end(args);
-}
-
-void PrintBiggestDigits(uint8_t x, uint8_t y, const char *pattern, ...) {
-  va_list args;
-  va_start(args, pattern);
-  printString(fontBiggest, x, y, C_FILL, POS_L, pattern, args);
-  va_end(args);
-}
-
-void PrintBiggestDigitsEx(uint8_t x, uint8_t y, TextPos posLCR, Color color,
-                          const char *pattern, ...) {
-  va_list args;
-  va_start(args, pattern);
-  printString(fontBiggest, x, y, color, posLCR, pattern, args);
-  va_end(args);
-}
-
-void PrintSymbolsEx(uint8_t x, uint8_t y, TextPos posLCR, Color color,
-                    const char *pattern, ...) {
-  va_list args;
-  va_start(args, pattern);
-  printString(&Symbols, x, y, color, posLCR, pattern, args);
-  va_end(args);
-}
-
-void FSmall(uint8_t x, uint8_t y, TextPos align, uint32_t frequency) {
-  PrintSmallEx(x, y, align, C_FILL, "%u.%05u", frequency / MHZ,
-               frequency % MHZ);
+void FSmall(uint8_t x, uint8_t y, TextPos a, uint32_t freq) {
+  PrintSmallEx(x, y, a, C_FILL, "%u.%05u", freq / MHZ, freq % MHZ);
 }

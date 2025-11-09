@@ -13,6 +13,7 @@ static inline void i2c_delay_short(void) {
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n");
+  // TIMER_DelayTicks(29);
 }
 
 static inline void i2c_delay_long(void) {
@@ -26,6 +27,7 @@ static inline void i2c_delay_long(void) {
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n");
+  // TIMER_DelayTicks(63);
 }
 
 /* === Управление состоянием SDA === */
@@ -73,6 +75,16 @@ static inline void scl_hi(void) {
   GPIO_SetBit(&GPIOA->DATA, GPIOA_PIN_I2C_SCL);
 }
 
+static inline bool scl_hi_wait(void) {
+  scl_hi();
+
+  uint32_t timeout = 10000;
+  while (!scl_read() && timeout--) {
+    TIMER_DelayUs(1);
+  }
+  return timeout > 0;
+}
+
 /* === Основные функции I2C === */
 
 void I2C_Init(void) {
@@ -88,7 +100,6 @@ void I2C_Init(void) {
   sda_hi();
 
   TIMER_DelayUs(10);
-  // printf("I2C initialized\n");
 }
 
 void I2C_Start(void) {
@@ -106,8 +117,6 @@ void I2C_Stop(void) {
   sda_lo();
   i2c_delay_long();
   scl_hi();
-  /* while (!scl_read())
-    continue; */
   i2c_delay_short(); // Setup time для STOP (600 нс)
   sda_hi();          // SDA поднимается при SCL=HIGH
   i2c_delay_long();  // Bus free time
@@ -120,8 +129,6 @@ void I2C_RepStart(void) {
   sda_hi(); // SDA поднимается при LOW SCL
   i2c_delay_short();
   scl_hi(); // SCL поднимается
-  /* while (!scl_read())
-    continue; */
   i2c_delay_short();
   sda_lo(); // SDA падает при HIGH SCL = Repeated START
   i2c_delay_short();
@@ -141,8 +148,6 @@ int I2C_Write(uint8_t Data) {
 
     i2c_delay_short(); // Setup time для данных (100 нс минимум)
     scl_hi(); // Данные считываются на подъёме SCL
-    /* while (!scl_read())
-      continue; */
     i2c_delay_short(); // HIGH период SCL
     scl_lo();
     i2c_delay_long(); // LOW период SCL
@@ -150,8 +155,7 @@ int I2C_Write(uint8_t Data) {
 
   // Читаем ACK
   sda_in();
-  // i2c_delay_short();
-  scl_hi();
+  scl_hi_wait();
   i2c_delay_short();
 
   if (!sda_read()) {
@@ -172,8 +176,6 @@ uint8_t I2C_Read(bool bFinal) {
     Data <<= 1;
 
     scl_hi();
-    /* while (!scl_read())
-      continue; // Stretching */
     i2c_delay_short();
 
     if (sda_read()) {
@@ -189,41 +191,15 @@ uint8_t I2C_Read(bool bFinal) {
   sda_out();
   (bFinal ? sda_hi : sda_lo)();
 
-  scl_hi();
+  scl_hi_wait();
+
   i2c_delay_short();
   scl_lo();
-  // i2c_delay_long();
 
   return Data;
 }
 
 /* === Вспомогательные функции === */
-
-void I2C_SimpleTest(void) {
-  printf("I2C simple test:\n");
-
-  // Тест 1: START + адрес + STOP
-  I2C_Start();
-  int result = I2C_Write(0xA0); // EEPROM write address
-  I2C_Stop();
-
-  printf("  Write 0xA0: %s\n", result == 0 ? "ACK" : "NACK");
-
-  TIMER_DelayUs(1000);
-
-  // Тест 2: Сканируем адреса
-  for (uint8_t addr = 0xA0; addr <= 0xAE; addr += 2) {
-    I2C_Start();
-    result = I2C_Write(addr);
-    I2C_Stop();
-
-    if (result == 0) {
-      printf("  Found device at 0x%02X\n", addr);
-    }
-
-    TIMER_DelayUs(1000);
-  }
-}
 
 uint16_t I2C_ReadBuffer(void *pBuffer, uint16_t Size) {
   uint8_t *pData = (uint8_t *)pBuffer;
@@ -240,15 +216,6 @@ uint16_t I2C_ReadBuffer(void *pBuffer, uint16_t Size) {
   return Size;
 }
 
-/* int I2C_WriteBuffer(const uint8_t *pBuffer, uint16_t Size) {
-  for (uint16_t i = 0; i < Size; i++) {
-    if (I2C_Write(pBuffer[i]) != 0) {
-      printf("I2C_WriteBuffer: NACK at byte %u\n", i);
-      return -1;
-    }
-  }
-  return 0;
-} */
 int I2C_WriteBuffer(const uint8_t *pBuffer, uint16_t Size) {
   for (uint16_t i = 0; i < Size; i++) {
     int retry = 3; // 3 попытки

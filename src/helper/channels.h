@@ -189,5 +189,6 @@ extern uint16_t gScanlist[SCANLIST_MAX];
 extern const char *TX_POWER_NAMES[4];
 extern const char *TX_OFFSET_NAMES[4];
 extern const char *TX_CODE_TYPES[4];
+extern const char *CH_TYPE_NAMES[6];
 
 #endif /* end of include guard: CHANNELS_H */

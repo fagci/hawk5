@@ -53,7 +53,7 @@ bool SI47XX_ReadBuffer(uint8_t *buf, uint8_t size) {
       }
     }
     I2C_Stop();
-    SYS_DelayMs(1); // Short retry delay
+    TIMER_DelayUs(1); // Short retry delay
   }
   // printf("SI R ERR\n");
   return false;

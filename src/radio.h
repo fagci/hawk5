@@ -99,9 +99,6 @@ typedef struct {
 
 // Контекст VFO
 typedef struct {
-  char name[10];
-  uint32_t last_save_time; // Время последнего сохранения
-  uint32_t frequency;      // Текущая частота
 
   struct {
     uint32_t frequency; // Частота передачи (может отличаться от RX)
@@ -115,28 +112,29 @@ typedef struct {
     bool pa_enabled;
   } tx_state;
 
-  uint16_t bandwidth; // Полоса пропускания
+  char name[10];
+  bool dirty[PARAM_COUNT]; // Флаги изменений
+
+  const FreqBand *current_band; // Активный диапазон
+  uint32_t last_save_time; // Время последнего сохранения
+  uint32_t frequency;      // Текущая частота
+  uint16_t bandwidth;      // Полоса пропускания
   uint16_t dev;
   uint8_t modulation_index;
   uint8_t bandwidth_index;
-  Radio radio_type;
-  ModulationType modulation;    // Текущая модуляция
-  uint8_t volume;               // Громкость
-  const FreqBand *current_band; // Активный диапазон
-  bool dirty[PARAM_COUNT];      // Флаги изменений
-  Code code;
-  Step step;
-  Squelch squelch;
-  TXOutputPower power;
+  uint8_t volume; // Громкость
   uint8_t gain;
-
   uint8_t afc;
   uint8_t afc_speed;
   uint8_t mic;
+  Code code;
+  Step step;
+  Radio radio_type;
+  ModulationType modulation; // Текущая модуляция
   XtalMode xtal;
-
   Filter filter;
-
+  TXOutputPower power;
+  Squelch squelch;
   bool preciseFChange;
   bool fixed_bounds;
 
@@ -148,11 +146,11 @@ typedef enum { MODE_VFO, MODE_CHANNEL } VFOMode;
 
 // Extended VFO context
 typedef struct {
-  Measurement msm;             // TODO: implement
-  VFOContext context;          // Existing VFO context
   uint32_t last_activity_time; // for multiwatch
   uint16_t channel_index;      // Channel index if in channel mode
   uint16_t vfo_ch_index;       // MR index of VFO
+  Measurement msm;             // TODO: implement
+  VFOContext context;          // Existing VFO context
   VFOMode mode;                // VFO or channel mode
   bool is_active;              // Whether this is the active VFO
   bool is_open;
@@ -161,14 +159,14 @@ typedef struct {
 // Global radio state
 typedef struct {
   ExtendedVFOContext vfos[MAX_VFOS]; // Array of VFOs
-  uint32_t last_scan_time;           // Last scan time
-  uint8_t num_vfos;                  // Number of configured VFOs
-  uint8_t active_vfo_index;          // Currently active VFO
-  uint8_t primary_vfo_index;         //
+  RadioScanState scan_state; // Состояние сканирования
+  uint32_t last_scan_time;   // Last scan time
+  uint8_t num_vfos;          // Number of configured VFOs
+  uint8_t active_vfo_index;  // Currently active VFO
+  uint8_t primary_vfo_index; //
   uint8_t last_active_vfo; // Последний активный VFO с активностью
   bool audio_routing_enabled; // Флаг управления аудио маршрутизацией
-  bool multiwatch_enabled;   // Whether multiwatch is enabled
-  RadioScanState scan_state; // Состояние сканирования
+  bool multiwatch_enabled; // Whether multiwatch is enabled
 } RadioState;
 
 // New functions for multi-VFO and multiwatch support

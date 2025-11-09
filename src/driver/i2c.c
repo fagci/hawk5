@@ -70,6 +70,10 @@ static inline bool sda_read(void) {
   return GPIO_CheckBit(&GPIOA->DATA, GPIOA_PIN_I2C_SDA);
 }
 
+static inline bool scl_read(void) {
+  return GPIO_CheckBit(&GPIOA->DATA, GPIOA_PIN_I2C_SCL);
+}
+
 /* === Управление SCL === */
 
 static inline void scl_lo(void) {
@@ -170,34 +174,28 @@ uint8_t I2C_Read(bool bFinal) {
   sda_in();
 
   for (uint8_t i = 0; i < 8; i++) {
-    scl_lo();
-    i2c_delay_long(); // LOW период SCL
-    scl_hi_wait();
-    i2c_delay_short(); // Задержка перед чтением
-
     Data <<= 1;
+
+    do {
+      scl_hi();
+    } while (!scl_read());
+    i2c_delay_short();
+
     if (sda_read()) {
       Data |= 1;
     }
     i2c_delay_short(); // HIGH период SCL
-  }
 
-  scl_lo();
-  i2c_delay_long();
+    scl_lo();
+  }
 
   // Отправляем ACK/NACK
   sda_out();
-  if (bFinal) {
-    sda_hi(); // NACK
-  } else {
-    sda_lo(); // ACK
-  }
+  (bFinal ? sda_hi : sda_lo)();
 
-  i2c_delay_short();
-  scl_hi_wait();
+  scl_hi();
   i2c_delay_short();
   scl_lo();
-  i2c_delay_long();
 
   return Data;
 }

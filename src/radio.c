@@ -693,8 +693,12 @@ static void RADIO_ApplyCorrections(VFOContext *ctx, bool save_to_eeprom) {
     }
 
     if (ctx->frequency < band->min_freq) {
+      LogC(LOG_C_BRIGHT_YELLOW, "[RADIO] CORRECT F=%u ~ %u (%u..%u)",
+           ctx->frequency, band->min_freq, band->max_freq);
       ctx->frequency = band->min_freq;
     } else if (ctx->frequency > band->max_freq) {
+      LogC(LOG_C_BRIGHT_YELLOW, "[RADIO] CORRECT F=%u ~ %u (%u..%u)",
+           ctx->frequency, band->min_freq, band->max_freq);
       ctx->frequency = band->max_freq;
     }
     ctx->dirty[PARAM_FREQUENCY] = true; // Помечаем как dirty для применения
@@ -750,25 +754,25 @@ static void RADIO_UpdateCurrentBand(VFOContext *ctx) {
 
   switch (ctx->radio_type) {
   case RADIO_BK4819:
-    LogC(LOG_C_BG_BLUE, "[RADIO] BAND: BK4819");
+    LogC(LOG_C_BRIGHT_YELLOW, "[RADIO] BAND: BK4819");
     band = &bk4819_bands[0];
     break;
   case RADIO_SI4732:
     // Выбираем диапазон на основе частоты и модуляции
     if (ctx->frequency >= SI47XX_FM_F_MIN &&
         ctx->frequency <= SI47XX_FM_F_MAX) {
-      LogC(LOG_C_BG_BLUE, "[RADIO] BAND: SI FM");
+      LogC(LOG_C_BRIGHT_YELLOW, "[RADIO] BAND: SI FM");
       band = &si4732_bands[2]; // FM
     } else if (ctx->modulation == SI47XX_LSB || ctx->modulation == SI47XX_USB) {
-      LogC(LOG_C_BG_BLUE, "[RADIO] BAND: SI SSB");
+      LogC(LOG_C_BRIGHT_YELLOW, "[RADIO] BAND: SI SSB");
       band = &si4732_bands[1]; // SSB
     } else {
-      LogC(LOG_C_BG_BLUE, "[RADIO] BAND: SI AM");
+      LogC(LOG_C_BG_BRIGHT_YELLOW, "[RADIO] BAND: SI AM");
       band = &si4732_bands[0]; // AM
     }
     break;
   case RADIO_BK1080:
-    LogC(LOG_C_BG_BLUE, "[RADIO] BAND: BK1080 FM");
+    LogC(LOG_C_BRIGHT_YELLOW, "[RADIO] BAND: BK1080 FM");
     band = &bk4819_bands[0]; // TODO: добавить свой диапазон
     break;
   default:
@@ -1257,8 +1261,6 @@ void RADIO_ApplySettings(VFOContext *ctx) {
        ctx->dirty[PARAM_TX_STATE]) &&
       ctx->radio_type == RADIO_BK4819;
 
-  LogC(LOG_C_BG_CYAN, "[RADIO] MOD DIRTY: %u", ctx->dirty[PARAM_MODULATION]);
-
   for (uint8_t p = 0; p < PARAM_COUNT; ++p) {
     if (!ctx->dirty[p]) {
       continue;
@@ -1541,7 +1543,7 @@ void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
                               const VFO *storage) {
   if (vfo_index >= state->num_vfos)
     return;
-  LogC(LOG_C_BRIGHT_CYAN, "[RADIO] MEM -> VFO");
+  LogC(LOG_C_BG_BLUE, "[RADIO] MEM -> VFO %u", vfo_index + 1);
 
   ExtendedVFOContext *vfo = &state->vfos[vfo_index];
   vfo->mode = storage->isChMode;
@@ -1848,6 +1850,7 @@ void RADIO_LoadVFOs(RadioState *state) {
     vfoIdx++;
   }
   state->num_vfos = vfoIdx;
+  printf("nm vfos: %u", vfoIdx);
 
   VFOContext *ctx = &state->vfos[state->active_vfo_index].context;
   for (uint8_t p = 0; p < PARAM_COUNT; ++p) {

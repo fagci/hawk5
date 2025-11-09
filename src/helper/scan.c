@@ -32,7 +32,7 @@ typedef struct {
 } ScanState;
 
 static ScanState scan = {
-    .mode = SCAN_MODE_FREQUENCY,
+    .mode = SCAN_MODE_SINGLE,
     .scanDelayUs = 1200,
     .squelchLevel = 0,
     .thinking = false,
@@ -163,10 +163,16 @@ static void NextWithTimeout() {
 // =============================
 // API функций
 // =============================
-
+const char *SCAN_MODE_NAMES[] = {
+    [SCAN_MODE_SINGLE] = "VFO",
+    [SCAN_MODE_FREQUENCY] = "Scan",
+    [SCAN_MODE_CHANNEL] = "CH Scan",
+    [SCAN_MODE_ANALYSER] = "Band scan",
+};
 // API для установки режима
 void SCAN_SetMode(ScanMode mode) {
   scan.mode = mode;
+  Log("[SCAN] mode=%s", SCAN_MODE_NAMES[scan.mode]);
 
   // Сброс состояния при смене режима
   scan.scanCycles = 0;
@@ -325,7 +331,7 @@ void SCAN_Check() {
   if (vfo->msm.open && !vfo->is_open) {
     scan.thinking = true;
     scan.wasThinkingEarlier = true;
-    TIMER_DelayUs(SQL_DELAY * 1000);
+    TIMER_DelayMs(SQL_DELAY);
     RADIO_UpdateSquelch(gRadioState);
     vfo->msm.open = vfo->is_open;
     scan.thinking = false;

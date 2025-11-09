@@ -143,38 +143,48 @@ SPECTRUM_H); DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
   }
 } */
 
-/* void SP_Render(const Band *p, VMinMax v) {
+void SP_Render(const Band *p, VMinMax v) {
   if (p) {
     UI_DrawTicks(S_BOTTOM, p);
   }
 
   DrawHLine(0, S_BOTTOM, MAX_POINTS, C_FILL);
 
-
-
-    // Median filter для 3 точек (сохраняет пики лучше)
-uint16_t smoothed[MAX_POINTS];
-for (uint8_t i = 0; i < filledPoints; ++i) {
-  if (i == 0 || i == filledPoints - 1) {
-    smoothed[i] = rssiHistory[i];  // Края без изменений
-  } else {
-    uint16_t vals[3] = {rssiHistory[i-1], rssiHistory[i], rssiHistory[i+1]};
-    // Сортировка для median (простая для 3 элементов)
-    if (vals[0] > vals[1]) { uint16_t t = vals[0]; vals[0] = vals[1]; vals[1] =
-t; } if (vals[1] > vals[2]) { uint16_t t = vals[1]; vals[1] = vals[2]; vals[2] =
-t; } if (vals[0] > vals[1]) { uint16_t t = vals[0]; vals[0] = vals[1]; vals[1] =
-t; } smoothed[i] = vals[1];  // Median
+  // Median filter для 3 точек (сохраняет пики лучше)
+  uint16_t smoothed[MAX_POINTS];
+  for (uint8_t i = 0; i < filledPoints; ++i) {
+    if (i == 0 || i == filledPoints - 1) {
+      smoothed[i] = rssiHistory[i]; // Края без изменений
+    } else {
+      uint16_t vals[3] = {rssiHistory[i - 1], rssiHistory[i],
+                          rssiHistory[i + 1]};
+      // Сортировка для median (простая для 3 элементов)
+      if (vals[0] > vals[1]) {
+        uint16_t t = vals[0];
+        vals[0] = vals[1];
+        vals[1] = t;
+      }
+      if (vals[1] > vals[2]) {
+        uint16_t t = vals[1];
+        vals[1] = vals[2];
+        vals[2] = t;
+      }
+      if (vals[0] > vals[1]) {
+        uint16_t t = vals[0];
+        vals[0] = vals[1];
+        vals[1] = t;
+      }
+      smoothed[i] = vals[1]; // Median
+    }
   }
-}
-
 
   for (uint8_t i = 0; i < filledPoints; ++i) {
     uint8_t yVal = ConvertDomain(smoothed[i], v.vMin, v.vMax, 0, SPECTRUM_H);
     DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
   }
-} */
+}
 
-void SP_Render(const Band *p, VMinMax v) {
+/* void SP_Render(const Band *p, VMinMax v) {
   if (p) {
     UI_DrawTicks(S_BOTTOM, p);
   }
@@ -191,7 +201,7 @@ void SP_Render(const Band *p, VMinMax v) {
       oY = yVal;
     }
   }
-}
+} */
 
 /* void SP_Render(const Band *p, VMinMax v) {
   if (p) {

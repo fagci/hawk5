@@ -20,7 +20,6 @@ static VMinMax minMaxRssi;
 static uint32_t cursorRangeTimeout = 0;
 static bool isAnalyserMode = false;
 static bool pttWasLongPressed = false;
-static uint8_t scanAFC;
 
 static void setRange(uint32_t fs, uint32_t fe) {
   BANDS_RangeClear();
@@ -52,7 +51,7 @@ void SCANER_init(void) {
   BANDS_RangeClear();
   BANDS_RangePush(gCurrentBand);
 
-  SCAN_SetMode(SCAN_MODE_ANALYSER);
+  SCAN_SetMode(isAnalyserMode ? SCAN_MODE_ANALYSER : SCAN_MODE_FREQUENCY);
   SCAN_Init(false);
 }
 
@@ -134,14 +133,9 @@ static bool handleLongPressCont(KEY_Code_t key) {
 }
 
 static void toggleAnalyserMode(void) {
-  if (isAnalyserMode) {
-    BK4819_SetAFC(scanAFC);
-  } else {
-    scanAFC = BK4819_GetAFC();
-    BK4819_SetAFC(0);
-  }
   isAnalyserMode = !isAnalyserMode;
   minMaxRssi = SP_GetMinMax();
+  SCAN_SetMode(isAnalyserMode ? SCAN_MODE_ANALYSER : SCAN_MODE_FREQUENCY);
 }
 
 static bool handlePTTRelease(void) {
@@ -211,6 +205,7 @@ static bool handleRelease(KEY_Code_t key) {
 }
 
 bool SCANER_key(KEY_Code_t key, Key_State_t state) {
+    return false;
   if (state == KEY_RELEASED && REGSMENU_Key(key, state)) {
     return true;
   }
@@ -281,6 +276,7 @@ static void renderBottomFreq(uint32_t step) {
 }
 
 void SCANER_render(void) {
+  return;
   const uint32_t step = StepFrequencyTable[RADIO_GetParam(ctx, PARAM_STEP)];
 
   STATUSLINE_RenderRadioSettings();

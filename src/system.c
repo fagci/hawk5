@@ -67,20 +67,6 @@ static void systemUpdate() {
   BACKLIGHT_Update();
 }
 
-void radioUpdate() {
-  if (gRadioState && gCurrentApp != APP_SCANER &&
-      gCurrentApp != APP_BAND_SCAN) {
-    RADIO_UpdateMultiwatch(gRadioState);
-    RADIO_CheckAndSaveVFO(gRadioState);
-    if (Now() - radioTimer >= SQL_DELAY) {
-      RADIO_UpdateSquelch(gRadioState);
-      SP_ShiftGraph(-1);
-      SP_AddGraphPoint(&vfo->msm);
-      radioTimer = Now();
-    }
-  }
-}
-
 static bool resetNeeded() {
   uint8_t buf[2];
   EEPROM_ReadBuffer(0, buf, 2);
@@ -188,7 +174,9 @@ void SYS_Main() {
 
     SETTINGS_UpdateSave();
 
-    SCAN_Check();
+    if (gCurrentApp != APP_RESET) {
+      SCAN_Check();
+    }
 
     APPS_update();
 

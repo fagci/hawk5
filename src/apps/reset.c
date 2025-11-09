@@ -11,11 +11,10 @@
 typedef enum {
   RESET_0xFF,
   RESET_FULL,
-  RESET_CHANNELS,
   RESET_UNKNOWN,
 } ResetType;
 
-static char *RESET_TYPE_NAMES[] = {"0xFF", "FULL", "CHANNELS"};
+static char *RESET_TYPE_NAMES[] = {"0xFF", "FULL"};
 
 static struct {
   uint32_t totalBytes;
@@ -27,37 +26,18 @@ static struct {
 } resetState;
 
 static VFO defaultVfos[4] = {
-    {.rxF = 14550000,
-     .meta.type = TYPE_VFO,
-     .gainIndex = AUTO_GAIN_INDEX,
-     .radio = RADIO_BK4819},
-    {.rxF = 43312500,
-     .meta.type = TYPE_VFO,
-     .gainIndex = AUTO_GAIN_INDEX,
-     .radio = RADIO_BK4819},
-    {.rxF = 25355000,
-     .meta.type = TYPE_VFO,
-     .gainIndex = AUTO_GAIN_INDEX,
-     .radio = RADIO_BK4819},
-    {.rxF = 40065000,
-     .meta.type = TYPE_VFO,
-     .gainIndex = AUTO_GAIN_INDEX,
-     .radio = RADIO_BK4819},
+    {.rxF = 14550000, .meta.type = TYPE_VFO, .gainIndex = AUTO_GAIN_INDEX, .radio = RADIO_BK4819},
+    {.rxF = 43312500, .meta.type = TYPE_VFO, .gainIndex = AUTO_GAIN_INDEX, .radio = RADIO_BK4819},
+    {.rxF = 25355000, .meta.type = TYPE_VFO, .gainIndex = AUTO_GAIN_INDEX, .radio = RADIO_BK4819},
+    {.rxF = 40065000, .meta.type = TYPE_VFO, .gainIndex = AUTO_GAIN_INDEX, .radio = RADIO_BK4819},
 };
 
 static void startReset(ResetType type) {
   resetState.type = type;
   resetState.doneBytes = 0;
   resetState.currentItem = 0;
-
-  if (type == RESET_0xFF) {
-    resetState.totalBytes = SETTINGS_GetEEPROMSize();
-  } else {
-    uint16_t items = (type == RESET_FULL) ? (1 + 9 + resetState.maxChannels - 9)
-                     : (type == RESET_CHANNELS) ? (resetState.maxChannels - 9)
-                                                : 0;
-    resetState.totalBytes = items * CH_SIZE;
-  }
+  resetState.totalBytes = (type == RESET_0xFF) ? SETTINGS_GetEEPROMSize() 
+                                                : resetState.maxChannels * CH_SIZE;
 }
 
 static bool processReset(void) {
@@ -68,39 +48,41 @@ static bool processReset(void) {
     return resetState.doneBytes >= resetState.totalBytes;
   }
 
-  if (resetState.type == RESET_FULL && resetState.currentItem == 0) {
+  // RESET_FULL
+  if (resetState.currentItem == 0) {
     SETTINGS_Save();
     resetState.doneBytes += SETTINGS_SIZE;
     resetState.currentItem++;
     return false;
   }
 
-  if (resetState.type == RESET_FULL && resetState.currentItem < 10) {
-    VFO vfo = defaultVfos[resetState.currentItem - 1];
-    if (vfo.meta.type == TYPE_VFO) {
-      sprintf(vfo.name, "VFO-%c", 'A' + resetState.currentItem - 1);
-    }
-    // vfo.channel = 0;
-    // vfo.modulation = MOD_FM;
-    vfo.bw = BK4819_FILTER_BW_12k;
-    // vfo.txF = 0;
-    // vfo.offsetDir = OFFSET_NONE;
-    // vfo.allowTx = false;
-    /* vfo.code.rx.type = 0;
-    vfo.code.tx.type = 0; */
-    // vfo.meta.readonly = false;
-    vfo.squelch.value = 4;
-    vfo.step = STEP_25_0kHz;
-    CHANNELS_Save(resetState.maxChannels - 9 + resetState.currentItem - 1,
-                  &vfo);
+  uint16_t chIndex = resetState.currentItem - 1;
+  uint8_t numVFOs = ARRAY_SIZE(defaultVfos);
+
+  if (chIndex < resetState.maxChannels - numVFOs) {
+    CHANNELS_Delete(chIndex);
     resetState.doneBytes += CH_SIZE;
     resetState.currentItem++;
     return false;
   }
 
-  if (resetState.currentItem < resetState.maxChannels - 9) {
-    CHANNELS_Delete(resetState.currentItem -
-                    (resetState.type == RESET_FULL ? 10 : 0));
+  if (chIndex < resetState.maxChannels) {
+    uint8_t vfoIndex = chIndex - (resetState.maxChannels - numVFOs);
+    VFO vfo = defaultVfos[vfoIndex];
+    sprintf(vfo.name, "VFO-%c", 'A' + vfoIndex);
+    vfo.meta.type = TYPE_VFO;
+    vfo.channel = 0;
+    vfo.modulation = MOD_FM;
+    vfo.bw = BK4819_FILTER_BW_12k;
+    vfo.txF = 0;
+    vfo.offsetDir = OFFSET_NONE;
+    vfo.allowTx = false;
+    vfo.code.rx.type = 0;
+    vfo.code.tx.type = 0;
+    vfo.meta.readonly = false;
+    vfo.squelch.value = 4;
+    vfo.step = STEP_25_0kHz;
+    CHANNELS_Save(chIndex, &vfo);
     resetState.doneBytes += CH_SIZE;
     resetState.currentItem++;
     return false;
@@ -119,16 +101,9 @@ void RESET_Init(void) {
 }
 
 void RESET_Update(void) {
-  if (gSettings.eepromType == EEPROM_UNKNOWN ||
-      resetState.type == RESET_UNKNOWN) {
+  if (resetState.type == RESET_UNKNOWN || !processReset()) {
     return;
   }
-
-  if (!processReset()) {
-    gRedrawScreen = true;
-    return;
-  }
-
   NVIC_SystemReset();
 }
 
@@ -140,10 +115,8 @@ void RESET_Render(void) {
     return;
   }
 
-  uint8_t progress =
-      ConvertDomain(resetState.doneBytes, 0, resetState.totalBytes, 0, 100);
+  uint8_t progress = ConvertDomain(resetState.doneBytes, 0, resetState.totalBytes, 0, 100);
   const uint8_t TOP = 28;
-
   DrawRect(13, TOP, 102, 9, C_FILL);
   FillRect(14, TOP + 1, progress, 7, C_FILL);
   PrintMediumEx(LCD_XCENTER, TOP + 7, POS_C, C_INVERT, "%u%", progress);

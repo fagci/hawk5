@@ -52,7 +52,7 @@ void VFO1_init(void) {
   updateBand();
 
   SCAN_SetMode(SCAN_MODE_SINGLE);
-  SCAN_Init(false);
+  // SCAN_Init(false);
 }
 
 void VFO1_update(void) {}
@@ -366,7 +366,7 @@ static void renderMonitorMode(uint8_t BASE) {
   SPECTRUM_Y = BASE + 2;
   SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
 
-  if (false && gSettings.showLevelInVFO) {
+  if (gSettings.showLevelInVFO) {
     static char *graphMeasurementNames[] = {
         [GRAPH_RSSI] = "RSSI",
         [GRAPH_NOISE] = "Noise",

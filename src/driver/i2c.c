@@ -7,17 +7,17 @@
 #include "systick.h"
 
 static inline void i2c_delay_short(void) {
-  __asm volatile("nop\n nop\n nop\n nop\n nop\n"
+  /* __asm volatile("nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n");
-  // TIMER_DelayTicks(29);
+                 "nop\n nop\n nop\n nop\n"); */
+  TIMER_DelayTicks(2);
 }
 
 static inline void i2c_delay_long(void) {
-  __asm volatile("nop\n nop\n nop\n nop\n nop\n"
+  /* __asm volatile("nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
@@ -26,8 +26,8 @@ static inline void i2c_delay_long(void) {
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n");
-  // TIMER_DelayTicks(63);
+                 "nop\n nop\n nop\n nop\n nop\n"); */
+  TIMER_DelayTicks(4);
 }
 
 /* === Управление состоянием SDA === */

@@ -6,37 +6,6 @@
 #include "gpio.h"
 #include "systick.h"
 
-// Для частоты CPU 48 МГц:
-// 600 нс = 0.6 мкс * 48 = ~29 циклов
-// 1300 нс = 1.3 мкс * 48 = ~62 цикла
-
-/* static inline void i2c_delay_short(void) {
-  __asm volatile("nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n");
-}
-
-static inline void i2c_delay_long(void) {
-  __asm volatile("nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n nop\n nop\n nop\n"
-                 "nop\n nop\n");
-} */
-// Оптимизированные задержки для 400kHz (Fast Mode)
-// При 48MHz: 1.25μs = 60 циклов для LOW, 0.6μs = 29 циклов для HIGH
-
 static inline void i2c_delay_short(void) {
   __asm volatile("nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"

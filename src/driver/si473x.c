@@ -26,22 +26,6 @@ bool isSi4732On = false;
 
 static uint16_t fDiv() { return si4732mode == SI47XX_FM ? 1000 : 100; }
 
-/* bool SI47XX_ReadBuffer(uint8_t *buf, uint8_t size) {
-  I2C_Start();
-  if (I2C_Write(SI47XX_I2C_ADDR + 1) != 0) {
-    I2C_Stop();
-    printf("SI R A nok\n");
-    return false;
-  }
-  if (I2C_ReadBuffer(buf, size) != 0) {
-    I2C_Stop();
-    printf("SI R D nok\n");
-    return false;
-  }
-  I2C_Stop();
-  return true;
-} */
-
 bool SI47XX_ReadBuffer(uint8_t *buf, uint8_t size) {
   uint8_t retries = 5;
   while (retries--) {
@@ -84,22 +68,6 @@ void waitToSend() {
     SI47XX_ReadBuffer((uint8_t *)&tmp, 1);
   } while (!(tmp & STATUS_CTS));
 }
-
-/* void waitToSend() {
-  uint8_t tmp = 0;
-  uint16_t attempts = 500; // ~500 мс max при delay 1 мс
-  do {
-    SYS_DelayMs(1); // Увеличьте до 1 мс — reduce traffic, allow CTS settle
-    if (!SI47XX_ReadBuffer(&tmp, 1))
-      continue; // Если failed, retry
-    if (--attempts == 0) {
-      printf("CTS timeout after %u ms\n", 500);
-      // Optional: I2C_Recover();  // Вызовите recovery
-      return;
-    }
-  } while (!(tmp & STATUS_CTS));
-  printf("CTS ok: 0x%02X\n", tmp);
-} */
 
 #include "../ui/graphics.h" // X_X
 void SI47XX_downloadPatch() {
@@ -209,10 +177,7 @@ void SI47XX_SetAutomaticGainControl(uint8_t AGCDIS, uint8_t AGCIDX) {
 
 void SI47XX_PowerUp() {
   // printf("SI PU\n");
-  /* RST_LOW;
-  SYS_DelayMs(10); */
   RST_HIGH;
-  // SYS_DelayMs(50);
 
   uint8_t cmd[3] = {CMD_POWER_UP, FLG_XOSCEN | FUNC_FM, OUT_ANALOG};
   if (si4732mode == SI47XX_AM) {

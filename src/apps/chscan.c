@@ -13,7 +13,6 @@
 CH activeCh;
 
 static uint32_t lastSqCheck;
-static uint32_t lastRender;
 static uint32_t timeout = 0;
 static bool lastListenState;
 static bool isWaiting;
@@ -53,11 +52,6 @@ void CHSCAN_update(void) {
   if (!gSettings.mWatch && Now() - lastSqCheck >= SQL_DELAY) {
     RADIO_UpdateSquelch(gRadioState);
     lastSqCheck = Now();
-  }
-
-  if (Now() - lastRender >= 500) {
-    lastRender = Now();
-    gRedrawScreen = true;
   }
 
   nextWithTimeout();

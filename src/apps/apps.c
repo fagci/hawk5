@@ -12,7 +12,6 @@
 #include "chscan.h"
 #include "fc.h"
 #include "finput.h"
-#include "generator.h"
 #include "lootlist.h"
 #include "reset.h"
 #include "scaner.h"

@@ -29,7 +29,6 @@ static char notificationMessage[16] = "";
 static uint32_t notificationTimeoutAt;
 
 static uint32_t secondTimer;
-static uint32_t appsRenderTimer;
 static uint32_t appsKeyboardTimer;
 static uint32_t radioTimer;
 
@@ -44,7 +43,7 @@ static void appRender() {
     return;
   }
 
-  if (Now() - appsRenderTimer < 40) {
+  if (Now() - gLastRender < 40) {
     return;
   }
 
@@ -62,7 +61,7 @@ static void appRender() {
   STATUSLINE_render(); // coz of APPS_render calls STATUSLINE_SetText
 
   ST7565_Blit();
-  appsRenderTimer = Now();
+  gLastRender = Now();
 }
 
 static void systemUpdate() {
@@ -135,7 +134,7 @@ static void processKeyboard() {
     if (APPS_key(n.key, n.state) || (MENU_IsActive() && n.key != KEY_EXIT)) {
       // LogC(LOG_C_BRIGHT_WHITE, "[SYS] Apps key");
       gRedrawScreen = true;
-      appsRenderTimer = 0;
+      gLastRender = 0;
     } else {
       // LogC(LOG_C_BRIGHT_WHITE, "[SYS] Global key");
       if (n.key == KEY_MENU) {
@@ -194,6 +193,11 @@ void SYS_Main() {
     radioUpdate();
 
     APPS_update();
+
+    // common: render 2 times per second minimum
+    if (Now() - gLastRender >= 500) {
+      gRedrawScreen = true;
+    }
 
     if (Now() - appsKeyboardTimer >= 14) {
       processKeyboard();

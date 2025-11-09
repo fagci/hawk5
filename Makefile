@@ -81,9 +81,7 @@ DEFINES  := -DPRINTF_INCLUDE_CONFIG_H \
 # Include paths
 INC_DIRS := -I./src/config \
             -I./src/external/CMSIS_5/CMSIS/Core/Include \
-            -I./src/external/CMSIS_5/Device/ARM/ARMCM0/Include \
-            -I./src/external/mcufont/decoder \
-            -I./src/external/mcufont/fonts
+            -I./src/external/CMSIS_5/Device/ARM/ARMCM0/Include
 
 # =============================================================================
 # Linker Flags
@@ -147,7 +145,7 @@ $(TARGET): $(OBJS) | $(BIN_DIR)
 	$(LD) $(LDFLAGS) $^ -o $@
 	@echo ""
 	$(SIZE) $@
-	arm-none-eabi-nm --size-sort -r $(BIN_DIR)/$(PROJECT_NAME) | head -10
+	arm-none-eabi-nm --size-sort -r $(BIN_DIR)/$(PROJECT_NAME) | head -20
 	@echo ""
 
 # Компиляция C файлов

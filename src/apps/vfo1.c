@@ -20,7 +20,6 @@
 #include "finput.h"
 
 static char String[16];
-static uint32_t lastRender;
 static const Step liveStep = STEP_5_0kHz;
 
 static void updateBand(void) {
@@ -53,10 +52,6 @@ void VFO1_init(void) {
 }
 
 void VFO1_update(void) {
-  if (Now() - lastRender >= 500) {
-    lastRender = Now();
-    gRedrawScreen = true;
-  }
 }
 
 static bool handleNumNav(KEY_Code_t key) {

@@ -18,7 +18,6 @@
 
 static VMinMax minMaxRssi;
 static uint32_t cursorRangeTimeout = 0;
-static uint32_t lastRender;
 static bool isAnalyserMode = false;
 static bool pttWasLongPressed = false;
 static uint8_t scanAFC;
@@ -55,14 +54,7 @@ void SCANER_init(void) {
   SCAN_Init(false);
 }
 
-void SCANER_update(void) {
-  SCAN_Check(isAnalyserMode);
-
-  if (Now() - lastRender >= 500) {
-    lastRender = Now();
-    gRedrawScreen = true;
-  }
-}
+void SCANER_update(void) { SCAN_Check(isAnalyserMode); }
 
 static bool handleLongPress(KEY_Code_t key) {
   uint32_t step = StepFrequencyTable[RADIO_GetParam(ctx, PARAM_STEP)];

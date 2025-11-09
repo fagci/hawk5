@@ -22,7 +22,6 @@ typedef struct {
   uint32_t lastCpsTime; // Последнее время замера CPS
   uint32_t currentCps; // Текущее значение CPS (кешированное)
   uint32_t cpsUpdateInterval; // Интервал обновления CPS (мс)
-  uint32_t lastRenderTime; // Последнее время отрисовки
   uint16_t squelchLevel; // Текущий уровень шумоподавления
 
   bool thinking;           // Думоем
@@ -43,7 +42,6 @@ static ScanState scan = {
     .scanCycles = 0,
     .lastCpsTime = 0,
     .currentCps = 0,
-    .lastRenderTime = 0,
     .cpsUpdateInterval = 1000,
 };
 

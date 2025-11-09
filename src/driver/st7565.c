@@ -20,6 +20,7 @@ static void waitToSend() {
 uint8_t gFrameBuffer[8][LCD_WIDTH];
 static uint8_t frameBufferSecond[8][LCD_WIDTH];
 
+static uint32_t gLastRender;
 bool gRedrawScreen = true;
 
 static void ST7565_Configure_GPIO_B11(void) {

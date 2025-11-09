@@ -9,8 +9,9 @@
 #define LCD_XCENTER 64
 #define LCD_YCENTER 32
 
-extern bool gRedrawScreen;
 extern uint8_t gFrameBuffer[8][LCD_WIDTH];
+static uint32_t gLastRender;
+extern bool gRedrawScreen;
 
 void ST7565_Blit(void);
 void ST7565_Init(bool full);

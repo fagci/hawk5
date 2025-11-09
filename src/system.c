@@ -155,9 +155,9 @@ static void processKeyboard() {
 }
 
 void initDisplay() {
-  // LogC(LOG_C_BRIGHT_WHITE, "DISPLAY");
+  LogC(LOG_C_BRIGHT_WHITE, "DISPLAY");
   ST7565_Init(true);
-  // LogC(LOG_C_BRIGHT_WHITE, "BACKLIGHT");
+  LogC(LOG_C_BRIGHT_WHITE, "BACKLIGHT");
   BACKLIGHT_Init();
 }
 
@@ -180,10 +180,10 @@ void SYS_Main() {
     STATUSLINE_render();
     ST7565_Blit();
 
-    // LogC(LOG_C_BRIGHT_WHITE, "LOAD BANDS");
+    LogC(LOG_C_BRIGHT_WHITE, "LOAD BANDS");
     BANDS_Load();
 
-    // LogC(LOG_C_BRIGHT_WHITE, "RUN DEFAULT APP");
+    LogC(LOG_C_BRIGHT_WHITE, "RUN DEFAULT APP");
     APPS_run(gSettings.mainApp);
   }
 

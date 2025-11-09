@@ -30,7 +30,64 @@ bool EEPROM_WaitReady(uint8_t device_addr, uint32_t timeout_ms) {
   return false;
 }
 
+// Оптимизированное чтение с Sequential Read
+// Автоматически определяет границы чипов и читает максимальными блоками
+int EEPROM_ReadBufferSequential(uint32_t address, void *pBuffer, uint16_t size) {
+  if (size == 0)
+    return 0;
+
+  uint8_t *pData = (uint8_t *)pBuffer;
+  address &= 0x3FFFF;
+
+  while (size > 0) {
+    // Определяем границу текущего чипа (64KB для большинства EEPROM)
+    uint32_t chip_boundary = (address & 0x30000) + 0x10000; // Следующая граница 64KB
+    uint32_t bytes_to_boundary = chip_boundary - address;
+    uint16_t chunk_size = (size < bytes_to_boundary) ? size : bytes_to_boundary;
+
+    // Адрес устройства с учетом старших битов адреса
+    uint8_t IIC_ADD = 0xA0 | ((address >> 15) & 0x0E);
+
+    // Отправляем адрес для чтения
+    I2C_Start();
+    if (I2C_Write(IIC_ADD) != 0) {
+      I2C_Stop();
+      return -1;
+    }
+    if (I2C_Write((address >> 8) & 0xFF) != 0) {
+      I2C_Stop();
+      return -1;
+    }
+    if (I2C_Write(address & 0xFF) != 0) {
+      I2C_Stop();
+      return -1;
+    }
+
+    // Repeated START для чтения
+    I2C_RepStart();
+    if (I2C_Write(IIC_ADD | 0x01) != 0) {
+      I2C_Stop();
+      return -1;
+    }
+
+    // Sequential Read - читаем весь блок за раз
+    I2C_ReadBuffer(pData, chunk_size);
+    I2C_Stop();
+
+    pData += chunk_size;
+    address += chunk_size;
+    size -= chunk_size;
+  }
+
+  return 0;
+}
+
+// Обновляем основную функцию чтения
 int EEPROM_ReadBuffer(uint32_t address, void *pBuffer, uint16_t size) {
+  return EEPROM_ReadBufferSequential(address, pBuffer, size);
+}
+
+/* int EEPROM_ReadBuffer(uint32_t address, void *pBuffer, uint16_t size) {
   if (size == 0)
     return 0;
 
@@ -60,9 +117,58 @@ int EEPROM_ReadBuffer(uint32_t address, void *pBuffer, uint16_t size) {
   I2C_ReadBuffer(pBuffer, size);
   I2C_Stop();
   return 0;
-}
+} */
 
 void EEPROM_WriteBuffer(uint32_t address, uint8_t *pBuffer, uint16_t size) {
+  if (pBuffer == NULL || size == 0)
+    return;
+
+  uint16_t PAGE_SIZE = EEPROM_GetPageSize();
+  address &= 0x3FFFF;
+
+  while (size > 0) {
+    uint16_t page_offset = address % PAGE_SIZE;
+    uint16_t chunk_size = (size < (PAGE_SIZE - page_offset)) ? 
+                          size : (PAGE_SIZE - page_offset);
+    uint8_t IIC_ADD = 0xA0 | ((address >> 15) & 0x0E);
+
+    if (!EEPROM_WaitReady(IIC_ADD, 10))
+      return;
+
+    I2C_Start();
+    if (I2C_Write(IIC_ADD) != 0) {
+      I2C_Stop();
+      return;
+    }
+    if (I2C_Write((address >> 8) & 0xFF) != 0) {
+      I2C_Stop();
+      return;
+    }
+    if (I2C_Write(address & 0xFF) != 0) {
+      I2C_Stop();
+      return;
+    }
+
+    // Пишем всю страницу за раз
+    if (I2C_WriteBuffer(pBuffer, chunk_size) != 0) {
+      I2C_Stop();
+      return;
+    }
+
+    I2C_Stop();
+    
+    // Ждем завершения записи
+    if (!EEPROM_WaitReady(IIC_ADD, 10))
+      return;
+
+    pBuffer += chunk_size;
+    address += chunk_size;
+    size -= chunk_size;
+    gEepromWrite = true;
+  }
+}
+
+/* void EEPROM_WriteBuffer(uint32_t address, uint8_t *pBuffer, uint16_t size) {
   if (pBuffer == NULL || size == 0)
     return;
 
@@ -111,7 +217,7 @@ void EEPROM_WriteBuffer(uint32_t address, uint8_t *pBuffer, uint16_t size) {
     size -= chunk_size;
     gEepromWrite = true;
   }
-}
+} */
 
 void EEPROM_ClearPage(uint16_t page) {
   uint16_t PAGE_SIZE = EEPROM_GetPageSize();
@@ -202,6 +308,16 @@ bool EEPROM_Test(uint32_t test_addr) {
   return (memcmp(test_data, read_data, sizeof(test_data)) == 0);
 }
 
+#include "uart.h"
+void EEPROM_TestReadSpeed() {
+  uint8_t buf[256];
+  Log("-- EEPROM TEST START --");
+  for (uint32_t i = 0; i < g_eeprom_size; i += g_eeprom_page_size) {
+    EEPROM_ReadBuffer(i, buf, g_eeprom_page_size);
+  }
+  Log("-- EEPROM TEST END --");
+}
+
 void EEPROM_ScanBus(void) {
   printf("\nI2C Scan:\n     0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\n");
   for (uint8_t row = 0; row < 8; row++) {
@@ -222,4 +338,39 @@ void EEPROM_ScanBus(void) {
     }
     printf("\n");
   }
+}
+
+void EEPROM_TestReadSpeedFast() {
+  static uint8_t buf[1024]; // Буфер 1KB
+  uint32_t total_size = g_eeprom_size;
+  
+  Log("-- EEPROM FAST TEST START --");
+  
+  // Читаем по границам чипов (64KB)
+  for (uint32_t base_addr = 0; base_addr < total_size; base_addr += 65536) {
+    uint32_t chip_size = ((base_addr + 65536) > total_size) ? 
+                         (total_size - base_addr) : 65536;
+    
+    uint8_t IIC_ADD = 0xA0 | ((base_addr >> 15) & 0x0E);
+    
+    // Один START для всего чипа
+    I2C_Start();
+    I2C_Write(IIC_ADD);
+    I2C_Write((base_addr >> 8) & 0xFF);
+    I2C_Write(base_addr & 0xFF);
+    I2C_RepStart();
+    I2C_Write(IIC_ADD | 0x01);
+    
+    // Читаем весь чип последовательно
+    uint32_t remaining = chip_size;
+    while (remaining > 0) {
+      uint16_t chunk = (remaining > sizeof(buf)) ? sizeof(buf) : remaining;
+      I2C_ReadBuffer(buf, chunk);
+      remaining -= chunk;
+    }
+    
+    I2C_Stop();
+  }
+  
+  Log("-- EEPROM FAST TEST END --");
 }

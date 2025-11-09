@@ -6,21 +6,11 @@
 #include "gpio.h"
 #include "systick.h"
 
-static inline void i2c_delay(void) {
-  for (volatile uint32_t i = 0; i < 7; i++) {
-    __NOP();
-  }
-}
-
 // Для частоты CPU 48 МГц:
 // 600 нс = 0.6 мкс * 48 = ~29 циклов
 // 1300 нс = 1.3 мкс * 48 = ~62 цикла
 
-static inline void i2c_delay_short(void) {
-  // ~600 нс для HIGH периода SCL
-  /* for (volatile uint32_t i = 0; i < 3; i++) {
-    __NOP();
-  } */
+/* static inline void i2c_delay_short(void) {
   __asm volatile("nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
@@ -30,11 +20,6 @@ static inline void i2c_delay_short(void) {
 }
 
 static inline void i2c_delay_long(void) {
-  // ~1300 нс для LOW периода SCL
-  /* for (volatile uint32_t i = 0; i < 6; i++) {
-    __NOP();
-  } */
-
   __asm volatile("nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
@@ -48,6 +33,30 @@ static inline void i2c_delay_long(void) {
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n");
+} */
+// Оптимизированные задержки для 400kHz (Fast Mode)
+// При 48MHz: 1.25μs = 60 циклов для LOW, 0.6μs = 29 циклов для HIGH
+
+static inline void i2c_delay_short(void) {
+  __asm volatile("nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n");
+}
+
+static inline void i2c_delay_long(void) {
+  __asm volatile("nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n"
+                 "nop\n nop\n nop\n nop\n nop\n");
 }
 
 /* === Управление состоянием SDA === */
@@ -128,6 +137,8 @@ void I2C_Stop(void) {
   sda_lo();
   i2c_delay_long();
   scl_hi();
+  /* while (!scl_read())
+    continue; */
   i2c_delay_short(); // Setup time для STOP (600 нс)
   sda_hi();          // SDA поднимается при SCL=HIGH
   i2c_delay_long();  // Bus free time
@@ -140,6 +151,8 @@ void I2C_RepStart(void) {
   sda_hi(); // SDA поднимается при LOW SCL
   i2c_delay_short();
   scl_hi(); // SCL поднимается
+  /* while (!scl_read())
+    continue; */
   i2c_delay_short();
   sda_lo(); // SDA падает при HIGH SCL = Repeated START
   i2c_delay_short();
@@ -147,70 +160,89 @@ void I2C_RepStart(void) {
   i2c_delay_long();
 }
 
-int I2C_Write(uint8_t Data) {
-  int ret = -1;
-  sda_out();
-  scl_lo();
-  i2c_delay_long(); // Добавить задержку LOW периода
 
-  for (uint8_t i = 0; i < 8; i++) {
-    ((Data & 0x80) ? sda_hi : sda_lo)();
-    Data <<= 1;
 
-    i2c_delay_short(); // Setup time для данных (100 нс минимум)
-    scl_hi(); // Данные считываются на подъёме SCL
-    i2c_delay_short(); // HIGH период SCL
-    scl_lo();
-    i2c_delay_long(); // LOW период SCL
-  }
 
-  // Читаем ACK
-  sda_in();
-  // i2c_delay_short();
-  scl_hi();
-  i2c_delay_short();
-
-  if (!sda_read()) {
-    ret = 0; // ACK получен
-  }
-
-  scl_lo();
-  // sda_out();
-  // sda_lo();
-  return ret;
-}
-
+// Оптимизированная функция чтения - убираем лишние задержки
 uint8_t I2C_Read(bool bFinal) {
   uint8_t Data = 0;
   sda_in();
 
   for (uint8_t i = 0; i < 8; i++) {
     Data <<= 1;
-
     scl_hi();
-    while (!scl_read())
-      continue;
     i2c_delay_short();
-
+    
     if (sda_read()) {
       Data |= 1;
     }
-    i2c_delay_short(); // HIGH период SCL
-
+    
     scl_lo();
+    i2c_delay_long();
   }
 
-  // Отправляем ACK/NACK
+  // ACK/NACK
   sda_out();
   (bFinal ? sda_hi : sda_lo)();
-
   scl_hi();
   i2c_delay_short();
   scl_lo();
-  i2c_delay_long();
 
   return Data;
 }
+
+// Оптимизированная функция записи
+int I2C_Write(uint8_t Data) {
+  int ret = -1;
+  sda_out();
+  scl_lo();
+  i2c_delay_long();
+
+  for (uint8_t i = 0; i < 8; i++) {
+    ((Data & 0x80) ? sda_hi : sda_lo)();
+    Data <<= 1;
+
+    i2c_delay_short();
+    scl_hi();
+    i2c_delay_short();
+    scl_lo();
+    i2c_delay_long();
+  }
+
+  // Читаем ACK
+  sda_in();
+  scl_hi();
+  i2c_delay_short();
+
+  if (!sda_read()) {
+    ret = 0;
+  }
+
+  scl_lo();
+  return ret;
+}
+
+// Оптимизированное чтение буфера - Sequential Read
+uint16_t I2C_ReadBuffer(void *pBuffer, uint16_t Size) {
+  uint8_t *pData = (uint8_t *)pBuffer;
+
+  if (Size == 0)
+    return 0;
+
+  // Убираем проверку на последний байт из цикла
+  uint16_t i;
+  for (i = 0; i < Size - 1; i++) {
+    pData[i] = I2C_Read(false);
+  }
+  pData[i] = I2C_Read(true);
+
+  return Size;
+}
+
+
+
+
+
 
 /* === Вспомогательные функции === */
 
@@ -240,30 +272,6 @@ void I2C_SimpleTest(void) {
   }
 }
 
-uint16_t I2C_ReadBuffer(void *pBuffer, uint16_t Size) {
-  uint8_t *pData = (uint8_t *)pBuffer;
-
-  if (Size == 0)
-    return 0;
-
-  for (uint16_t i = 0; i < Size - 1; i++) {
-    pData[i] = I2C_Read(false); // ACK
-  }
-
-  pData[Size - 1] = I2C_Read(true); // NACK на последнем байте
-
-  return Size;
-}
-
-/* int I2C_WriteBuffer(const uint8_t *pBuffer, uint16_t Size) {
-  for (uint16_t i = 0; i < Size; i++) {
-    if (I2C_Write(pBuffer[i]) != 0) {
-      printf("I2C_WriteBuffer: NACK at byte %u\n", i);
-      return -1;
-    }
-  }
-  return 0;
-} */
 int I2C_WriteBuffer(const uint8_t *pBuffer, uint16_t Size) {
   for (uint16_t i = 0; i < Size; i++) {
     int retry = 3; // 3 попытки
@@ -273,7 +281,7 @@ int I2C_WriteBuffer(const uint8_t *pBuffer, uint16_t Size) {
       }
       if (retry > 0) {
         // printf("I2C_WriteBuffer: NACK at byte %u, retry %d\n", i, 3 - retry);
-        i2c_delay();
+        i2c_delay_short();
       } else {
         // printf("I2C_WriteBuffer: NACK at byte %u - FAILED\n", i);
         return -1;

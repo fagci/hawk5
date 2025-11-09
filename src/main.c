@@ -31,6 +31,9 @@ void Main(void) {
   } */
 
   EEPROM_Init(); // Автоматически определит параметры
+  EEPROM_TestReadSpeedFast();
+  for (;;) {
+  }
   /* EEPROM_ScanBus();
   for (;;) {
   } */

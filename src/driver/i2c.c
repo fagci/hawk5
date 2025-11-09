@@ -160,23 +160,58 @@ void I2C_RepStart(void) {
   i2c_delay_long();
 }
 
+int I2C_Write(uint8_t Data) {
+  int ret = -1;
+  sda_out();
+  scl_lo();
+  i2c_delay_long(); // Добавить задержку LOW периода
 
+  for (uint8_t i = 0; i < 8; i++) {
+    ((Data & 0x80) ? sda_hi : sda_lo)();
+    Data <<= 1;
 
+    i2c_delay_short(); // Setup time для данных (100 нс минимум)
+    scl_hi(); // Данные считываются на подъёме SCL
+    /* while (!scl_read())
+      continue; */
+    i2c_delay_short(); // HIGH период SCL
+    scl_lo();
+    i2c_delay_long(); // LOW период SCL
+  }
 
-// Оптимизированная функция чтения - убираем лишние задержки
+  // Читаем ACK
+  sda_in();
+  // i2c_delay_short();
+  scl_hi();
+  i2c_delay_short();
+
+  if (!sda_read()) {
+    ret = 0; // ACK получен
+  }
+
+  scl_lo();
+  // sda_out();
+  // sda_lo();
+  return ret;
+}
+
 uint8_t I2C_Read(bool bFinal) {
   uint8_t Data = 0;
   sda_in();
 
   for (uint8_t i = 0; i < 8; i++) {
     Data <<= 1;
+
     scl_hi();
+    /* while (!scl_read())
+      continue; // Stretching */
     i2c_delay_short();
-    
+
     if (sda_read()) {
       Data |= 1;
     }
-    
+    i2c_delay_short(); // tHIGH
+
     scl_lo();
     i2c_delay_long();
   }
@@ -184,65 +219,14 @@ uint8_t I2C_Read(bool bFinal) {
   // ACK/NACK
   sda_out();
   (bFinal ? sda_hi : sda_lo)();
+
   scl_hi();
   i2c_delay_short();
   scl_lo();
+  // i2c_delay_long();
 
   return Data;
 }
-
-// Оптимизированная функция записи
-int I2C_Write(uint8_t Data) {
-  int ret = -1;
-  sda_out();
-  scl_lo();
-  i2c_delay_long();
-
-  for (uint8_t i = 0; i < 8; i++) {
-    ((Data & 0x80) ? sda_hi : sda_lo)();
-    Data <<= 1;
-
-    i2c_delay_short();
-    scl_hi();
-    i2c_delay_short();
-    scl_lo();
-    i2c_delay_long();
-  }
-
-  // Читаем ACK
-  sda_in();
-  scl_hi();
-  i2c_delay_short();
-
-  if (!sda_read()) {
-    ret = 0;
-  }
-
-  scl_lo();
-  return ret;
-}
-
-// Оптимизированное чтение буфера - Sequential Read
-uint16_t I2C_ReadBuffer(void *pBuffer, uint16_t Size) {
-  uint8_t *pData = (uint8_t *)pBuffer;
-
-  if (Size == 0)
-    return 0;
-
-  // Убираем проверку на последний байт из цикла
-  uint16_t i;
-  for (i = 0; i < Size - 1; i++) {
-    pData[i] = I2C_Read(false);
-  }
-  pData[i] = I2C_Read(true);
-
-  return Size;
-}
-
-
-
-
-
 
 /* === Вспомогательные функции === */
 
@@ -272,6 +256,30 @@ void I2C_SimpleTest(void) {
   }
 }
 
+uint16_t I2C_ReadBuffer(void *pBuffer, uint16_t Size) {
+  uint8_t *pData = (uint8_t *)pBuffer;
+
+  if (Size == 0)
+    return 0;
+
+  for (uint16_t i = 0; i < Size - 1; i++) {
+    pData[i] = I2C_Read(false); // ACK
+  }
+
+  pData[Size - 1] = I2C_Read(true); // NACK на последнем байте
+
+  return Size;
+}
+
+/* int I2C_WriteBuffer(const uint8_t *pBuffer, uint16_t Size) {
+  for (uint16_t i = 0; i < Size; i++) {
+    if (I2C_Write(pBuffer[i]) != 0) {
+      printf("I2C_WriteBuffer: NACK at byte %u\n", i);
+      return -1;
+    }
+  }
+  return 0;
+} */
 int I2C_WriteBuffer(const uint8_t *pBuffer, uint16_t Size) {
   for (uint16_t i = 0; i < Size; i++) {
     int retry = 3; // 3 попытки

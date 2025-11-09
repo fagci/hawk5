@@ -526,7 +526,7 @@ void UART_printf(const char *str, ...) {
   va_end(va);
 }
 
-#define DEBUG 1
+// #define DEBUG 1
 
 #ifdef DEBUG
 void Log(const char *pattern, ...) {

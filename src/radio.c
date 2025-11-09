@@ -24,7 +24,7 @@
 
 #define RADIO_SAVE_DELAY_MS 1000
 
-#define DEBUG_PARAMS 1
+// #define DEBUG_PARAMS 1
 
 bool gShowAllRSSI = false;
 bool gMonitorMode = false;

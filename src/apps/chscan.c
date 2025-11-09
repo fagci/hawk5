@@ -63,8 +63,7 @@ bool CHSCAN_key(KEY_Code_t key, Key_State_t state) {
   if ((longHeld || simpleKeypress) && (key > KEY_0 && key < KEY_9)) {
     gSettings.currentScanlist = CHANNELS_ScanlistByKey(
         gSettings.currentScanlist, key, longHeld && !simpleKeypress);
-    CHANNELS_LoadScanlist(TYPE_FILTER_CH, gSettings.currentScanlist);
-    CHANNELS_LoadCurrentScanlistCH();
+    CHSCAN_init();
     SETTINGS_DelayedSave();
     isWaiting = false;
     return true;

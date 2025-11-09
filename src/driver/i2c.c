@@ -7,7 +7,34 @@
 #include "systick.h"
 
 static inline void i2c_delay(void) {
-  for (volatile uint32_t i = 0; i < 4; i++) {
+  for (volatile uint32_t i = 0; i < 7; i++) {
+    __NOP();
+  }
+}
+
+// Для частоты CPU 48 МГц:
+// 600 нс = 0.6 мкс * 48 = ~29 циклов
+// 1300 нс = 1.3 мкс * 48 = ~62 цикла
+
+static inline void i2c_delay_short(void) {
+  // ~600 нс для HIGH периода SCL
+  for (volatile uint32_t i = 0; i < 3; i++) {
+    __NOP();
+  }
+}
+
+static inline void i2c_delay_long(void) {
+  // ~1300 нс для LOW периода SCL
+  for (volatile uint32_t i = 0; i < 6; i++) {
+    __NOP();
+  }
+}
+
+static inline void scl_hi_wait(void) {
+  GPIO_SetBit(&GPIOA->DATA, GPIOA_PIN_I2C_SCL);
+  // Ждём пока slave отпустит SCL (clock stretching)
+  uint32_t timeout = 10000;
+  while (!GPIO_CheckBit(&GPIOA->DATA, GPIOA_PIN_I2C_SCL) && timeout--) {
     __NOP();
   }
 }
@@ -72,156 +99,105 @@ void I2C_Init(void) {
 }
 
 void I2C_Start(void) {
-  /* Убедимся что SDA в режиме выхода */
   sda_out();
-
-  /* START condition:
-     1. Обе линии HIGH (idle)
-     2. SDA падает при SCL=HIGH
-     3. SCL падает */
-
   sda_hi();
-  scl_hi();
-  i2c_delay();
-
-  sda_lo(); // SDA падает при SCL=HIGH
-  i2c_delay();
-
-  scl_lo(); // Готовы к передаче данных
-  i2c_delay();
-}
-
-void I2C_RepStart(void) {
-  /* Repeated START (предполагается SCL=LOW):
-     1. SDA поднимается при SCL=LOW
-     2. SCL поднимается
-     3. SDA падает при SCL=HIGH (START)
-     4. SCL падает */
-
-  sda_out();
-
-  sda_hi(); // SDA HIGH при SCL=LOW
-  i2c_delay();
-
-  scl_hi(); // SCL поднимается
-  i2c_delay();
-
-  sda_lo(); // START: SDA падает при SCL=HIGH
-  i2c_delay();
-
-  scl_lo(); // Готовы к передаче
-  i2c_delay();
+  i2c_delay_short(); // Setup time для START (600 нс)
+  sda_lo();          // SDA падает при SCL=HIGH
+  i2c_delay_short(); // Hold time для START (600 нс)
+  scl_lo();
+  i2c_delay_long();
 }
 
 void I2C_Stop(void) {
-  /* STOP condition (предполагается SCL=LOW):
-     1. SDA=LOW при SCL=LOW
-     2. SCL поднимается
-     3. SDA поднимается при SCL=HIGH (STOP) */
-
   sda_out();
+  sda_lo();
+  i2c_delay_long();
+  scl_hi();
+  i2c_delay_short(); // Setup time для STOP (600 нс)
+  sda_hi();          // SDA поднимается при SCL=HIGH
+  i2c_delay_long();  // Bus free time
+}
 
-  sda_lo(); // Убедимся что SDA=LOW
-  i2c_delay();
-
+void I2C_RepStart(void) {
+  sda_out();
+  scl_lo(); // Убедимся что SCL = LOW
+  i2c_delay_long();
+  sda_hi(); // SDA поднимается при LOW SCL
+  i2c_delay_short();
   scl_hi(); // SCL поднимается
-  i2c_delay();
-
-  sda_hi(); // STOP: SDA поднимается при SCL=HIGH
-  i2c_delay();
+  i2c_delay_short();
+  sda_lo(); // SDA падает при HIGH SCL = Repeated START
+  i2c_delay_short();
+  scl_lo();
+  i2c_delay_long();
 }
 
 int I2C_Write(uint8_t Data) {
   int ret = -1;
-
   sda_out();
   scl_lo();
-  i2c_delay();
+  i2c_delay_long(); // Добавить задержку LOW периода
 
-  /* Передаём 8 бит (MSB first) */
   for (uint8_t i = 0; i < 8; i++) {
-    if (Data & 0x80) {
-      sda_hi();
-    } else {
-      sda_lo();
-    }
+    ((Data & 0x80) ? sda_hi : sda_lo)();
     Data <<= 1;
-    i2c_delay();
 
+    i2c_delay_short(); // Setup time для данных (100 нс минимум)
     scl_hi(); // Данные считываются на подъёме SCL
-    i2c_delay();
+    i2c_delay_short(); // HIGH период SCL
     scl_lo();
+    i2c_delay_long(); // LOW период SCL
   }
 
-  /* Читаем ACK от slave:
-     1. Отпускаем SDA (master -> input)
-     2. SCL поднимается
-     3. Читаем SDA (0=ACK, 1=NACK)
-     4. SCL падает */
-
+  // Читаем ACK
   sda_in();
-  i2c_delay();
-
-  scl_hi();
-  i2c_delay();
-  i2c_delay(); // Дополнительная задержка для стабилизации
+  // i2c_delay_short();
+  scl_hi_wait();
+  i2c_delay_short();
 
   if (!sda_read()) {
     ret = 0; // ACK получен
   }
 
   scl_lo();
-  i2c_delay();
-
-  /* Возвращаем SDA в режим выхода */
-  sda_out();
-  sda_lo();
-
+  // sda_out();
+  // sda_lo();
   return ret;
 }
 
 uint8_t I2C_Read(bool bFinal) {
   uint8_t Data = 0;
-
-  /* Переключаем SDA на вход для чтения от slave */
   sda_in();
 
-  /* Читаем 8 бит (MSB first) */
   for (uint8_t i = 0; i < 8; i++) {
     scl_lo();
-    i2c_delay();
-
-    scl_hi();
-    i2c_delay();
+    i2c_delay_long(); // LOW период SCL
+    scl_hi_wait();
+    i2c_delay_short(); // Задержка перед чтением
 
     Data <<= 1;
     if (sda_read()) {
       Data |= 1;
     }
+    i2c_delay_short(); // HIGH период SCL
   }
 
   scl_lo();
-  i2c_delay();
+  i2c_delay_long();
 
-  /* Отправляем ACK/NACK:
-     1. SDA -> output
-     2. SDA = 0 (ACK) или 1 (NACK)
-     3. SCL поднимается
-     4. SCL падает */
-
+  // Отправляем ACK/NACK
   sda_out();
-
   if (bFinal) {
-    sda_hi(); // NACK (последний байт)
+    sda_hi(); // NACK
   } else {
-    sda_lo(); // ACK (продолжаем чтение)
+    sda_lo(); // ACK
   }
 
-  i2c_delay();
-  scl_hi();
-  i2c_delay();
+  i2c_delay_short();
+  scl_hi_wait();
+  i2c_delay_short();
   scl_lo();
-  i2c_delay();
+  i2c_delay_long();
 
   return Data;
 }

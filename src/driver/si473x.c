@@ -334,6 +334,7 @@ void SI47XX_PowerDown() {
 }
 
 void SI47XX_SwitchMode(SI47XX_MODE mode) {
+  Log("[SI] mode %u -> %u", si4732mode, mode);
   if (si4732mode != mode) {
     bool wasSSB = SI47XX_IsSSB();
     si4732mode = mode;

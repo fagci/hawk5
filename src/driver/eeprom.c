@@ -101,7 +101,7 @@ void EEPROM_WriteBuffer(uint32_t address, uint8_t *pBuffer, uint16_t size) {
     }
 
     I2C_Stop();
-    SYS_DelayMs(10);
+    SYS_DelayMs(15);
 
     if (!EEPROM_WaitReady(IIC_ADD, 50))
       return;

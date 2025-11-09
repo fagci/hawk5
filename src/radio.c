@@ -169,10 +169,9 @@ static const FreqBand bk4819_bands[] = {
                 BK4819_FILTER_BW_17k, //  "W 17k",
                 BK4819_FILTER_BW_20k, //  "W 20k",
                 BK4819_FILTER_BW_23k, //  "W 23k",
-                BK4819_FILTER_BW_26k, //	"W 26k",
+                BK4819_FILTER_BW_26k, //  "W 26k",
             },
     },
-    // ... другие диапазоны
 };
 
 // Диапазоны для SI4732
@@ -905,26 +904,8 @@ void RADIO_SetParam(VFOContext *ctx, ParamType param, uint32_t value,
           break;
         }
       }
-      // Если не нашли (редко), сброс на 0
-      if (ctx->modulation_index >= ctx->current_band->num_available_mods &&
-          ctx->current_band->num_available_mods > 0) {
-        ctx->modulation_index = 0;
-        ctx->modulation = ctx->current_band->available_mods[0];
-      }
     }
     ctx->dirty[PARAM_MODULATION] = true;
-    /* ctx->modulation = (ModulationType)value;
-    // ← добавляем:
-    if (ctx->current_band) {
-      ctx->modulation_index = 0;
-      for (uint8_t i = 0; i < ctx->current_band->num_available_mods; i++) {
-        if (ctx->current_band->available_mods[i] == value) {
-          ctx->modulation_index = i;
-          break;
-        }
-      }
-    }
-    ctx->dirty[PARAM_MODULATION] = true; */
     break;
 
   case PARAM_BANDWIDTH:
@@ -1141,18 +1122,20 @@ bool RADIO_AdjustParam(VFOContext *ctx, ParamType param, uint32_t inc,
       return false;
     // Работаем с индексом!
     ctx->modulation_index = AdjustU(ctx->modulation_index, 0, ma, inc);
-    ctx->modulation = band->available_mods[ctx->modulation_index];
-    ctx->dirty[PARAM_MODULATION] = true;
-    break;
+    RADIO_SetParam(ctx, param, band->available_mods[ctx->modulation_index],
+                   save_to_eeprom);
+    RADIO_ApplySettings(ctx);
+    return true;
 
   case PARAM_BANDWIDTH:
     ma = band->num_available_bandwidths;
     if (ma == 0)
       return false;
     ctx->bandwidth_index = AdjustU(ctx->bandwidth_index, 0, ma, inc);
-    ctx->bandwidth = band->available_bandwidths[ctx->bandwidth_index];
-    ctx->dirty[PARAM_BANDWIDTH] = true;
-    break;
+    RADIO_SetParam(ctx, param, band->available_bandwidths[ctx->bandwidth_index],
+                   save_to_eeprom);
+    RADIO_ApplySettings(ctx);
+    return true;
 
   case PARAM_FREQUENCY:
     mi = band->min_freq;
@@ -1236,13 +1219,15 @@ bool RADIO_IncDecParam(VFOContext *ctx, ParamType param, bool inc,
     v = StepFrequencyTable[ctx->step];
   }
   if (param == PARAM_RADIO) {
+    v = RADIO_GetParam(ctx, PARAM_RADIO);
     v = v == RADIO_BK4819 ? (RADIO_HasSi() ? RADIO_SI4732 : RADIO_BK1080)
                           : RADIO_BK4819;
-    return v;
+    RADIO_SetParam(ctx, param, v, save_to_eeprom);
+    return true;
   }
-  /* if (param == PARAM_DEV) {
+  if (param == PARAM_DEV) {
     v = 10;
-  } */
+  }
   return RADIO_AdjustParam(ctx, param, inc ? v : -v, save_to_eeprom);
 }
 
@@ -1271,6 +1256,8 @@ void RADIO_ApplySettings(VFOContext *ctx) {
       (ctx->dirty[PARAM_RX_CODE] || ctx->dirty[PARAM_TX_CODE] ||
        ctx->dirty[PARAM_TX_STATE]) &&
       ctx->radio_type == RADIO_BK4819;
+
+  LogC(LOG_C_BG_CYAN, "[RADIO] MOD DIRTY: %u", ctx->dirty[PARAM_MODULATION]);
 
   for (uint8_t p = 0; p < PARAM_COUNT; ++p) {
     if (!ctx->dirty[p]) {
@@ -1929,23 +1916,13 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
     snprintf(buf, 15, "%+ddB", Rssi2DBm(v));
     break;
   case PARAM_MODULATION:
-    if (ctx->current_band &&
-        ctx->modulation_index < ctx->current_band->num_available_mods) {
-      uint8_t mod = ctx->current_band->available_mods[ctx->modulation_index];
-      if (ctx->radio_type == RADIO_SI4732) {
-        return MOD_NAMES_SI47XX[mod];
-      }
-    }
-    return "???";
-
-  /* case PARAM_MODULATION:
     if (ctx->radio_type == RADIO_BK4819) {
       return MOD_NAMES_BK4819[ctx->modulation];
     }
     if (ctx->radio_type == RADIO_SI4732) {
       return MOD_NAMES_SI47XX[ctx->modulation];
     }
-    return "WFM"; */
+    return "WFM";
   case PARAM_TX_STATE:
     return TX_STATE_NAMES[ctx->tx_state.last_error];
   case PARAM_BANDWIDTH:

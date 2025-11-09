@@ -155,8 +155,7 @@ static bool handlePTTRelease(void) {
   // Блокировка: короткое нажатие = blacklist
   if (gSettings.keylock && !pttWasLongPressed) {
     pttWasLongPressed = false;
-    LOOT_BlacklistLast();
-    SCAN_Next();
+    SCAN_NextBlacklist();
     return true;
   }
 
@@ -178,13 +177,11 @@ static bool handleRelease(KEY_Code_t key) {
     return true;
 
   case KEY_SIDE1:
-    LOOT_BlacklistLast();
-    SCAN_Next();
+    SCAN_NextBlacklist();
     return true;
 
   case KEY_SIDE2:
-    LOOT_WhitelistLast();
-    SCAN_Next();
+    SCAN_NextWhitelist();
     return true;
 
   case KEY_STAR:

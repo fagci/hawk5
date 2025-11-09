@@ -183,6 +183,7 @@ CHMeta CHANNELS_GetMeta(int16_t num);
 bool CHANNELS_IsScanlistable(CHType type);
 bool CHANNELS_IsFreqable(CHType type);
 uint16_t CHANNELS_ScanlistByKey(uint16_t sl, KEY_Code_t key, bool longPress);
+void CHANNELS_SelectScanlistByKey(KEY_Code_t key, bool longPress);
 
 extern uint16_t gScanlistSize;
 extern uint16_t gScanlist[SCANLIST_MAX];

@@ -199,3 +199,9 @@ uint16_t CHANNELS_ScanlistByKey(uint16_t sl, KEY_Code_t key, bool longPress) {
     return SCANLIST_ALL;
   }
 }
+
+void CHANNELS_SelectScanlistByKey(KEY_Code_t key, bool longPress) {
+  gSettings.currentScanlist =
+      CHANNELS_ScanlistByKey(gSettings.currentScanlist, key, longPress);
+  SETTINGS_DelayedSave();
+}

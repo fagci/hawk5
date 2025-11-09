@@ -14,7 +14,6 @@
 
 static bool lastListenState;
 static uint32_t timeout = 0;
-static bool isWaiting;
 
 void BANDSCAN_init(void) {
   CHANNELS_LoadScanlist(TYPE_FILTER_BAND, gSettings.currentScanlist);
@@ -36,12 +35,9 @@ bool BANDSCAN_key(KEY_Code_t key, Key_State_t state) {
   bool longHeld = state == KEY_LONG_PRESSED;
   bool simpleKeypress = state == KEY_RELEASED;
   if ((longHeld || simpleKeypress) && (key > KEY_0 && key < KEY_9)) {
-    gSettings.currentScanlist = CHANNELS_ScanlistByKey(
-        gSettings.currentScanlist, key, longHeld && !simpleKeypress);
+    CHANNELS_SelectScanlistByKey(key, longHeld && !simpleKeypress);
     CHANNELS_LoadScanlist(TYPE_FILTER_BAND, gSettings.currentScanlist);
     BANDS_SelectScan(0);
-    SETTINGS_DelayedSave();
-    isWaiting = false;
     return true;
   }
   if (state == KEY_RELEASED) {
@@ -51,12 +47,10 @@ bool BANDSCAN_key(KEY_Code_t key, Key_State_t state) {
       SCAN_Next();
       return true;
     case KEY_SIDE1:
-      LOOT_BlacklistLast();
-      SCAN_Next();
+      SCAN_NextBlacklist();
       return true;
     case KEY_SIDE2:
-      LOOT_WhitelistLast();
-      SCAN_Next();
+      SCAN_NextWhitelist();
       return true;
     case KEY_STAR:
       APPS_run(APP_LOOT_LIST);

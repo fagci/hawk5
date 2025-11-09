@@ -20,6 +20,8 @@ void SCAN_setBand(Band b);
 void SCAN_Check(bool isAnalyserMode);
 void SCAN_Next();
 uint32_t SCAN_GetCps();
+void SCAN_NextBlacklist();
+void SCAN_NextWhitelist();
 
 void SCAN_SetDelay(uint32_t delay);
 uint32_t SCAN_GetDelay();

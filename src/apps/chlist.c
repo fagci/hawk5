@@ -130,9 +130,7 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
     if ((state == KEY_LONG_PRESSED || state == KEY_RELEASED) &&
         (key > KEY_0 && key < KEY_9)) {
       if (viewMode == MODE_SCANLIST_SELECT) {
-        gSettings.currentScanlist = CHANNELS_ScanlistByKey(
-            gSettings.currentScanlist, key, state == KEY_LONG_PRESSED);
-        SETTINGS_DelayedSave();
+        CHANNELS_SelectScanlistByKey(key, state == KEY_LONG_PRESSED);
         CHLIST_init();
       } else {
         CHANNELS_Load(chNum, &ch);

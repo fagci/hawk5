@@ -159,6 +159,16 @@ void SCAN_setRange(uint32_t fs, uint32_t fe) {
 
 void SCAN_Next() { NextFrequency(); }
 
+void SCAN_NextBlacklist() {
+  LOOT_BlacklistLast();
+  SCAN_Next();
+}
+
+void SCAN_NextWhitelist() {
+  LOOT_BlacklistLast();
+  SCAN_Next();
+}
+
 void SCAN_Init(bool multiband) {
   scan.isMultiband = multiband;
   vfo->msm.snr = 0;

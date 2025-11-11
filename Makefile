@@ -23,10 +23,13 @@ SRC := $(wildcard $(SRC_DIR)/*.c) \
        $(wildcard $(SRC_DIR)/ui/*.c) \
        $(wildcard $(SRC_DIR)/apps/*.c)
 
+SRC_CXX := $(wildcard $(SRC_DIR)/*.cpp)
+
 OBJS := $(OBJ_DIR)/start.o \
         $(OBJ_DIR)/init.o \
         $(OBJ_DIR)/external/printf/printf.o \
-        $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+        $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o) \
+		$(SRC_CXX:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 # =============================================================================
 # BSP Configuration
@@ -43,6 +46,7 @@ CC       := $(TOOLCHAIN_PREFIX)gcc
 LD       := $(TOOLCHAIN_PREFIX)gcc
 OBJCOPY  := $(TOOLCHAIN_PREFIX)objcopy
 SIZE     := $(TOOLCHAIN_PREFIX)size
+CXX      := $(TOOLCHAIN_PREFIX)g++
 
 # =============================================================================
 # Compiler Flags
@@ -66,6 +70,14 @@ CFLAGS   := $(COMMON_FLAGS) $(OPTIMIZATION) \
             -fsingle-precision-constant \
             -finline-functions-called-once \
             -MMD -MP
+
+# C++ flags
+CXXFLAGS = $(CFLAGS) -std=c++23
+CXXFLAGS += -fno-exceptions
+CXXFLAGS += -fno-rtti
+CXXFLAGS += -fno-threadsafe-statics
+CXXFLAGS += -fno-use-cxa-atexit
+
 
 # Debug/Release specific flags
 DEBUG_FLAGS   := -g3 -DDEBUG -Og
@@ -153,6 +165,11 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(BSP_HEADERS) $(OBJ_DIR)
 	@mkdir -p $(@D)
 	@echo "CC $<"
 	@$(CC) $(CFLAGS) $(DEFINES) $(INC_DIRS) -c $< -o $@
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BSP_HEADERS) $(OBJ_DIR)
+	@mkdir -p $(@D)
+	@echo "CC $<"
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Компиляция ассемблерных файлов
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.S | $(OBJ_DIR)

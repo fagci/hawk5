@@ -11,6 +11,7 @@
 #include "../inc/dp32g030/gpio.h"
 #include "../radio.h"
 #include "../scheduler.h"
+#include "../test.h"
 #include "../ui/components.h"
 #include "../ui/graphics.h"
 #include "../ui/spectrum.h"
@@ -435,4 +436,5 @@ void VFO1_render(void) {
   }
 
   REGSMENU_Draw();
+
 }

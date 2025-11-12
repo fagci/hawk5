@@ -1851,7 +1851,6 @@ void RADIO_LoadVFOs(RadioState *state) {
     vfoIdx++;
   }
   state->num_vfos = vfoIdx;
-  printf("nm vfos: %u", vfoIdx);
 
   VFOContext *ctx = &state->vfos[state->active_vfo_index].context;
   for (uint8_t p = 0; p < PARAM_COUNT; ++p) {

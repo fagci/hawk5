@@ -24,7 +24,7 @@ typedef struct {
 #define TIMER0 ((TIMERBASE_TypeDef *)TIMER0_BASE)
 #define TIMER1 ((TIMERBASE_TypeDef *)TIMER1_BASE)
 
-static inline void timer_base_enable_clk(void) {
+static void timer_base_enable_clk(void) {
   /* SYSCON->DEV_CLK_GATE bit 12 & 13 */
   *(volatile uint32_t *)0x40000008 |= (3UL << 12);
 }

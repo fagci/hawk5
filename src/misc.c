@@ -20,7 +20,7 @@ unsigned int SQRT16(unsigned int value) {
   return sqrti;
 }
 
-void _putchar(char c) { UART_Send((uint8_t *)&c, 1); }
+void _putchar(char character) { UART_Send((uint8_t *)&character, 1); }
 
 void ScanlistStr(uint32_t sl, char *buf) {
   for (uint8_t i = 0; i < 16; i++) {

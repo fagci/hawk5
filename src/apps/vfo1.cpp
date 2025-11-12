@@ -1,4 +1,4 @@
-#include "vfo1.h"
+#include "vfo1.hpp"
 #include "../dcs.h"
 #include "../driver/gpio.h"
 #include "../driver/uart.h"
@@ -436,5 +436,4 @@ void VFO1_render(void) {
   }
 
   REGSMENU_Draw();
-
 }

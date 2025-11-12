@@ -19,7 +19,7 @@ const char *TX_OFFSET_NAMES[4] = {"None", "+", "-", "Freq"};
 const char *TX_CODE_TYPES[4] = {"None", "CT", "DCS", "-DCS"};
 
 static uint32_t getChannelsEnd() {
-  uint32_t eepromSize = SETTINGS_GetEEPROMSize();
+  uint32_t eepromSize = EEPROM_DetectSize();
   uint32_t minSizeWithPatch = CHANNELS_OFFSET + CH_SIZE + PATCH_SIZE;
   if (eepromSize < minSizeWithPatch) {
     return eepromSize;

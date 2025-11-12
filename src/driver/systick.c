@@ -18,6 +18,9 @@ void TIMER0_InitAsUptimeCounter(void) {
 
 static volatile uint32_t timer0_overflows = 0;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 void HandlerTIMER_BASE0(void) /* вектор 5 в таблице DP32G030 */
 {
   if (TIMER0->IF & 2) { /* HIGH counter overflow */
@@ -25,6 +28,9 @@ void HandlerTIMER_BASE0(void) /* вектор 5 в таблице DP32G030 */
     ++timer0_overflows; /* 65536 мкс каждый тик */
   }
 }
+#ifdef __cplusplus
+}
+#endif
 
 uint64_t GetUptimeUs(void) {
   uint32_t cnt = TIMER0->HIGH_CNT;  /* 0-65535 */

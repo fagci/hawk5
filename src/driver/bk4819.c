@@ -64,7 +64,7 @@ static ModulationType gLastModulation = 255;
 // Low-Level GPIO and SPI Operations
 // ============================================================================
 
-static inline void gpio_set_scn(bool high) {
+static void gpio_set_scn(bool high) {
   if (high) {
     GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_BK4819_SCN);
   } else {
@@ -72,7 +72,7 @@ static inline void gpio_set_scn(bool high) {
   }
 }
 
-static inline void gpio_set_scl(bool high) {
+static void gpio_set_scl(bool high) {
   if (high) {
     GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_BK4819_SCL);
   } else {
@@ -80,7 +80,7 @@ static inline void gpio_set_scl(bool high) {
   }
 }
 
-static inline void gpio_set_sda(bool high) {
+static void gpio_set_sda(bool high) {
   if (high) {
     GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_BK4819_SDA);
   } else {
@@ -205,7 +205,7 @@ void BK4819_SetRegValue(RegisterSpec spec, uint16_t value) {
 // Utility Functions
 // ============================================================================
 
-static inline uint16_t scale_frequency(uint16_t freq) {
+static uint16_t scale_frequency(uint16_t freq) {
   return (((uint32_t)freq * 1353245u) + (1u << 16)) >> 17; // with rounding
 }
 

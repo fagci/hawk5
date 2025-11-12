@@ -21,7 +21,6 @@ typedef enum {
   APP_CH_CFG,
   APP_SETTINGS,
   APP_VFO1,
-  // APP_GENERATOR,
   APP_ABOUT,
 
   APPS_COUNT,

@@ -281,7 +281,11 @@ void LOOTLIST_update() {
   SYS_DelayMs(SQL_DELAY);
 }
 
-static Menu lootMenu = {"Loot", .render_item = renderItem, .action = action};
+static Menu lootMenu = {
+    .title = "Loot",
+    .render_item = renderItem,
+    .action = action,
+};
 
 static void initMenu() {
   lootMenu.num_items = LOOT_Size();

@@ -3,6 +3,7 @@
 #include "i2c.h"
 #include "system.h"
 #include "systick.h"
+#include "uart.h"
 #include <string.h>
 
 bool gEepromWrite = false;
@@ -13,8 +14,7 @@ static uint16_t g_eeprom_page_size = 0;
 void EEPROM_Init(void) {
   g_eeprom_size = EEPROM_DetectSize();
   g_eeprom_page_size = EEPROM_GetPageSize();
-  printf("EEPROM: %lu bytes, page %u bytes\n", g_eeprom_size,
-         g_eeprom_page_size);
+  Log("EEPROM: %lu bytes, page %u bytes\n", g_eeprom_size, g_eeprom_page_size);
 }
 
 bool EEPROM_WaitReady(uint8_t device_addr, uint32_t timeout_ms) {
@@ -121,7 +121,7 @@ int EEPROM_ReadBuffer(uint32_t address, void *pBuffer, uint16_t size) {
   return 0;
 } */
 
-void EEPROM_WriteBuffer(uint32_t address, uint8_t *pBuffer, uint16_t size) {
+void EEPROM_WriteBuffer(uint32_t address, void *pBuffer, uint16_t size) {
   if (pBuffer == NULL || size == 0)
     return;
 

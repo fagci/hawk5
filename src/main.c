@@ -11,6 +11,14 @@
 #include "system.h"
 
 static const char *APP_NAME = "hawk5";
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void HandlerHardFault(void) {
+    LogC(LOG_C_BRIGHT_RED, "HARDFAULT!");
+    while(1);
+}
 
 void Main(void) {
   SYS_ConfigureClocks();
@@ -44,3 +52,6 @@ void Main(void) {
 
   SYS_Main();
 }
+#ifdef __cplusplus
+}
+#endif

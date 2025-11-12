@@ -27,18 +27,18 @@ const char *CH_DISPLAY_MODE_NAMES[3] = {"Name+F", "F", "Name"};
 const char *rogerNames[2] = {"None", "Tiny"};
 const char *FC_TIME_NAMES[4] = {"0.2s", "0.4s", "0.8s", "1.6s"};
 const char *MW_NAMES[4] = {
-    [MW_OFF] = "Off",
-    [MW_ON] = "On",
-    [MW_SWITCH] = "Switch",
-    [MW_EXTRA] = "Extra",
+    "Off",
+    "On",
+    "Switch",
+    "Extra",
 };
 const char *EEPROM_TYPE_NAMES[6] = {
-    [EEPROM_BL24C64] = "64 #",   //
-    [EEPROM_BL24C128] = "128",   //
-    [EEPROM_BL24C256] = "256",   //
-    [EEPROM_BL24C512] = "512",   //
-    [EEPROM_BL24C1024] = "1024", //
-    [EEPROM_M24M02] = "M02",     //
+    "64 #", //
+    "128",  //
+    "256",  //
+    "512",  //
+    "1024", //
+    "M02",  //
 };
 uint32_t SCAN_TIMEOUTS[15] = {
     0,         100,       200,           300,           400,
@@ -55,58 +55,134 @@ static const uint8_t PATCH3_PREAMBLE[] = {0x15, 0x00, 0x03, 0x74,
                                           0x0b, 0xd4, 0x84, 0x60};
 
 Settings gSettings = {
-    .eepromType = EEPROM_UNKNOWN,
-    .batsave = 4,
-    // .vox = 0,
-    .backlight = 3,
-    // .txTime = 0,
+    // uint32_t upconverter : 27;
+    // uint8_t checkbyte : 5;
+    .upconverter = 0,
+    .checkbyte = 0,
+
+    // uint16_t currentScanlist;
     .currentScanlist = SCANLIST_ALL,
-    /* .roger = 0,
-    .scanmode = 0,
-    .chDisplayMode = 0,
-    .beep = false,
-    .keylock = false,
-    .busyChannelTxLock = false, */
-    .ste = true,
-    .repeaterSte = true,
-    // .dtmfdecode = false,
-    .brightness = 8,
-    .contrast = 8,
+
+    // uint8_t mainApp : 8;
     .mainApp = APP_VFO1,
-    .sqOpenedTimeout = SCAN_TO_NONE,
-    .sqClosedTimeout = SCAN_TO_2s,
-    .sqlOpenTime = 1,
-    .sqlCloseTime = 1,
-    .skipGarbageFrequencies = true,
-    // .activeVFO = 0,
-    .backlightOnSquelch = BL_SQL_ON,
+
+    // uint16_t batteryCalibration : 12;
+    // uint8_t contrast : 4;
     .batteryCalibration = 2000,
+    .contrast = 8,
+
+    // uint8_t backlight : 4;
+    // uint8_t mic : 4;
+    .backlight = 3,
+    .mic = 0,
+
+    // uint8_t reserved3 : 4;
+    // uint8_t batsave : 4;
+    .reserved3 = 0,
+    .batsave = 4,
+
+    // uint8_t vox : 4;
+    // uint8_t txTime : 4;
+    .vox = 0,
+    .txTime = 0,
+
+    // uint8_t fcTime : 2;
+    // uint8_t reserved5 : 2;
+    // uint8_t iAmPro : 1;
+    // uint8_t roger : 3;
+    .fcTime = 0,
+    .reserved5 = 0,
+    .iAmPro = 0,
+    .roger = 0,
+
+    // uint8_t scanmode : 2;
+    // CHDisplayMode chDisplayMode : 2;
+    // uint8_t pttLock : 1;
+    // bool showLevelInVFO : 1;
+    // uint8_t beep : 1;
+    // uint8_t keylock : 1;
+    .scanmode = 0,
+    .chDisplayMode = CH_DISPLAY_MODE_NF,
+    .pttLock = 0,
+    .showLevelInVFO = 0,
+    .beep = 0,
+    .keylock = 0,
+
+    // uint8_t busyChannelTxLock : 1;
+    // uint8_t ste : 1;
+    // uint8_t repeaterSte : 1;
+    // uint8_t dtmfdecode : 1;
+    // uint8_t brightness : 4;
+    .busyChannelTxLock = 0,
+    .ste = 1,
+    .repeaterSte = 1,
+    .dtmfdecode = 0,
+    .brightness = 8,
+
+    // uint8_t brightnessLow : 4;
+    // EEPROMType eepromType : 3;
+    // bool bound_240_280 : 1;
+    .brightnessLow = 0,
+    .eepromType = EEPROM_UNKNOWN,
+    .bound_240_280 = 0,
+
+    // ScanTimeout sqClosedTimeout : 4;
+    // ScanTimeout sqOpenedTimeout : 4;
+    .sqClosedTimeout = SCAN_TO_2s,
+    .sqOpenedTimeout = SCAN_TO_NONE,
+
+    // BatteryType batteryType : 2;
+    // BatteryStyle batteryStyle : 2;
+    // bool noListen : 1;
+    // bool si4732PowerOff : 1;
+    // uint8_t mWatch : 2;
     .batteryType = BAT_1600,
     .batteryStyle = BAT_PERCENT,
-    // .upconverter = 0,
-    .deviation = 130, // 1300
+    .noListen = 0,
+    .si4732PowerOff = 0,
+    .mWatch = 0,
+
+    // uint8_t freqCorrection;
+    .freqCorrection = 0,
+
+    // BacklightOnSquelchMode backlightOnSquelch : 2;
+    // bool toneLocal : 1;
+    // uint8_t sqlOpenTime : 3;
+    // uint8_t sqlCloseTime : 2;
+    .backlightOnSquelch = BL_SQL_ON,
+    .toneLocal = 0,
+    .sqlOpenTime = 1,
+    .sqlCloseTime = 1,
+
+    // uint8_t deviation;
+    .deviation = 130,
+
+    // uint8_t activeVFO : 2;
+    // bool skipGarbageFrequencies : 1;
+    .activeVFO = 0,
+    .skipGarbageFrequencies = 1,
 };
 
 const uint32_t EEPROM_SIZES[6] = {
-    [EEPROM_BL24C64] = 8192,     //
-    [EEPROM_BL24C128] = 16384,   //
-    [EEPROM_BL24C256] = 32768,   //
-    [EEPROM_BL24C512] = 65536,   //
-    [EEPROM_BL24C1024] = 131072, //
-    [EEPROM_M24M02] = 262144,    //
+    8192,   // EEPROM_BL24C64
+    16384,  // EEPROM_BL24C128
+    32768,  // EEPROM_BL24C256
+    65536,  // EEPROM_BL24C512
+    131072, // EEPROM_BL24C1024
+    262144, // EEPROM_M24M02
 };
 
 const uint16_t PAGE_SIZES[6] = {
-    [EEPROM_BL24C64] = 32,    //
-    [EEPROM_BL24C128] = 64,   //
-    [EEPROM_BL24C256] = 64,   //
-    [EEPROM_BL24C512] = 128,  //
-    [EEPROM_BL24C1024] = 128, //
-    [EEPROM_M24M02] = 256,    //
+    32,  // EEPROM_BL24C64
+    64,  // EEPROM_BL24C128
+    64,  // EEPROM_BL24C256
+    128, // EEPROM_BL24C512
+    128, // EEPROM_BL24C1024
+    256, // EEPROM_M24M02
 };
 
 void SETTINGS_Save(void) {
-  EEPROM_WriteBuffer(SETTINGS_OFFSET, &gSettings, SETTINGS_SIZE);
+  EEPROM_WriteBuffer(SETTINGS_OFFSET, (uint8_t *)&gSettings, SETTINGS_SIZE);
 }
 
 void SETTINGS_Load(void) {

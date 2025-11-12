@@ -17,7 +17,7 @@ static Menu *active_menu = NULL;
 static void (*renderFn)(uint8_t x, uint8_t y, const char *pattern, ...);
 
 // Вспомогательная функция для вычисления правой границы
-static inline uint8_t getMenuRightEdge(void) {
+static uint8_t getMenuRightEdge(void) {
   return active_menu->x + active_menu->width;
 }
 

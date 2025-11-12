@@ -412,33 +412,33 @@ static Menu radioMenu = {"Radio", radioMenuItems, ARRAY_SIZE(radioMenuItems)};
 
 static MenuItem menuChVfo[] = {
     {"Type", MEM_TYPE, getValS, updVal},
-    {"Name", MEM_NAME, getValS, .action = setName},
+    {"Name", MEM_NAME, getValS, NULL, NULL, setName},
 
-    {"RX f", MEM_F_RX, getValS, .action = setRXF},
-    {"TX f / offset", MEM_F_TX, getValS, .action = setTXF},
+    {"RX f", MEM_F_RX, getValS, NULL, NULL, setRXF},
+    {"TX f / offset", MEM_F_TX, getValS, NULL, NULL, setTXF},
     {"TX offset dir", MEM_TX_OFFSET_DIR, getValS, updVal},
 
-    {"Radio", .submenu = &radioMenu},
+    {.name = "Radio", .submenu = &radioMenu},
 
     {"Readonly", MEM_READONLY, getValS, updVal},
-    {"Save CH", .action = save},
+    {.name = "Save CH", .action = save},
 };
 
 static MenuItem menuBand[] = {
     {"Type", MEM_TYPE, getValS, updVal},
-    {"Name", MEM_NAME, getValS, .action = setName},
+    {"Name", MEM_NAME, getValS, NULL, NULL, setName},
 
-    {"Bounds", MEM_BOUNDS, getValS, .action = setBounds},
+    {"Bounds", MEM_BOUNDS, getValS, NULL, NULL, setBounds},
 
-    {"Radio", .submenu = &radioMenu},
+    {"Radio", NULL, NULL, NULL, &radioMenu},
 
-    {"P cal", .submenu = &pCalMenu},
+    {"P cal", NULL, NULL, NULL, &pCalMenu},
     {"Last f", MEM_LAST_F, getValS, updVal},
     {"PPM", MEM_PPM, getValS, updVal},
 
     {"Bank", MEM_BANK, getValS, updVal},
     {"Readonly", MEM_READONLY, getValS, updVal},
-    {"Save BAND", .action = save},
+    {.name = "Save BAND", .action = save},
 };
 
 static Menu *menu;

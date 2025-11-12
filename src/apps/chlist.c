@@ -9,7 +9,6 @@
 #include "apps.h"
 #include "chcfg.h"
 #include "textinput.h"
-#include "vfo1.h"
 #include <string.h>
 
 typedef enum {
@@ -33,12 +32,12 @@ static char *VIEW_MODE_NAMES[] = {
 };
 
 static char *CH_TYPE_FILTER_NAMES[] = {
-    [TYPE_FILTER_CH] = "CH",              //
-    [TYPE_FILTER_CH_SAVE] = "CH sav",     //
-    [TYPE_FILTER_BAND] = "BAND",          //
-    [TYPE_FILTER_BAND_SAVE] = "BAND sav", //
-    [TYPE_FILTER_VFO] = "VFO",            //
-    [TYPE_FILTER_VFO_SAVE] = "VFO sav",   //
+    "CH",       //
+    "CH sav",   //
+    "BAND",     //
+    "BAND sav", //
+    "VFO",      //
+    "VFO sav",  //
 };
 
 // TODO:
@@ -53,13 +52,17 @@ static CH ch;
 static char tempName[10] = {0};
 
 static const Symbol typeIcons[] = {
-    [TYPE_CH] = SYM_CH,         [TYPE_BAND] = SYM_BAND,
-    [TYPE_VFO] = SYM_VFO,       [TYPE_SETTING] = SYM_SETTING,
-    [TYPE_FILE] = SYM_FILE,     [TYPE_MELODY] = SYM_MELODY,
-    [TYPE_FOLDER] = SYM_FOLDER, [TYPE_EMPTY] = SYM_MISC2,
+    SYM_MISC2,   //
+    SYM_CH,      //
+    SYM_BAND,    //
+    SYM_VFO,     //
+    SYM_FOLDER,  //
+    SYM_MELODY,  //
+    SYM_SETTING, //
+    SYM_FILE,    //
 };
 
-static inline uint16_t getChannelNumber(uint16_t menuIndex) {
+static uint16_t getChannelNumber(uint16_t menuIndex) {
   if (menuIndex >= gScanlistSize) {
     Log("ERROR: menuIndex %u >= gScanlistSize %u", menuIndex, gScanlistSize);
     return 0; // или другое безопасное значение
@@ -201,7 +204,10 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
 }
 
 static Menu chListMenu = {
-    .render_item = renderItem, .itemHeight = MENU_ITEM_H, .action = action};
+    .render_item = renderItem,
+    .action = action,
+    .itemHeight = MENU_ITEM_H,
+};
 
 void CHLIST_init() {
   if (gChSaveMode) {

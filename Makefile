@@ -24,6 +24,7 @@ SRC := $(wildcard $(SRC_DIR)/*.c) \
        $(wildcard $(SRC_DIR)/apps/*.c)
 
 SRC_CXX := $(wildcard $(SRC_DIR)/*.cpp)
+SRC_CXX := $(wildcard $(SRC_DIR)/apps/*.cpp)
 
 OBJS := $(OBJ_DIR)/start.o \
         $(OBJ_DIR)/init.o \
@@ -60,10 +61,8 @@ ASFLAGS  := $(COMMON_FLAGS) -c
 
 # Compiler flags
 CFLAGS   := $(COMMON_FLAGS) $(OPTIMIZATION) \
-            -std=c2x \
-            -Wall -Wextra -Wpedantic \
+            -Wall -Wextra \
             -Wno-missing-field-initializers \
-            -Wno-incompatible-pointer-types \
             -Wno-unused-function -Wno-unused-variable \
             -fno-builtin -fshort-enums \
             -fno-delete-null-pointer-checks \
@@ -72,12 +71,26 @@ CFLAGS   := $(COMMON_FLAGS) $(OPTIMIZATION) \
             -MMD -MP
 
 # C++ flags
-CXXFLAGS = $(CFLAGS) -std=c++23
-CXXFLAGS += -fno-exceptions
-CXXFLAGS += -fno-rtti
-CXXFLAGS += -fno-threadsafe-statics
-CXXFLAGS += -fno-use-cxa-atexit
 
+COMMON_FLAGS := -mcpu=cortex-m0 -mthumb -mabi=aapcs
+OPTIMIZATION := -Os -flto=auto -ffunction-sections -fdata-sections
+
+# C++ flags (используем для ВСЕГО)
+CXXFLAGS := $(COMMON_FLAGS) $(OPTIMIZATION) \
+            -std=gnu++23 \
+            -Wall -Wextra \
+            -Wno-missing-field-initializers \
+            -Wno-unused-function -Wno-unused-variable \
+            -fno-builtin -fshort-enums \
+            -fno-delete-null-pointer-checks \
+            -fsingle-precision-constant \
+            -finline-functions-called-once \
+            -fno-exceptions \
+            -fno-rtti \
+            -fno-threadsafe-statics \
+            -fno-use-cxa-atexit \
+            -fpermissive \
+            -MMD -MP
 
 # Debug/Release specific flags
 DEBUG_FLAGS   := -g3 -DDEBUG -Og
@@ -152,24 +165,31 @@ $(TARGET).bin: $(TARGET)
 	fi
 
 # Линковка
+
 $(TARGET): $(OBJS) | $(BIN_DIR)
-	@echo "Linking..."
-	$(LD) $(LDFLAGS) $^ -o $@
+	@echo "Linking with g++..."
+	$(CXX) $(LDFLAGS) $^ -o $@
 	@echo ""
 	$(SIZE) $@
 	arm-none-eabi-nm --size-sort -r $(BIN_DIR)/$(PROJECT_NAME) | head -20
 	@echo ""
 
-# Компиляция C файлов
+# Специальные флаги для критичных драйверов
+DRIVER_CXXFLAGS := $(CXXFLAGS) -O1 -fno-strict-aliasing
+
+
+# Компилируем ВСЕ .c файлы через g++ (как C++)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(BSP_HEADERS) $(OBJ_DIR)
 	@mkdir -p $(@D)
-	@echo "CC $<"
-	@$(CC) $(CFLAGS) $(DEFINES) $(INC_DIRS) -c $< -o $@
+	@echo "CXX $< (C as C++)"
+	@$(CXX) $(CXXFLAGS) $(DEFINES) $(INC_DIRS) -c $< -o $@
 
+# Компилируем .cpp файлы через g++
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BSP_HEADERS) $(OBJ_DIR)
 	@mkdir -p $(@D)
-	@echo "CC $<"
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	@echo "CXX $<"
+	@$(CXX) $(CXXFLAGS) $(DEFINES) $(INC_DIRS) -c $< -o $@
+
 
 # Компиляция ассемблерных файлов
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.S | $(OBJ_DIR)

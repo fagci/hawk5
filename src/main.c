@@ -15,7 +15,7 @@ static const char *APP_NAME = "hawk5";
 extern "C" {
 #endif
 
-/* __attribute__((externally_visible, used)) void
+__attribute__((externally_visible, used)) void
 HardFault_Handler_C(uint32_t *hardfault_args) {
   volatile uint32_t stacked_r0 = hardfault_args[0];
   volatile uint32_t stacked_r1 = hardfault_args[1];
@@ -33,7 +33,7 @@ HardFault_Handler_C(uint32_t *hardfault_args) {
   printf("R3:  0x%08lX\n", stacked_r3);
   printf("R12: 0x%08lX\n", stacked_r12);
   printf("LR:  0x%08lX\n", stacked_lr);
-  printf("PC:  0x%08lX <- see .map\n", stacked_pc);
+  printf("PC:  0x%08lX <- see .map (0=NULLptr)\n", stacked_pc);
   printf("PSR: 0x%08lX\n", stacked_psr);
 
   while (1)
@@ -54,7 +54,7 @@ __attribute__((naked)) void HandlerHardFault(void) {
                  "ldr r1,=HardFault_Handler_C \n"
                  "bx r1                  \n"
                  "bkpt #0                \n");
-} */
+}
 
 void Main(void) {
   SYS_ConfigureClocks();

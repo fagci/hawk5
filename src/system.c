@@ -1,5 +1,5 @@
 #include "system.h"
-#include "apps/apps.h"
+#include "apps/apps_compat.hpp"
 #include "driver/backlight.h"
 #include "driver/eeprom.h"
 #include "driver/keyboard.h"
@@ -146,6 +146,7 @@ void initDisplay() {
 
 void SYS_Main() {
   BATTERY_UpdateBatteryInfo();
+  APPS_Init();
 
   SystemMessages n = KEYBOARD_GetKey();
   if (resetNeeded() || n.key == KEY_EXIT) {
@@ -174,9 +175,9 @@ void SYS_Main() {
 
     SETTINGS_UpdateSave();
 
-    if (gCurrentApp != APP_RESET) {
+    /* if (gCurrentApp != APP_RESET) {
       SCAN_Check();
-    }
+    } */
 
     APPS_update();
 
@@ -198,10 +199,10 @@ void SYS_Main() {
 
     appRender();
 
-    while (gCurrentApp != APP_SCANER && UART_IsCommandAvailable()) {
+    /* while (gCurrentApp != APP_SCANER && UART_IsCommandAvailable()) {
       UART_HandleCommand();
       lastUartDataTime = Now();
-    }
+    } */
 
     // __WFI();
   }

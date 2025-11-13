@@ -64,7 +64,7 @@ const AppType_t appsAvailableToRun[RUN_APPS_COUNT] = {
     APP_ABOUT,     //
 };
 
-const App apps[APPS_COUNT] = {
+/* const App apps[APPS_COUNT] = {
     {"None", NULL, NULL, NULL, NULL, NULL},
     {"Spectrum", SCANER_init, SCANER_update, SCANER_render, SCANER_key,
      SCANER_deinit, true},
@@ -87,16 +87,16 @@ const App apps[APPS_COUNT] = {
      SETTINGS_deinit},
     {"1 VFO", VFO1_init, VFO1_update, VFO1_render, VFO1_key, NULL, true},
     {"ABOUT", NULL, NULL, ABOUT_Render, NULL, NULL},
-};
+}; */
 
-bool APPS_key(KEY_Code_t Key, Key_State_t state) {
+/* bool APPS_key(KEY_Code_t Key, Key_State_t state) {
   if (apps[gCurrentApp].key) {
     return apps[gCurrentApp].key(Key, state);
   }
   return false;
-}
+} */
 
-void APPS_init(AppType_t app) {
+/* void APPS_init(AppType_t app) {
 
   STATUSLINE_SetText("%s", apps[app].name);
   gRedrawScreen = true;
@@ -105,31 +105,31 @@ void APPS_init(AppType_t app) {
   if (apps[app].init) {
     apps[app].init();
   }
-}
+} */
 
-void APPS_update(void) {
+/* void APPS_update(void) {
   if (apps[gCurrentApp].update) {
     apps[gCurrentApp].update();
   }
-}
+} */
 
-void APPS_render(void) {
+/* void APPS_render(void) {
   if (apps[gCurrentApp].render) {
     UI_ClearScreen();
     apps[gCurrentApp].render();
   }
-}
+} */
 
-void APPS_deinit(void) {
+/* void APPS_deinit(void) {
   // LogC(LOG_C_YELLOW, "[APP] Deinit %s", apps[gCurrentApp].name);
   MENU_Deinit();
   if (apps[gCurrentApp].deinit) {
     apps[gCurrentApp].deinit();
   }
-}
+} */
 
 RadioState radioState;
-void APPS_run(AppType_t app) {
+/* void APPS_run(AppType_t app) {
   if (appsStack[stackIndex] == app) {
     return;
   }
@@ -148,11 +148,11 @@ void APPS_run(AppType_t app) {
   }
 
   APPS_init(app);
-}
+} */
 
-void APPS_runManual(AppType_t app) { APPS_run(app); }
+// void APPS_runManual(AppType_t app) { APPS_run(app); }
 
-bool APPS_exit(void) {
+/* bool APPS_exit(void) {
   if (stackIndex == 0) {
     return false;
   }
@@ -166,4 +166,4 @@ bool APPS_exit(void) {
   gRedrawScreen = true;
   // }
   return true;
-}
+} */

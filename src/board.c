@@ -230,6 +230,10 @@ void BOARD_ToggleRed(bool on) {
   BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, on);
 }
 
+void BOARD_ToggleFlashlight() {
+  GPIO_FlipBit(&GPIOC->DATA, GPIOC_PIN_FLASHLIGHT);
+}
+
 void BOARD_Init(void) {
   // Можно добавить инициализацию если нужно
 }

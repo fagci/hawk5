@@ -43,7 +43,7 @@ const char *FILTER_NAMES[4] = {
 };
 
 const char *PARAM_NAMES[] = {
-    "f",             // PARAM_RADIO = 0
+    "Radio",         // PARAM_RADIO = 0
     "Precise f",     // PARAM_PRECISE_F_CHANGE = 1
     "Step",          // PARAM_STEP = 2
     "Power",         // PARAM_POWER = 3

@@ -1,5 +1,5 @@
 #include "settings.h"
-#include "apps/apps.h"
+#include "apps/App.hpp"
 #include "driver/backlight.h"
 #include "driver/bk4819.h"
 #include "driver/eeprom.h"
@@ -475,8 +475,8 @@ const char *SETTINGS_GetValueString(Setting s) {
     return rogerNames[v];
   case SETTING_CHDISPLAYMODE:
     return CH_DISPLAY_MODE_NAMES[v];
-  case SETTING_MAINAPP:
-    return apps[v].name;
+  /* case SETTING_MAINAPP:
+    return apps[v].name; */
   case SETTING_SQOPENEDTIMEOUT:
   case SETTING_SQCLOSEDTIMEOUT:
     return SCAN_TIMEOUT_NAMES[v];
@@ -575,7 +575,7 @@ void SETTINGS_IncDecValue(Setting s, bool inc) {
   case SETTING_CHDISPLAYMODE:
     ma = ARRAY_SIZE(CH_DISPLAY_MODE_NAMES);
     break;
-  case SETTING_MAINAPP: {
+  /* case SETTING_MAINAPP: {
     int8_t found_index = -1;
     for (uint8_t i = 0; i < RUN_APPS_COUNT; i++) {
       if (appsAvailableToRun[i] == v) {
@@ -592,7 +592,7 @@ void SETTINGS_IncDecValue(Setting s, bool inc) {
     v = appsAvailableToRun[next_index];
     SETTINGS_SetValue(s, v);
     return;
-  }
+  } */
   case SETTING_SQOPENEDTIMEOUT:
   case SETTING_SQCLOSEDTIMEOUT:
     ma = ARRAY_SIZE(SCAN_TIMEOUT_NAMES);

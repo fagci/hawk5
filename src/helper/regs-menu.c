@@ -1,5 +1,4 @@
 #include "regs-menu.h"
-#include "../apps/apps.h"
 #include "../external/printf/printf.h"
 #include "../helper/menu.h"
 #include "../radio.h"

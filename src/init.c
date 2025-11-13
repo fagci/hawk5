@@ -35,6 +35,11 @@ void DATA_Init(void) {
     *pDst++ = *pSrc++;
   }
 }
+
+void _init(void) {
+    // Пустая функция, но линкер доволен
+}
+
 #ifdef __cplusplus
 }
 #endif

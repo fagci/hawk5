@@ -77,8 +77,7 @@ OPTIMIZATION := -Os -flto=auto -ffunction-sections -fdata-sections
 
 # C++ flags (используем для ВСЕГО)
 CXXFLAGS := $(COMMON_FLAGS) $(OPTIMIZATION) \
-            -std=gnu++23 \
-            -Wall -Wextra \
+            -std=gnu++20 \
             -Wno-missing-field-initializers \
             -Wno-unused-function -Wno-unused-variable \
             -fno-builtin -fshort-enums \
@@ -114,12 +113,13 @@ INC_DIRS := -I./src/config \
 LDFLAGS  := $(COMMON_FLAGS) $(OPTIMIZATION) \
             -nostartfiles \
             -Tfirmware.ld \
-            --specs=nano.specs \
             -lc -lnosys -lm \
             -Wl,--gc-sections \
             -Wl,--build-id=none \
             -Wl,--print-memory-usage \
             -Wl,-Map=$(OBJ_DIR)/output.map
+
+LDFLAGS += --specs=nano.specs --specs=nosys.specs -lm
 
 # =============================================================================
 # Build Configuration

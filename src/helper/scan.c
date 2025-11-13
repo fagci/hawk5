@@ -1,5 +1,4 @@
 #include "scan.h"
-#include "../apps/apps.h"
 #include "../driver/st7565.h"
 #include "../driver/system.h"
 #include "../driver/systick.h"

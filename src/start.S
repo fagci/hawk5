@@ -28,6 +28,7 @@
 	.extern DATA_Init
 	.extern BSS_Init
 	.extern Main
+    .extern __libc_init_array
 
 @ ==============================================================================
 @ Vector Table
@@ -105,6 +106,7 @@ HandlerReset:
 
 	@ Zero .bss section
 	bl	BSS_Init
+    bl __libc_init_array
 
     cpsie	i
 

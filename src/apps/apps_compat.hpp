@@ -1,23 +1,17 @@
 #include "AppManager.hpp"
+#include "TestApp.hpp"
 #include "VFOApp.hpp"
 
 // Глобальные экземпляры приложений
 static VFOApp vfoApp;
+static TestApp testApp;
 
 extern "C" {
 
 void APPS_Init() {
-  printf("sizeof(VFOApp): %u\n", sizeof(VFOApp));
-  printf("=== APPS_Init START ===\n");
-
   auto &mgr = AppManager::instance();
-
-  printf("Registering VFO app...\n");
-    printf("VFOApp getName: %s\n", vfoApp.getName());
-    printf("VFOApp getAppId: %u\n",vfoApp.getAppId());
   mgr.registerApp(&vfoApp);
-
-  printf("=== APPS_Init DONE ===\n");
+  mgr.registerApp(&testApp);
 }
 
 void APPS_run(uint8_t appId) { AppManager::instance().run(appId); }

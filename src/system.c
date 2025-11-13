@@ -1,4 +1,5 @@
 #include "system.h"
+#include "apps/App.hpp"
 #include "apps/apps_compat.hpp"
 #include "driver/backlight.h"
 #include "driver/eeprom.h"
@@ -168,7 +169,8 @@ void SYS_Main() {
     BANDS_Load();
 
     LogC(LOG_C_BRIGHT_WHITE, "RUN DEFAULT APP");
-    APPS_run(gSettings.mainApp);
+    // APPS_run(gSettings.mainApp);
+    APPS_run(APP_TEST);
   }
 
   for (;;) {

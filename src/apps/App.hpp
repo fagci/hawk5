@@ -19,6 +19,7 @@ typedef enum {
   APP_SETTINGS,
   APP_VFO1,
   APP_ABOUT,
+  APP_TEST,
 
   APPS_COUNT,
 } AppType_t;

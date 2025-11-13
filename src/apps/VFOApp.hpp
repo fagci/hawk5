@@ -33,12 +33,6 @@ public:
     SCAN_SetMode(SCAN_MODE_SINGLE);
   }
 
-  void deinit() override {}
-
-  void update() override {
-    // Периодическое обновление
-  }
-
   void render() override {
     const uint8_t BASE = 40;
 
@@ -125,7 +119,7 @@ public:
   uint8_t getAppId() const override { return APP_VFO1; }
 
 private:
-  static void updateBand(void) {
+  void updateBand(void) {
     uint32_t f = RADIO_GetParam(ctx, PARAM_FREQUENCY);
     if (!BANDS_InRange(f, gCurrentBand) ||
         gCurrentBand.meta.type == TYPE_BAND_DETACHED) {
@@ -138,14 +132,14 @@ private:
                            v);
   }
 
-  static void tuneTo(uint32_t f, uint32_t _) {
+  void tuneTo(uint32_t f, uint32_t _) {
     (void)_;
     RADIO_SetParam(ctx, PARAM_FREQUENCY, f, true);
     RADIO_ApplySettings(ctx);
     updateBand();
   }
 
-  static bool handleNumNav(KEY_Code_t key) {
+  bool handleNumNav(KEY_Code_t key) {
     if (gIsNumNavInput) {
       NUMNAV_Input(key);
       return true;
@@ -160,7 +154,7 @@ private:
     return false;
   }
 
-  static bool handleFrequencyChange(KEY_Code_t key) {
+  bool handleFrequencyChange(KEY_Code_t key) {
     if (key != KEY_UP && key != KEY_DOWN)
       return false;
 
@@ -173,7 +167,7 @@ private:
     return true;
   }
 
-  static bool handleSSBFineTune(KEY_Code_t key) {
+  bool handleSSBFineTune(KEY_Code_t key) {
     if (ctx->radio_type != RADIO_SI4732 || !RADIO_IsSSB(ctx))
       return false;
     if (key != KEY_SIDE1 && key != KEY_SIDE2)
@@ -184,7 +178,7 @@ private:
     return true;
   }
 
-  static bool handleLongPress(KEY_Code_t key) {
+  bool handleLongPress(KEY_Code_t key) {
     uint8_t vfoN = RADIO_GetCurrentVFONumber(gRadioState);
 
     switch (key) {
@@ -237,7 +231,7 @@ private:
     }
   }
 
-  static bool handleRelease(KEY_Code_t key, Key_State_t state) {
+  bool handleRelease(KEY_Code_t key, Key_State_t state) {
     uint8_t vfoN = RADIO_GetCurrentVFONumber(gRadioState);
 
     switch (key) {
@@ -293,7 +287,7 @@ private:
     }
   }
 
-  static void renderTxRxState(uint8_t y, bool isTx) {
+  void renderTxRxState(uint8_t y, bool isTx) {
     if (isTx) {
       if (ctx->tx_state.is_active) {
         PrintMediumEx(0, 21, POS_L, C_FILL, "TX");
@@ -306,7 +300,7 @@ private:
     }
   }
 
-  static void renderChannelName(uint8_t y, uint16_t channel) {
+  void renderChannelName(uint8_t y, uint16_t channel) {
     uint8_t vfoN = RADIO_GetCurrentVFONumber(gRadioState);
     FillRect(0, y - 14, 30, 7, C_FILL);
     PrintSmallEx(15, y - 9, POS_C, C_INVERT, "VFO %u/%u", vfoN + 1,
@@ -324,7 +318,7 @@ private:
     return ((int64_t)(int16_t)reg_6d * 1000LL) / 291LL;
   }
 
-  static void renderStatusLine(void) {
+  void renderStatusLine(void) {
     if (gIsNumNavInput) {
       return;
     }
@@ -337,7 +331,7 @@ private:
     }
   }
 
-  static void renderBandInfo(uint8_t BASE) {
+  void renderBandInfo(uint8_t BASE) {
     if (vfo->mode == MODE_CHANNEL) {
       PrintMediumEx(LCD_XCENTER, BASE - 16, POS_C, C_FILL, "%s", ctx->name);
     } else {
@@ -353,7 +347,7 @@ private:
     }
   }
 
-  static void renderCodes(uint8_t BASE) {
+  void renderCodes(uint8_t BASE) {
     if (ctx->code.type) {
       PrintSmallEx(0, BASE - 6, POS_L, C_FILL, "R%s",
                    RADIO_GetParamValueString(ctx, PARAM_RX_CODE));
@@ -364,7 +358,7 @@ private:
     }
   }
 
-  static void renderExtraInfo(uint8_t BASE) {
+  void renderExtraInfo(uint8_t BASE) {
     uint32_t txF = RADIO_GetParam(ctx, PARAM_TX_FREQUENCY_FACT);
     uint32_t rxF = RADIO_GetParam(ctx, PARAM_FREQUENCY);
     bool isTxFDifferent = (txF != rxF);
@@ -381,7 +375,7 @@ private:
     }
   }
 
-  static void renderLootInfo(void) {
+  void renderLootInfo(void) {
     if (!gLastActiveLoot)
       return;
     char String[16];
@@ -408,27 +402,26 @@ private:
     }
   }
 
-  static void renderMonitorMode(uint8_t BASE) {
+  void renderMonitorMode(uint8_t BASE) {
     SPECTRUM_Y = BASE + 2;
     SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
 
     if (gSettings.showLevelInVFO) {
-      static char *graphMeasurementNames[] = {
-          [GRAPH_RSSI] = "RSSI",
-          [GRAPH_NOISE] = "Noise",
-          [GRAPH_GLITCH] = "Glitch",
-          [GRAPH_SNR] = "SNR",
+      static const char *graphMeasurementNames[] = {
+          "RSSI",
+          "Noise",
+          "Glitch",
+          "SNR",
       };
 
       static const struct {
         uint8_t min;
         uint8_t max;
       } graphRanges[] = {
-          [GRAPH_RSSI] = {RSSI_MIN, RSSI_MAX},
-          [GRAPH_NOISE] = {0, 255},
-          [GRAPH_GLITCH] = {0, 255},
-          [GRAPH_SNR] = {0, 30},
-          [GRAPH_COUNT] = {RSSI_MIN, RSSI_MAX},
+          {RSSI_MIN, RSSI_MAX},
+          {0, 255},
+          {0, 255},
+          {0, 30},
       };
 
       SP_RenderGraph(graphRanges[graphMeasurement].min,

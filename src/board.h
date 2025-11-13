@@ -31,5 +31,6 @@ void BOARD_EEPROM_LoadCalibration(void);
 void BOARD_FactoryReset(bool bIsAll);
 void BOARD_ToggleGreen(bool on);
 void BOARD_ToggleRed(bool on);
+void BOARD_ToggleFlashlight();
 
 #endif

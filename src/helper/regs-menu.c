@@ -1,5 +1,4 @@
 #include "regs-menu.h"
-#include "../apps/apps.h"
 #include "../external/printf/printf.h"
 #include "../helper/menu.h"
 #include "../radio.h"
@@ -60,15 +59,15 @@ static const ParamType paramsBK1080[] = {
 };
 
 static const ParamType *radioParams[] = {
-    [RADIO_BK4819] = paramsBK4819,
-    [RADIO_SI4732] = paramsSI,
-    [RADIO_BK1080] = paramsBK1080,
+    paramsBK4819,
+    paramsBK1080,
+    paramsSI,
 };
 
 static const uint8_t radioParamCount[] = {
-    [RADIO_BK4819] = ARRAY_SIZE(paramsBK4819),
-    [RADIO_SI4732] = ARRAY_SIZE(paramsSI),
-    [RADIO_BK1080] = ARRAY_SIZE(paramsBK1080),
+    ARRAY_SIZE(paramsBK4819),
+    ARRAY_SIZE(paramsBK1080),
+    ARRAY_SIZE(paramsSI),
 };
 
 static void initMenu() {

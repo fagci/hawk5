@@ -26,18 +26,19 @@ static struct {
 } resetState;
 
 static VFO defaultVfos[4] = {
-    {.rxF = 14550000, .meta.type = TYPE_VFO, .gainIndex = AUTO_GAIN_INDEX, .radio = RADIO_BK4819},
-    {.rxF = 43312500, .meta.type = TYPE_VFO, .gainIndex = AUTO_GAIN_INDEX, .radio = RADIO_BK4819},
-    {.rxF = 25355000, .meta.type = TYPE_VFO, .gainIndex = AUTO_GAIN_INDEX, .radio = RADIO_BK4819},
-    {.rxF = 40065000, .meta.type = TYPE_VFO, .gainIndex = AUTO_GAIN_INDEX, .radio = RADIO_BK4819},
+    {.rxF = 14550000},
+    {.rxF = 43312500},
+    {.rxF = 25355000},
+    {.rxF = 40065000},
 };
 
 static void startReset(ResetType type) {
   resetState.type = type;
   resetState.doneBytes = 0;
   resetState.currentItem = 0;
-  resetState.totalBytes = (type == RESET_0xFF) ? SETTINGS_GetEEPROMSize() 
-                                                : resetState.maxChannels * CH_SIZE;
+  resetState.totalBytes = (type == RESET_0xFF)
+                              ? SETTINGS_GetEEPROMSize()
+                              : resetState.maxChannels * CH_SIZE;
 }
 
 static bool processReset(void) {
@@ -82,6 +83,8 @@ static bool processReset(void) {
     vfo.meta.readonly = false;
     vfo.squelch.value = 4;
     vfo.step = STEP_25_0kHz;
+    vfo.gainIndex = AUTO_GAIN_INDEX;
+    vfo.radio = RADIO_BK4819;
     CHANNELS_Save(chIndex, &vfo);
     resetState.doneBytes += CH_SIZE;
     resetState.currentItem++;
@@ -115,7 +118,8 @@ void RESET_Render(void) {
     return;
   }
 
-  uint8_t progress = ConvertDomain(resetState.doneBytes, 0, resetState.totalBytes, 0, 100);
+  uint8_t progress =
+      ConvertDomain(resetState.doneBytes, 0, resetState.totalBytes, 0, 100);
   const uint8_t TOP = 28;
   DrawRect(13, TOP, 102, 9, C_FILL);
   FillRect(14, TOP + 1, progress, 7, C_FILL);

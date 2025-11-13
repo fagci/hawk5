@@ -1,4 +1,4 @@
-#include "vfo1.h"
+#include "vfo1.hpp"
 #include "../dcs.h"
 #include "../driver/gpio.h"
 #include "../driver/uart.h"
@@ -11,6 +11,7 @@
 #include "../inc/dp32g030/gpio.h"
 #include "../radio.h"
 #include "../scheduler.h"
+#include "../test.h"
 #include "../ui/components.h"
 #include "../ui/graphics.h"
 #include "../ui/spectrum.h"

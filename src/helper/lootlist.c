@@ -221,21 +221,27 @@ CH LOOT_ToCh(const Loot *loot) {
   // TODO: automatic params by simple "band plan"
   Band p = BANDS_ByFrequency(loot->f);
   CH ch = {
-      .meta.type = TYPE_CH,
+      .meta = {.type = TYPE_CH},
       .rxF = loot->f,
       .txF = 0,
+      .modulation = p.modulation,
+      .bw = p.bw,
+      .radio = p.radio,
+      .power = p.power,
+      .squelch = p.squelch,
       .code =
           (CodeRXTX){
-              .rx.type = CODE_TYPE_OFF,
-              .tx.type = CODE_TYPE_OFF,
-              .rx.value = 0,
-              .tx.value = 0,
+              .rx =
+                  {
+                      .value = 0,
+                      .type = CODE_TYPE_OFF,
+                  },
+              .tx =
+                  {
+                      .value = 0,
+                      .type = CODE_TYPE_OFF,
+                  },
           },
-      .radio = p.radio,
-      .modulation = p.modulation,
-      .power = p.power,
-      .bw = p.bw,
-      .squelch = p.squelch,
       .gainIndex = p.gainIndex,
   };
 

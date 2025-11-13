@@ -23,10 +23,14 @@ SRC := $(wildcard $(SRC_DIR)/*.c) \
        $(wildcard $(SRC_DIR)/ui/*.c) \
        $(wildcard $(SRC_DIR)/apps/*.c)
 
+SRC_CXX := $(wildcard $(SRC_DIR)/*.cpp)
+SRC_CXX := $(wildcard $(SRC_DIR)/apps/*.cpp)
+
 OBJS := $(OBJ_DIR)/start.o \
         $(OBJ_DIR)/init.o \
         $(OBJ_DIR)/external/printf/printf.o \
-        $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+        $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o) \
+		$(SRC_CXX:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 
 # =============================================================================
 # BSP Configuration
@@ -43,6 +47,7 @@ CC       := $(TOOLCHAIN_PREFIX)gcc
 LD       := $(TOOLCHAIN_PREFIX)gcc
 OBJCOPY  := $(TOOLCHAIN_PREFIX)objcopy
 SIZE     := $(TOOLCHAIN_PREFIX)size
+CXX      := $(TOOLCHAIN_PREFIX)g++
 
 # =============================================================================
 # Compiler Flags
@@ -56,15 +61,34 @@ ASFLAGS  := $(COMMON_FLAGS) -c
 
 # Compiler flags
 CFLAGS   := $(COMMON_FLAGS) $(OPTIMIZATION) \
-            -std=c2x \
-            -Wall -Wextra -Wpedantic \
+            -Wall -Wextra \
             -Wno-missing-field-initializers \
-            -Wno-incompatible-pointer-types \
             -Wno-unused-function -Wno-unused-variable \
             -fno-builtin -fshort-enums \
             -fno-delete-null-pointer-checks \
             -fsingle-precision-constant \
             -finline-functions-called-once \
+            -MMD -MP
+
+# C++ flags
+
+COMMON_FLAGS := -mcpu=cortex-m0 -mthumb -mabi=aapcs
+OPTIMIZATION := -Os -flto=auto -ffunction-sections -fdata-sections
+
+# C++ flags (используем для ВСЕГО)
+CXXFLAGS := $(COMMON_FLAGS) $(OPTIMIZATION) \
+            -std=gnu++20 \
+            -Wno-missing-field-initializers \
+            -Wno-unused-function -Wno-unused-variable \
+            -fno-builtin -fshort-enums \
+            -fno-delete-null-pointer-checks \
+            -fsingle-precision-constant \
+            -finline-functions-called-once \
+            -fno-exceptions \
+            -fno-rtti \
+            -fno-threadsafe-statics \
+            -fno-use-cxa-atexit \
+            -fpermissive \
             -MMD -MP
 
 # Debug/Release specific flags
@@ -89,12 +113,13 @@ INC_DIRS := -I./src/config \
 LDFLAGS  := $(COMMON_FLAGS) $(OPTIMIZATION) \
             -nostartfiles \
             -Tfirmware.ld \
-            --specs=nano.specs \
             -lc -lnosys -lm \
             -Wl,--gc-sections \
             -Wl,--build-id=none \
             -Wl,--print-memory-usage \
             -Wl,-Map=$(OBJ_DIR)/output.map
+
+LDFLAGS += --specs=nano.specs --specs=nosys.specs -lm
 
 # =============================================================================
 # Build Configuration
@@ -140,19 +165,31 @@ $(TARGET).bin: $(TARGET)
 	fi
 
 # Линковка
+
 $(TARGET): $(OBJS) | $(BIN_DIR)
-	@echo "Linking..."
-	$(LD) $(LDFLAGS) $^ -o $@
+	@echo "Linking with g++..."
+	$(CXX) $(LDFLAGS) $^ -o $@
 	@echo ""
 	$(SIZE) $@
 	arm-none-eabi-nm --size-sort -r $(BIN_DIR)/$(PROJECT_NAME) | head -20
 	@echo ""
 
-# Компиляция C файлов
+# Специальные флаги для критичных драйверов
+DRIVER_CXXFLAGS := $(CXXFLAGS) -O1 -fno-strict-aliasing
+
+
+# Компилируем ВСЕ .c файлы через g++ (как C++)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(BSP_HEADERS) $(OBJ_DIR)
 	@mkdir -p $(@D)
-	@echo "CC $<"
-	@$(CC) $(CFLAGS) $(DEFINES) $(INC_DIRS) -c $< -o $@
+	@echo "CXX $< (C as C++)"
+	@$(CXX) $(CXXFLAGS) $(DEFINES) $(INC_DIRS) -c $< -o $@
+
+# Компилируем .cpp файлы через g++
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BSP_HEADERS) $(OBJ_DIR)
+	@mkdir -p $(@D)
+	@echo "CXX $<"
+	@$(CXX) $(CXXFLAGS) $(DEFINES) $(INC_DIRS) -c $< -o $@
+
 
 # Компиляция ассемблерных файлов
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.S | $(OBJ_DIR)

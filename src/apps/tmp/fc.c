@@ -14,9 +14,9 @@ static const uint8_t REQUIRED_FREQUENCY_HITS = 2;
 static const uint8_t FILTER_SWITCH_INTERVAL = REQUIRED_FREQUENCY_HITS;
 
 static const char *FILTER_NAMES[] = {
-    [FILTER_OFF] = "ALL",
-    [FILTER_VHF] = "VHF",
-    [FILTER_UHF] = "UHF",
+    "VHF",
+    "UHF",
+    "ALL",
 };
 static Filter filter = FILTER_VHF;
 

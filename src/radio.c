@@ -33,111 +33,108 @@ RadioState *gRadioState;
 ExtendedVFOContext *vfo;
 VFOContext *ctx;
 
-const char *RADIO_NAMES[3] = {
-    [RADIO_BK4819] = "BK4819",
-    [RADIO_BK1080] = "BK1080",
-    [RADIO_SI4732] = "SI4732",
-};
+// Убедитесь, что порядок соответствует enum'ам!
 
 const char *FILTER_NAMES[4] = {
-    [FILTER_VHF] = "VHF",
-    [FILTER_UHF] = "UHF",
-    [FILTER_OFF] = "Off",
-    [FILTER_AUTO] = "Auto",
+    "VHF",  // FILTER_VHF = 0
+    "UHF",  // FILTER_UHF = 1
+    "Off",  // FILTER_OFF = 2
+    "Auto", // FILTER_AUTO = 3
 };
 
 const char *PARAM_NAMES[] = {
-    [PARAM_FREQUENCY] = "f",                 //
-    [PARAM_STEP] = "Step",                   //
-    [PARAM_POWER] = "Power",                 //
-    [PARAM_TX_OFFSET] = "TX offset",         //
-    [PARAM_TX_OFFSET_DIR] = "TX offset dir", //
-    [PARAM_MODULATION] = "Mod",              //
-    [PARAM_SQUELCH_VALUE] = "SQ",            //
-    [PARAM_SQUELCH_TYPE] = "SQ type",        //
-    [PARAM_VOLUME] = "Volume",               //
-    [PARAM_GAIN] = "Gain",                   //
-    [PARAM_BANDWIDTH] = "BW",                //
-    [PARAM_TX_STATE] = "TX state",           //
-    [PARAM_RADIO] = "Radio",                 //
-    [PARAM_RX_CODE] = "RX code",             //
-    [PARAM_TX_CODE] = "TX code",             //
-    [PARAM_RSSI] = "RSSI",                   //
-    [PARAM_GLITCH] = "Glitch",               //
-    [PARAM_NOISE] = "Noise",                 //
-    [PARAM_SNR] = "SNR",                     //
-    [PARAM_PRECISE_F_CHANGE] = "Precise f",  //
+    "Radio",         // PARAM_RADIO = 0
+    "Precise f",     // PARAM_PRECISE_F_CHANGE = 1
+    "Step",          // PARAM_STEP = 2
+    "Power",         // PARAM_POWER = 3
+    "Mod",           // PARAM_MODULATION = 4
+    "SQ type",       // PARAM_SQUELCH_TYPE = 5
+    "SQ",            // PARAM_SQUELCH_VALUE = 6
+    "Gain",          // PARAM_GAIN = 7
+    "Volume",        // PARAM_VOLUME = 8
+    "BW",            // PARAM_BANDWIDTH = 9
+    "TX offset",     // PARAM_TX_OFFSET = 10
+    "TX offset dir", // PARAM_TX_OFFSET_DIR = 11
+    "TX state",      // PARAM_TX_STATE = 12
+    "TX f",          // PARAM_TX_FREQUENCY = 13
+    "TX f fact",     // PARAM_TX_FREQUENCY_FACT = 14
+    "TX Power",      // PARAM_TX_POWER = 15
+    "TX PA",         // PARAM_TX_POWER_AMPLIFIER = 16
+    "RX code",       // PARAM_RX_CODE = 17
+    "TX code",       // PARAM_TX_CODE = 18
+    "AFC",           // PARAM_AFC = 19
+    "AFC SPD",       // PARAM_AFC_SPD = 20
+    "DEV",           // PARAM_DEV = 21
+    "MIC",           // PARAM_MIC = 22
+    "XTAL",          // PARAM_XTAL = 23
+    "Filter",        // PARAM_FILTER = 24
+    "RSSI",          // PARAM_RSSI = 25
+    "Noise",         // PARAM_NOISE = 26
+    "Glitch",        // PARAM_GLITCH = 27
+    "SNR",           // PARAM_SNR = 28
+    "Frequency",     // PARAM_FREQUENCY = 29
+};
 
-    [PARAM_TX_POWER] = "TX Power",
-    [PARAM_TX_POWER_AMPLIFIER] = "TX PA",
-    [PARAM_TX_FREQUENCY] = "TX f",
-    [PARAM_TX_FREQUENCY_FACT] = "TX f fact",
-
-    [PARAM_AFC] = "AFC",         //
-    [PARAM_AFC_SPD] = "AFC SPD", //
-    [PARAM_DEV] = "DEV",         //
-    [PARAM_MIC] = "MIC",         //
-    [PARAM_XTAL] = "XTAL",       //
-    [PARAM_FILTER] = "Filter",   //
+const char *RADIO_NAMES[3] = {
+    "BK4819",
+    "BK1080",
+    "SI4732",
 };
 
 const char *TX_STATE_NAMES[7] = {
-    [TX_UNKNOWN] = "TX Off",              //
-    [TX_ON] = "TX On",                    //
-    [TX_VOL_HIGH] = "CHARGING",           //
-    [TX_BAT_LOW] = "BAT LOW",             //
-    [TX_DISABLED] = "DISABLED",           //
-    [TX_DISABLED_UPCONVERTER] = "UPCONV", //
-    [TX_POW_OVERDRIVE] = "HIGH POW",      //
+    "TX Off",   //
+    "TX On",    //
+    "CHARGING", //
+    "BAT LOW",  //
+    "DISABLED", //
+    "UPCONV",   //
+    "HIGH POW", //
 };
 
 const char *MOD_NAMES_BK4819[8] = {
-    [MOD_FM] = "FM",   //
-    [MOD_AM] = "AM",   //
-    [MOD_LSB] = "LSB", //
-    [MOD_USB] = "USB", //
-    [MOD_BYP] = "BYP", //
-    [MOD_RAW] = "RAW", //
-    [MOD_WFM] = "WFM", //
+    "FM",  //
+    "AM",  //
+    "LSB", //
+    "USB", //
+    "BYP", //
+    "RAW", //
+    "WFM", //
 };
 
 const char *MOD_NAMES_SI47XX[8] = {
-    [SI47XX_AM] = "AM",
-    [SI47XX_FM] = "FM",
-    [SI47XX_LSB] = "LSB",
-    [SI47XX_USB] = "USB",
+    "FM", "AM", "LSB", "USB", "CW",
 };
 
 const char *BW_NAMES_BK4819[10] = {
-    [BK4819_FILTER_BW_6k] = "U6K",   //
-    [BK4819_FILTER_BW_7k] = "U7K",   //
-    [BK4819_FILTER_BW_9k] = "N9k",   //
-    [BK4819_FILTER_BW_10k] = "N10k", //
-    [BK4819_FILTER_BW_12k] = "W12k", //
-    [BK4819_FILTER_BW_14k] = "W14k", //
-    [BK4819_FILTER_BW_17k] = "W17k", //
-    [BK4819_FILTER_BW_20k] = "W20k", //
-    [BK4819_FILTER_BW_23k] = "W23k", //
-    [BK4819_FILTER_BW_26k] = "W26k", //
+    "U6K",  //
+    "U7K",  //
+    "N9k",  //
+    "N10k", //
+    "W12k", //
+    "W14k", //
+    "W17k", //
+    "W20k", //
+    "W23k", //
+    "W26k", //
 };
 
 const char *BW_NAMES_SI47XX[7] = {
-    [SI47XX_BW_1_8_kHz] = "1.8k", //
-    [SI47XX_BW_1_kHz] = "1k",     //
-    [SI47XX_BW_2_kHz] = "2k",     //
-    [SI47XX_BW_2_5_kHz] = "2.5k", //
-    [SI47XX_BW_3_kHz] = "3k",     //
-    [SI47XX_BW_4_kHz] = "4k",     //
-    [SI47XX_BW_6_kHz] = "6k",     //
+    "6k",   //
+    "4k",   //
+    "3k",   //
+    "2k",   //
+    "1k",   //
+    "1.8k", //
+    "2.5k", //
 };
 
 const char *BW_NAMES_SI47XX_SSB[6] = {
-    [SI47XX_SSB_BW_0_5_kHz] = "0.5k", //
-    [SI47XX_SSB_BW_1_0_kHz] = "1.0k", //
-    [SI47XX_SSB_BW_1_2_kHz] = "1.2k", //
-    [SI47XX_SSB_BW_2_2_kHz] = "2.2k", //
-    [SI47XX_SSB_BW_3_kHz] = "3k",     //
-    [SI47XX_SSB_BW_4_kHz] = "4k",     //
+    "1.2k", //
+    "2.2k", //
+    "3k",   //
+    "4k",   //
+    "0.5k", //
+    "1.0k", //
 };
 
 const char *FLT_BOUND_NAMES[2] = {"240MHz", "280MHz"};
@@ -160,22 +157,23 @@ static const FreqBand bk4819_bands[] = {
         .available_mods = {MOD_FM, MOD_AM, MOD_LSB, MOD_USB},
         .available_bandwidths =
             {
-                BK4819_FILTER_BW_6k,  //  "U 6K"
-                BK4819_FILTER_BW_7k,  //  "U 7K",
-                BK4819_FILTER_BW_9k,  //  "N 9k",
-                BK4819_FILTER_BW_10k, //  "N 10k",
-                BK4819_FILTER_BW_12k, //  "W 12k",
-                BK4819_FILTER_BW_14k, //  "W 14k",
-                BK4819_FILTER_BW_17k, //  "W 17k",
-                BK4819_FILTER_BW_20k, //  "W 20k",
-                BK4819_FILTER_BW_23k, //  "W 23k",
-                BK4819_FILTER_BW_26k, //  "W 26k",
+                BK4819_FILTER_BW_6k,
+                BK4819_FILTER_BW_7k,
+                BK4819_FILTER_BW_9k,
+                BK4819_FILTER_BW_10k,
+                BK4819_FILTER_BW_12k,
+                BK4819_FILTER_BW_14k,
+                BK4819_FILTER_BW_17k,
+                BK4819_FILTER_BW_20k,
+                BK4819_FILTER_BW_23k,
+                BK4819_FILTER_BW_26k,
             },
     },
 };
 
 // Диапазоны для SI4732
 static const FreqBand si4732_bands[] = {
+    // AM band
     {
         .min_freq = SI47XX_F_MIN,
         .max_freq = SI47XX_F_MAX,
@@ -193,6 +191,7 @@ static const FreqBand si4732_bands[] = {
                 SI47XX_BW_6_kHz,
             },
     },
+    // SSB band
     {
         .min_freq = SI47XX_F_MIN,
         .max_freq = SI47XX_F_MAX,
@@ -209,13 +208,15 @@ static const FreqBand si4732_bands[] = {
                 SI47XX_SSB_BW_4_kHz,
             },
     },
+    // FM band
     {
         .min_freq = SI47XX_FM_F_MIN,
         .max_freq = SI47XX_FM_F_MAX,
         .num_available_mods = 1,
         .num_available_bandwidths = 0,
         .available_mods = {SI47XX_FM},
-        .available_bandwidths = {},
+        .available_bandwidths =
+            {0}, // Пустой массив, но C++ требует хотя бы один элемент
     },
 };
 
@@ -1546,7 +1547,7 @@ void RADIO_LoadVFOFromStorage(RadioState *state, uint8_t vfo_index,
   LogC(LOG_C_BG_BLUE, "[RADIO] MEM -> VFO %u", vfo_index + 1);
 
   ExtendedVFOContext *vfo = &state->vfos[vfo_index];
-  vfo->mode = storage->isChMode;
+  vfo->mode = storage->isChMode ? MODE_CHANNEL : MODE_VFO;
   VFOContext *ctx = &vfo->context;
 
   // Set basic parameters
@@ -1850,7 +1851,6 @@ void RADIO_LoadVFOs(RadioState *state) {
     vfoIdx++;
   }
   state->num_vfos = vfoIdx;
-  printf("nm vfos: %u", vfoIdx);
 
   VFOContext *ctx = &state->vfos[state->active_vfo_index].context;
   for (uint8_t p = 0; p < PARAM_COUNT; ++p) {

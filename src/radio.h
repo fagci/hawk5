@@ -28,7 +28,7 @@ extern bool gShowAllRSSI;
 extern bool gMonitorMode;
 
 // Параметры
-typedef const enum {
+typedef enum {
   PARAM_RADIO,
   PARAM_PRECISE_F_CHANGE,
   PARAM_STEP,
@@ -91,10 +91,10 @@ typedef enum {
 typedef struct {
   uint32_t min_freq;
   uint32_t max_freq;
-  uint16_t available_bandwidths[10]; // Доступные полосы (кГц)
-  uint8_t available_mods[5];         // Доступные модуляции
   uint8_t num_available_mods;
   uint8_t num_available_bandwidths;
+  uint8_t available_mods[5];         // Доступные модуляции
+  uint16_t available_bandwidths[10]; // Доступные полосы (кГц)
 } FreqBand;
 
 // Контекст VFO

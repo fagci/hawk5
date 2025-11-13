@@ -14,21 +14,23 @@ Band gCurrentBand;
 
 // to use instead of predefined when we need to keep step, etc
 Band defaultBand = {
-    .meta.readonly = true,
-    .meta.type = TYPE_BAND_DETACHED,
+    .meta =
+        {
+            .type = TYPE_BAND_DETACHED,
+            .readonly = true,
+        },
     .name = "Unknown",
+    .rxF = BK4819_F_MIN,
+    .txF = BK4819_F_MAX,
 
     // .radio = RADIO_BK4819,
     .step = STEP_25_0kHz,
     .bw = BK4819_FILTER_BW_12k,
 
-    .rxF = BK4819_F_MIN,
-    .txF = BK4819_F_MAX,
-
     .squelch =
         {
-            .type = SQUELCH_RSSI_NOISE_GLITCH,
             .value = 4,
+            .type = SQUELCH_RSSI_NOISE_GLITCH,
         },
     .gainIndex = AUTO_GAIN_INDEX,
     // .allowTx = false,
@@ -99,9 +101,9 @@ void BANDS_Load(void) {
     CH ch;
     CHANNELS_Load(chNum, &ch);
     allBands[allBandsSize] = (DBand){
-        .mr = chNum,
         .s = ch.rxF,
         .e = ch.txF,
+        .mr = chNum,
         .step = ch.step,
     };
 

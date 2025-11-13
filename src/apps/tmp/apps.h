@@ -21,13 +21,12 @@ typedef enum {
   APP_CH_CFG,
   APP_SETTINGS,
   APP_VFO1,
-  // APP_GENERATOR,
   APP_ABOUT,
 
   APPS_COUNT,
 } AppType_t;
 
-typedef struct App {
+typedef struct {
   const char *name;
   void (*init)(void);
   void (*update)(void);
@@ -36,20 +35,20 @@ typedef struct App {
   void (*deinit)(void);
   bool needsRadioState;
   // RadioState radioState;
-} App;
+} _App;
 
-extern const App apps[APPS_COUNT];
+extern const _App apps[APPS_COUNT];
 extern const AppType_t appsAvailableToRun[RUN_APPS_COUNT];
 
 extern AppType_t gCurrentApp;
 
 AppType_t APPS_Peek();
-bool APPS_key(KEY_Code_t Key, Key_State_t state);
+/* bool APPS_key(KEY_Code_t Key, Key_State_t state);
 void APPS_init(AppType_t app);
 void APPS_update(void);
 void APPS_render(void);
 void APPS_run(AppType_t app);
 void APPS_runManual(AppType_t app);
-bool APPS_exit(void);
+bool APPS_exit(void); */
 
 #endif /* end of include guard: APPS_H */

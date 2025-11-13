@@ -6,7 +6,7 @@
 #include "gpio.h"
 #include "systick.h"
 
-static inline void i2c_delay_short(void) {
+static void i2c_delay_short(void) {
   __asm volatile("nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
@@ -16,7 +16,7 @@ static inline void i2c_delay_short(void) {
   // TIMER_DelayTicks(2);
 }
 
-static inline void i2c_delay_long(void) {
+static void i2c_delay_long(void) {
   __asm volatile("nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
                  "nop\n nop\n nop\n nop\n nop\n"
@@ -36,49 +36,41 @@ static inline void i2c_delay_long(void) {
 /* === Управление состоянием SDA === */
 
 /* SDA -> Output (для записи) */
-static inline void sda_out(void) {
+static void sda_out(void) {
   PORTCON_PORTA_IE &= ~PORTCON_PORTA_IE_A11_MASK;
   PORTCON_PORTA_OD |= PORTCON_PORTA_OD_A11_BITS_ENABLE;
   GPIOA->DIR |= GPIO_DIR_11_BITS_OUTPUT;
 }
 
 /* SDA -> Input (для чтения) */
-static inline void sda_in(void) {
+static void sda_in(void) {
   GPIO_SetBit(&GPIOA->DATA, GPIOA_PIN_I2C_SDA); // Отпускаем линию
   PORTCON_PORTA_IE |= PORTCON_PORTA_IE_A11_BITS_ENABLE;
   GPIOA->DIR &= ~GPIO_DIR_11_MASK;
 }
 
 /* Установить SDA = 0 */
-static inline void sda_lo(void) {
-  GPIO_ClearBit(&GPIOA->DATA, GPIOA_PIN_I2C_SDA);
-}
+static void sda_lo(void) { GPIO_ClearBit(&GPIOA->DATA, GPIOA_PIN_I2C_SDA); }
 
 /* Установить SDA = 1 */
-static inline void sda_hi(void) {
-  GPIO_SetBit(&GPIOA->DATA, GPIOA_PIN_I2C_SDA);
-}
+static void sda_hi(void) { GPIO_SetBit(&GPIOA->DATA, GPIOA_PIN_I2C_SDA); }
 
 /* Прочитать SDA */
-static inline bool sda_read(void) {
+static bool sda_read(void) {
   return GPIO_CheckBit(&GPIOA->DATA, GPIOA_PIN_I2C_SDA);
 }
 
-static inline bool scl_read(void) {
+static bool scl_read(void) {
   return GPIO_CheckBit(&GPIOA->DATA, GPIOA_PIN_I2C_SCL);
 }
 
 /* === Управление SCL === */
 
-static inline void scl_lo(void) {
-  GPIO_ClearBit(&GPIOA->DATA, GPIOA_PIN_I2C_SCL);
-}
+static void scl_lo(void) { GPIO_ClearBit(&GPIOA->DATA, GPIOA_PIN_I2C_SCL); }
 
-static inline void scl_hi(void) {
-  GPIO_SetBit(&GPIOA->DATA, GPIOA_PIN_I2C_SCL);
-}
+static void scl_hi(void) { GPIO_SetBit(&GPIOA->DATA, GPIOA_PIN_I2C_SCL); }
 
-static inline bool scl_hi_wait(void) {
+static bool scl_hi_wait(void) {
   scl_hi();
 
   uint32_t timeout = 10000;

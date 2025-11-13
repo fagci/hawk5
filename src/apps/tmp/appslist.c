@@ -1,7 +1,7 @@
 #include "appslist.h"
 #include "../helper/channels.h"
 #include "../helper/menu.h"
-#include "apps.h"
+#include "apps_compat.hpp"
 #include "chlist.h"
 #include <sys/types.h>
 
@@ -15,7 +15,7 @@ static bool run(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
     if (item->setting == APP_CH_LIST) {
       gChListFilter = TYPE_FILTER_CH;
     }
-    APPS_runManual(item->setting);
+    APPS_run(item->setting);
     return true;
   }
   return false;

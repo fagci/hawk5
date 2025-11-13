@@ -1,5 +1,4 @@
 #include "scan.h"
-#include "../apps/apps.h"
 #include "../driver/st7565.h"
 #include "../driver/system.h"
 #include "../driver/systick.h"
@@ -34,17 +33,17 @@ typedef struct {
 static ScanState scan = {
     .mode = SCAN_MODE_SINGLE,
     .scanDelayUs = 1200,
-    .squelchLevel = 0,
-    .thinking = false,
-    .wasThinkingEarlier = false,
-    .lastListenState = false,
-    .isMultiband = false,
     .stayAtTimeout = 0,
     .scanListenTimeout = 0,
     .scanCycles = 0,
     .lastCpsTime = 0,
     .currentCps = 0,
     .cpsUpdateInterval = 1000,
+    .squelchLevel = 0,
+    .thinking = false,
+    .wasThinkingEarlier = false,
+    .lastListenState = false,
+    .isMultiband = false,
 };
 
 // =============================
@@ -164,10 +163,10 @@ static void NextWithTimeout() {
 // API функций
 // =============================
 const char *SCAN_MODE_NAMES[] = {
-    [SCAN_MODE_SINGLE] = "VFO",
-    [SCAN_MODE_FREQUENCY] = "Scan",
-    [SCAN_MODE_CHANNEL] = "CH Scan",
-    [SCAN_MODE_ANALYSER] = "Band scan",
+    "VFO",
+    "CH Scan",
+    "Scan",
+    "Band scan",
 };
 // API для установки режима
 void SCAN_SetMode(ScanMode mode) {

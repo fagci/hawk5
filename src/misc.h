@@ -22,7 +22,15 @@ unsigned int SQRT16(unsigned int value);
 #define KHZ 100
 #define MHZ 100000
 
-void _putchar(char c);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void _putchar(char character);
+#ifdef __cplusplus
+}
+#endif
+
 void ScanlistStr(uint32_t sl, char *buf);
 void mhzToS(char *buf, uint32_t f);
 

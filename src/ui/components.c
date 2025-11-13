@@ -1,5 +1,4 @@
 #include "components.h"
-#include "../apps/apps.h"
 #include "../driver/st7565.h"
 #include "../helper/channels.h"
 #include "../helper/measurements.h"

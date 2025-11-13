@@ -82,8 +82,10 @@ void BK1080_WriteRegister(BK1080_Register_t Register, uint16_t Value) {
   I2C_Start();
   I2C_Write(0x80);
   I2C_Write((Register << 1) | I2C_WRITE);
-  Value = ((Value >> 8) & 0xFF) | ((Value & 0xFF) << 8);
-  I2C_WriteBuffer(&Value, sizeof(Value));
+  /* Value = ((Value >> 8) & 0xFF) | ((Value & 0xFF) << 8);
+  I2C_WriteBuffer(&Value, sizeof(Value)); */
+  uint8_t buf[2] = {(Value >> 8) & 0xFF, Value & 0xFF}; // MSB first
+  I2C_WriteBuffer(buf, sizeof(buf));
   I2C_Stop();
 }
 

@@ -4,228 +4,270 @@
 #include "RadioCommon.hpp"
 #include "si473x.h"
 
+// ============================================================================
+// SI4732 DRIVER
+// ============================================================================
+
 class SI4732Driver : public IRadioDriver {
 public:
-  SI4732Driver() : IRadioDriver() {
-    // ====================================================================
-    // FREQUENCY
-    // ====================================================================
-    params_[(uint8_t)ParamId::Frequency] = Param<std::function<void(uint32_t)>>(
-        "Freq", 10000000,
-        [this](uint32_t v) {
-          if (powerState_ > 0) {
-            SI47XX_TuneTo(v);
-          }
+  SI4732Driver()
+      : IRadioDriver(), si4732mode_(SI47XX_FM), applyingFrequency_(false) {
 
-          // Auto mode switching based on frequency
+    // ====================================================================
+    // FREQUENCY - с автопереключением режима
+    // ====================================================================
+    params_[(uint8_t)ParamId::Frequency] = Param<uint32_t>(
+        10000000, this,
+        [](void *ctx) -> uint32_t { return 15000; },    // 150 kHz min
+        [](void *ctx) -> uint32_t { return 10800000; }, // 108 MHz max
+        [](void *ctx, uint32_t v) {                     // apply
+          auto *driver = static_cast<SI4732Driver *>(ctx);
+          if (driver->powerState_ == 0 || driver->applyingFrequency_)
+            return;
+
+          driver->applyingFrequency_ = true; // защита от рекурсии
+
+          SI47XX_TuneTo(v);
+
+          // Автоматическое переключение режима на основе частоты
           SI47XX_MODE newMode = SI47XX_FM;
+          auto &modParam = driver->getParam(ParamId::Modulation);
+
           if (v < 3000000) {
-            // < 30 MHz - AM or SSB
-            uint32_t mod = params_[(uint8_t)ParamId::Modulation].get();
-            if (mod == MOD_USB)
+            // < 30 MHz - AM или SSB
+            uint32_t mod = modParam.get();
+            if (mod == (uint32_t)ModType::USB)
               newMode = SI47XX_USB;
-            else if (mod == MOD_LSB)
+            else if (mod == (uint32_t)ModType::LSB)
               newMode = SI47XX_LSB;
             else
               newMode = SI47XX_AM;
           } else if (v < 7600000) {
+            // 30-76 MHz - AM
             newMode = SI47XX_AM;
+            modParam.set((uint32_t)ModType::AM);
           } else {
-            // FM broadcast
+            // >= 76 MHz - FM broadcast
             newMode = SI47XX_FM;
-            params_[(uint8_t)ParamId::Modulation].set(MOD_WFM);
+            modParam.set((uint32_t)ModType::WFM);
           }
 
-          if (si4732mode != newMode) {
+          if (driver->si4732mode_ != newMode) {
             SI47XX_SwitchMode(newMode);
+            driver->si4732mode_ = newMode;
+          }
+
+          driver->applyingFrequency_ = false;
+        },
+        PARAM_PERSIST);
+
+    // ====================================================================
+    // MODULATION - зависит от частоты
+    // ====================================================================
+    params_[(uint8_t)ParamId::Modulation] = Param<uint32_t>(
+        (uint32_t)ModType::FM, this, [](void *ctx) -> uint32_t { return 0; },
+        [](void *ctx) -> uint32_t {
+          auto *driver = static_cast<SI4732Driver *>(ctx);
+          uint32_t freq = driver->getParam(ParamId::Frequency).get();
+          if (freq >= 7600000)
+            return (uint32_t)ModType::WFM; // только FM
+          if (freq >= 3000000)
+            return (uint32_t)ModType::AM; // только AM
+          return (uint32_t)ModType::LSB;  // AM/USB/LSB доступны
+        },
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<SI4732Driver *>(ctx);
+          if (driver->powerState_ == 0 || driver->applyingFrequency_)
+            return;
+
+          uint32_t freq = driver->getParam(ParamId::Frequency).get();
+          SI47XX_MODE newMode = SI47XX_FM;
+
+          if (v == (uint32_t)ModType::WFM && freq >= 7600000) {
+            newMode = SI47XX_FM;
+          } else if (v == (uint32_t)ModType::AM && freq < 3000000) {
+            newMode = SI47XX_AM;
+          } else if (v == (uint32_t)ModType::USB && freq < 3000000) {
+            newMode = SI47XX_USB;
+          } else if (v == (uint32_t)ModType::LSB && freq < 3000000) {
+            newMode = SI47XX_LSB;
+          }
+
+          if (driver->si4732mode_ != newMode) {
+            SI47XX_SwitchMode(newMode);
+            driver->si4732mode_ = newMode;
           }
         },
-        []() { return 15000u; },    // 150 kHz min
-        []() { return 10800000u; }, // 108 MHz max
-        PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
+        PARAM_PERSIST);
 
     // ====================================================================
-    // MODULATION
+    // BANDWIDTH - зависит от режима (SSB или AM/FM)
     // ====================================================================
-    params_[(uint8_t)ParamId::Modulation] =
-        Param<std::function<void(uint32_t)>>(
-            "Mod", MOD_FM,
-            [this](uint32_t v) {
-              uint32_t freq = params_[(uint8_t)ParamId::Frequency].get();
-              SI47XX_MODE newMode = SI47XX_FM;
+    params_[(uint8_t)ParamId::Bandwidth] = Param<uint32_t>(
+        1, this, [](void *ctx) -> uint32_t { return 0; },
+        [](void *ctx) -> uint32_t { return SI47XX_IsSSB() ? 5 : 6; },
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<SI4732Driver *>(ctx);
+          if (driver->powerState_ == 0)
+            return;
 
-              if (v == MOD_WFM && freq >= 7600000) {
-                newMode = SI47XX_FM;
-              } else if (v == MOD_AM && freq < 3000000) {
-                newMode = SI47XX_AM;
-              } else if (v == MOD_USB && freq < 3000000) {
-                newMode = SI47XX_USB;
-              } else if (v == MOD_LSB && freq < 3000000) {
-                newMode = SI47XX_LSB;
-              }
-
-              if (si4732mode != newMode && powerState_ > 0) {
-                SI47XX_SwitchMode(newMode);
-              }
-            },
-            []() { return 0u; },
-            [this]() -> uint32_t {
-              uint32_t freq = params_[(uint8_t)ParamId::Frequency].get();
-              if (freq >= 7600000)
-                return MOD_WFM; // FM only
-              if (freq >= 3000000)
-                return MOD_AM; // AM only
-              return MOD_LSB;  // AM/USB/LSB
-            },
-            PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
-
-    // ====================================================================
-    // BANDWIDTH
-    // ====================================================================
-    params_[(uint8_t)ParamId::Bandwidth] = Param<std::function<void(uint32_t)>>(
-        "BW", 1,
-        [this](uint32_t v) {
-          if (powerState_ > 0) {
-            if (SI47XX_IsSSB()) {
-              SI47XX_SetSsbBandwidth((SI47XX_SsbFilterBW)v);
-            } else {
-              SI47XX_SetBandwidth((SI47XX_FilterBW)v, v > 3);
-            }
+          if (SI47XX_IsSSB()) {
+            SI47XX_SetSsbBandwidth((SI47XX_SsbFilterBW)v);
+          } else {
+            SI47XX_SetBandwidth((SI47XX_FilterBW)v, v > 3);
           }
         },
-        []() { return 0u; },
-        [this]() -> uint32_t { return SI47XX_IsSSB() ? 5u : 6u; },
-        PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
+        PARAM_PERSIST);
 
     // ====================================================================
     // GAIN (AGC Index)
     // ====================================================================
-    params_[(uint8_t)ParamId::Gain] = Param<std::function<void(uint32_t)>>(
-        "Gain", 0,
-        [this](uint32_t v) {
-          if (powerState_ > 0) {
-            SI47XX_SetAutomaticGainControl(v > 0 ? 1 : 0, v);
-          }
+    params_[(uint8_t)ParamId::Gain] = Param<uint32_t>(
+        0, 0, 37, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<SI4732Driver *>(ctx);
+          if (driver->powerState_ == 0)
+            return;
+          SI47XX_SetAutomaticGainControl(v > 0 ? 1 : 0, v);
         },
-        []() { return 0u; }, []() { return 37u; },
-        PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
+        PARAM_PERSIST);
 
     // ====================================================================
     // VOLUME
     // ====================================================================
-    params_[(uint8_t)ParamId::Volume] = Param<std::function<void(uint32_t)>>(
-        "Vol", 32,
-        [this](uint32_t v) {
-          if (powerState_ > 0) {
-            SI47XX_SetVolume(v);
-          }
+    params_[(uint8_t)ParamId::Volume] = Param<uint32_t>(
+        32, 0, 63, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<SI4732Driver *>(ctx);
+          if (driver->powerState_ == 0)
+            return;
+          SI47XX_SetVolume(v);
         },
-        0, 63, PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
-
-    params_[(uint8_t)ParamId::Squelch] = Param<std::function<void(uint32_t)>>(
-        "SQL", 10,
-        [this](uint32_t v) {
-          if (powerState_ > 0) {
-            if (si4732mode == SI47XX_FM) {
-              SI47XX_SetSeekFmRssiThreshold(v);
-            } else {
-              SI47XX_SetSeekAmRssiThreshold(v);
-            }
-          }
-        },
-        0, 127, PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
-
-    params_[(uint8_t)ParamId::Step] = Param<std::function<void(uint32_t)>>(
-        nullptr, 10000, [](uint32_t) {}, 1000, 100000,
-        PARAM_READABLE | PARAM_WRITABLE);
+        PARAM_PERSIST);
 
     // ====================================================================
-    // MEASUREMENTS
+    // SQUELCH - зависит от режима (FM или AM)
     // ====================================================================
-    params_[(uint8_t)ParamId::RSSI] = Param<std::function<void(uint32_t)>>(
-        "RSSI", 0, [](uint32_t) {}, 0, 127, PARAM_READABLE);
+    params_[(uint8_t)ParamId::Squelch] = Param<uint32_t>(
+        10, 0, 127, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<SI4732Driver *>(ctx);
+          if (driver->powerState_ == 0)
+            return;
 
-    params_[(uint8_t)ParamId::SNR] = Param<std::function<void(uint32_t)>>(
-        "SNR", 0, [](uint32_t) {}, 0, 127, PARAM_READABLE);
+          if (driver->si4732mode_ == SI47XX_FM) {
+            SI47XX_SetSeekFmRssiThreshold(v);
+          } else {
+            SI47XX_SetSeekAmRssiThreshold(v);
+          }
+        },
+        PARAM_PERSIST);
 
+    // ====================================================================
+    // STEP
+    // ====================================================================
+    params_[(uint8_t)ParamId::Step] =
+        Param<uint32_t>(10000, 1000, 100000, nullptr, nullptr, PARAM_PERSIST);
+
+    // ====================================================================
+    // READ-ONLY PARAMETERS (измерения)
+    // ====================================================================
+    params_[(uint8_t)ParamId::RSSI] =
+        Param<uint32_t>(0, 0, 127, PARAM_READONLY);
+    params_[(uint8_t)ParamId::SNR] = Param<uint32_t>(0, 0, 127, PARAM_READONLY);
     params_[(uint8_t)ParamId::SquelchOpen] =
-        Param<std::function<void(uint32_t)>>(
-            nullptr, 0, [](uint32_t) {}, 0, 1, PARAM_READABLE);
+        Param<uint32_t>(0, 0, 1, PARAM_READONLY);
 
     // ====================================================================
     // STATE
     // ====================================================================
-    params_[(uint8_t)ParamId::RxMode] = Param<std::function<void(uint32_t)>>(
-        nullptr, 0,
-        [this](uint32_t v) {
-          if (v && powerState_ == 0) {
-            params_[(uint8_t)ParamId::PowerOn].set(1);
+    params_[(uint8_t)ParamId::RxMode] = Param<uint32_t>(
+        0, 0, 1, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<SI4732Driver *>(ctx);
+          if (v && driver->powerState_ == 0) {
+            driver->getParam(ParamId::PowerOn).set(1);
           }
         },
-        0, 1, PARAM_READABLE | PARAM_WRITABLE);
+        0);
 
-    params_[(uint8_t)ParamId::Mute] = Param<std::function<void(uint32_t)>>(
-        nullptr, 0,
-        [this](uint32_t v) {
-          if (powerState_ > 0) {
-            SI47XX_SetVolume(v ? 0 : params_[(uint8_t)ParamId::Volume].get());
-          }
+    params_[(uint8_t)ParamId::Mute] = Param<uint32_t>(
+        0, 0, 1, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<SI4732Driver *>(ctx);
+          if (driver->powerState_ == 0)
+            return;
+
+          uint32_t vol = v ? 0 : driver->getParam(ParamId::Volume).get();
+          SI47XX_SetVolume(vol);
         },
-        0, 1, PARAM_READABLE | PARAM_WRITABLE);
+        0);
 
     // ====================================================================
     // ACTIONS
     // ====================================================================
-    params_[(uint8_t)ParamId::PowerOn] = Param<std::function<void(uint32_t)>>(
-        nullptr, 0,
-        [this](uint32_t) {
-          if (powerState_ == 0) {
-            if (SI47XX_IsSSB()) {
-              SI47XX_PatchPowerUp();
-            } else {
-              SI47XX_PowerUp();
-            }
-            powerState_ = 1;
+    params_[(uint8_t)ParamId::PowerOn] = Param<uint32_t>(
+        0, 0, 1, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<SI4732Driver *>(ctx);
+          if (v && driver->powerState_ == 0) {
+            driver->powerOn();
           }
         },
-        0, 0, PARAM_ACTION);
+        PARAM_ACTION);
 
-    params_[(uint8_t)ParamId::PowerOff] = Param<std::function<void(uint32_t)>>(
-        nullptr, 0,
-        [this](uint32_t) {
-          if (powerState_ > 0) {
-            SI47XX_PowerDown();
-            powerState_ = 0;
+    params_[(uint8_t)ParamId::PowerOff] = Param<uint32_t>(
+        0, 0, 1, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<SI4732Driver *>(ctx);
+          if (v && driver->powerState_ > 0) {
+            driver->powerOff();
           }
         },
-        0, 0, PARAM_ACTION);
+        PARAM_ACTION);
   }
 
   RadioType getRadioType() const override { return RadioType::SI4732; }
   const char *getRadioName() const override { return "SI4732"; }
 
-  ParamProxy<std::function<void(uint32_t)>> operator[](ParamId id) override {
-    uint8_t idx = (uint8_t)id;
+  void powerOn() {
+    if (powerState_ > 0)
+      return;
 
-    // Update measurements
-    if (id == ParamId::RSSI || id == ParamId::SNR ||
-        id == ParamId::SquelchOpen) {
-      RSQ_GET();
-      params_[(uint8_t)ParamId::RSSI].set(rsqStatus.resp.RSSI);
-      params_[(uint8_t)ParamId::SNR].set(rsqStatus.resp.SNR);
-      params_[(uint8_t)ParamId::SquelchOpen].set(rsqStatus.resp.SMUTE ? 0 : 1);
+    if (SI47XX_IsSSB()) {
+      SI47XX_PatchPowerUp();
+    } else {
+      SI47XX_PowerUp();
     }
 
-    return params_[idx].proxy();
+    powerState_ = 1;
+
+    // Применяем все параметры после включения
+    getParam(ParamId::Frequency).set(getParam(ParamId::Frequency).get(), true);
+    getParam(ParamId::Volume).set(getParam(ParamId::Volume).get(), true);
+    getParam(ParamId::Gain).set(getParam(ParamId::Gain).get(), true);
+    getParam(ParamId::Squelch).set(getParam(ParamId::Squelch).get(), true);
   }
 
-  bool isDirty() const override {
-    for (uint8_t i = 0; i < (uint8_t)ParamId::Count; ++i) {
-      if (params_[i].isDirty() && (params_[i].flags() & PARAM_PERSIST)) {
-        return true;
-      }
-    }
-    return false;
+  void powerOff() {
+    if (powerState_ == 0)
+      return;
+    SI47XX_PowerDown();
+    powerState_ = 0;
   }
 
+  // Обновление read-only параметров
+  void updateMeasurements() {
+    if (powerState_ == 0)
+      return;
+
+    RSQ_GET();
+    getParam(ParamId::RSSI).set(rsqStatus.resp.RSSI, true);
+    getParam(ParamId::SNR).set(rsqStatus.resp.SNR, true);
+    getParam(ParamId::SquelchOpen).set(rsqStatus.resp.SMUTE ? 0 : 1, true);
+  }
+
+private:
+  SI47XX_MODE si4732mode_;
+  bool applyingFrequency_; // защита от циклических зависимостей
 };

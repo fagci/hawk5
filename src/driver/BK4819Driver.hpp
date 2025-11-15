@@ -5,222 +5,217 @@
 #include "bk1080.h"
 #include "bk4819-regs.h"
 #include "bk4819.h"
-#include <cstring>
+#include "uart.h"
+
+// ============================================================================
+// BK4819 DRIVER
+// ============================================================================
 
 class BK4819Driver : public IRadioDriver {
 public:
-  BK4819Driver() : IRadioDriver() {
+  BK4819Driver() : IRadioDriver(), applyingFrequency_(false) {
+
     // ====================================================================
     // FREQUENCY - контекстно-зависимые границы
     // ====================================================================
-    params_[(uint8_t)ParamId::Frequency] = Param<std::function<void(uint32_t)>>(
-        "Freq", 145500000,
-        [this](uint32_t v) {
-          if (powerState_ > 0) {
-            BK4819_TuneTo(v, false);
-            BK4819_SelectFilterEx((v < SETTINGS_GetFilterBound()) ? FILTER_VHF
-                                                                  : FILTER_UHF);
-          }
+    params_[(uint8_t)ParamId::Frequency] = Param<uint32_t>(
+        145500000, this, [](void *ctx) -> uint32_t { return 5000; }, // getMin
+        [](void *ctx) -> uint32_t { return 130000000; },             // getMax
+        [](void *ctx, uint32_t v) {                                  // apply
+          auto *driver = static_cast<BK4819Driver *>(ctx);
+          if (driver->powerState_ == 0 || driver->applyingFrequency_)
+            return;
+
+          driver->applyingFrequency_ = true; // защита от рекурсии
+
+          BK4819_TuneTo(v, false);
+          BK4819_SelectFilterEx((v < SETTINGS_GetFilterBound()) ? FILTER_VHF
+                                                                : FILTER_UHF);
 
           // АВТО-ПЕРЕКЛЮЧЕНИЕ МОДУЛЯЦИИ
-          // FM broadcast диапазон: 88-108 МГц
+          auto &modParam = driver->getParam(ParamId::Modulation);
+
           if (v >= 8800000 && v <= 10800000) {
-            params_[(uint8_t)ParamId::Modulation].set(MOD_WFM);
-          }
-          // VHF/UHF - FM по умолчанию
-          else if (v >= 13000000) {
-            if (params_[(uint8_t)ParamId::Modulation].get() == MOD_WFM) {
-              params_[(uint8_t)ParamId::Modulation].set(MOD_FM);
+            // FM broadcast диапазон: 88-108 МГц
+            modParam.set((uint32_t)ModType::WFM);
+          } else if (v >= 13000000) {
+            // VHF/UHF - FM по умолчанию
+            if (modParam.get() == (uint32_t)ModType::WFM) {
+              modParam.set((uint32_t)ModType::FM);
+            }
+          } else {
+            // КВ - AM по умолчанию
+            if (modParam.get() == (uint32_t)ModType::WFM ||
+                modParam.get() == (uint32_t)ModType::FM) {
+              modParam.set((uint32_t)ModType::AM);
             }
           }
-          // КВ - AM по умолчанию
-          else if (v < 3000000) {
-            if (params_[(uint8_t)ParamId::Modulation].get() == MOD_WFM ||
-                params_[(uint8_t)ParamId::Modulation].get() == MOD_FM) {
-              params_[(uint8_t)ParamId::Modulation].set(MOD_AM);
-            }
-          }
+
+          driver->applyingFrequency_ = false;
         },
-        []() { return BK4819_F_MIN; }, // min - статический
-        []() { return BK4819_F_MAX; }, // max - статический
-        PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
+        PARAM_PERSIST);
 
     // ====================================================================
-    // MODULATION - контекстно-зависимые границы
+    // MODULATION
     // ====================================================================
     params_[(uint8_t)ParamId::Modulation] =
-        Param<std::function<void(uint32_t)>>(
-            "Mod", MOD_FM,
-            [this](uint32_t v) {
-              if (powerState_ > 0)
-                BK4819_SetModulation((ModulationType)v);
-            },
-            // min - всегда 0
-            []() { return 0u; },
-            // max - зависит от частоты!
-            [this]() -> uint32_t {
-              uint32_t freq = params_[(uint8_t)ParamId::Frequency].get();
-
-              // FM broadcast: только WFM
-              if (freq >= 8800000 && freq <= 10800000) {
-                return MOD_WFM; // min=max=WFM → только одна модуляция
-              }
-              // VHF/UHF: FM, AM, BYP, RAW
-              else if (freq >= 13000000) {
-                return MOD_RAW;
-              }
-              // КВ: все кроме WFM
-              else {
-                return MOD_RAW;
-              }
-            },
-            PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
+        Param<uint32_t>((uint32_t)ModType::FM, 0, 6, this,
+                        [](void *ctx, uint32_t v) {
+                          auto *driver = static_cast<BK4819Driver *>(ctx);
+                          if (driver->powerState_ == 0)
+                            return;
+                          BK4819_SetModulation((ModulationType)v);
+                        },
+                        PARAM_PERSIST);
 
     // ====================================================================
-    // BANDWIDTH - контекстно-зависимый
+    // BANDWIDTH
     // ====================================================================
-    params_[(uint8_t)ParamId::Bandwidth] = Param<std::function<void(uint32_t)>>(
-        "BW", 1,
-        [this](uint32_t v) {
-          if (powerState_ > 0)
-            BK4819_SetFilterBandwidth((BK4819_FilterBandwidth_t)v);
+    params_[(uint8_t)ParamId::Bandwidth] = Param<uint32_t>(
+        BK4819_FILTER_BW_23k, BK4819_FILTER_BW_12k, BK4819_FILTER_BW_6k, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<BK4819Driver *>(ctx);
+          if (driver->powerState_ == 0)
+            return;
+          BK4819_SetFilterBandwidth((BK4819_FilterBandwidth_t)v);
         },
-        []() { return 0u; },
-        [this]() -> uint32_t {
-          uint32_t mod = params_[(uint8_t)ParamId::Modulation].get();
-          // WFM - широкий диапазон полос
-          if (mod == MOD_WFM)
-            return 7;
-          // Узкие режимы - ограниченный выбор
-          if (mod == MOD_USB || mod == MOD_LSB)
-            return 3;
-          return 7;
-        },
-        PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
+        PARAM_PERSIST);
 
     // ====================================================================
-    // GAIN - контекстно-зависимый
+    // GAIN (LNA+PGA) - зависит от частоты
     // ====================================================================
-    params_[(uint8_t)ParamId::Gain] = Param<std::function<void(uint32_t)>>(
-        "Gain", 16,
-        [this](uint32_t v) {
-          if (powerState_ > 0) {
-            BK4819_SetAGC(params_[(uint8_t)ParamId::Modulation].get() != MOD_AM,
-                          v);
-          }
+    params_[(uint8_t)ParamId::Gain] = Param<uint32_t>(
+        34, this, [](void *ctx) -> uint32_t { return 0; },
+        [](void *ctx) -> uint32_t {
+          auto *driver = static_cast<BK4819Driver *>(ctx);
+          uint32_t freq = driver->getParam(ParamId::Frequency).get();
+          return (freq < SETTINGS_GetFilterBound()) ? 72 : 78;
         },
-        // min - зависит от модуляции
-        [this]() -> uint32_t {
-          uint32_t mod = params_[(uint8_t)ParamId::Modulation].get();
-          // WFM - минимум выше для защиты от перегрузки
-          if (mod == MOD_WFM)
-            return 8;
-          return 0;
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<BK4819Driver *>(ctx);
+          if (driver->powerState_ == 0)
+            return;
+
+          uint32_t freq = driver->getParam(ParamId::Frequency).get();
+          uint8_t lna = (v / 24);
+          uint8_t pga =
+              (freq < SETTINGS_GetFilterBound()) ? (v % 24) / 3 : (v % 24) / 6;
+          BK4819_WriteRegister((BK4819_REGISTER_t)0x13,
+                               (lna << 8) | (pga << 0));
         },
-        []() { return 31u; }, PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
+        PARAM_PERSIST);
 
-    params_[(uint8_t)ParamId::Squelch] = Param<std::function<void(uint32_t)>>(
-        "SQL", 4,
-        [this](uint32_t v) {
-          if (powerState_ > 0)
-            BK4819_Squelch(v, 100, 200);
+    // ====================================================================
+    // SQUELCH
+    // ====================================================================
+    params_[(uint8_t)ParamId::Squelch] = Param<uint32_t>(
+        3, 0, 9, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<BK4819Driver *>(ctx);
+          if (driver->powerState_ == 0)
+            return;
+          BK4819_Squelch(v, 0, 0);
         },
-        0, 9, PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
+        PARAM_PERSIST);
 
-    params_[(uint8_t)ParamId::Volume] = Param<std::function<void(uint32_t)>>(
-        "Vol", 8,
-        [this](uint32_t v) {
-          if (powerState_ > 0)
-            BK4819_SetRegValue(RS_AF_RX_GAIN, v);
+    // ====================================================================
+    // STEP
+    // ====================================================================
+    params_[(uint8_t)ParamId::Step] =
+        Param<uint32_t>(1250, 125, 10000000, nullptr, nullptr, PARAM_PERSIST);
+
+    // ====================================================================
+    // VOLUME
+    // ====================================================================
+    params_[(uint8_t)ParamId::Volume] = Param<uint32_t>(
+        8, 0, 15, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<BK4819Driver *>(ctx);
+          if (driver->powerState_ == 0)
+            return;
+          BK4819_WriteRegister((BK4819_REGISTER_t)0x48, (v & 0x0F) | 0xB040);
         },
-        0, 15, PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
+        PARAM_PERSIST);
 
-    params_[(uint8_t)ParamId::Step] = Param<std::function<void(uint32_t)>>(
-        nullptr, 12500, [](uint32_t) {}, 0, 1000000,
-        PARAM_READABLE | PARAM_WRITABLE);
-
-    params_[(uint8_t)ParamId::PowerOn] = Param<std::function<void(uint32_t)>>(
-        nullptr, 0,
-        [this](uint32_t on) {
-          (on ? BK4819_Init : BK4819_Idle)();
-          powerState_ = on;
-        },
-        0, 1, PARAM_READABLE | PARAM_WRITABLE);
-
-    params_[(uint8_t)ParamId::RxMode] = Param<std::function<void(uint32_t)>>(
-        nullptr, 0,
-        [this](uint32_t v) {
-          if (v) {
-            // Включаем приём
-            if (powerState_ == 0) {
-              params_[(uint8_t)ParamId::PowerOn].set(1);
-            }
-            BK4819_RX_TurnOn();
-            powerState_ = 1;
-
-            // ПРИМЕНЯЕМ ВСЕ НАСТРОЙКИ после включения
-            applyToHardware();
-          } else {
-            BK4819_Idle();
-          }
-        },
-        0, 1, PARAM_READABLE | PARAM_WRITABLE);
-
-    // READ ONLY PARAMS
-    // RSSI - только чтение
-    params_[(uint8_t)ParamId::RSSI] = Param<std::function<void(uint32_t)>>(
-        "RSSI", // Имя
-        0,      // Начальное значение
-        [](uint32_t) {}, // Пустая лямбда apply (ничего не делает)
-        0,               // min
-        65535,         // max
-        PARAM_READABLE // Только READABLE, без WRITABLE!
-    );
-
-    // Noise - только чтение
-    params_[(uint8_t)ParamId::Noise] = Param<std::function<void(uint32_t)>>(
-        "Noise", 0, [](uint32_t) {}, 0, 255, PARAM_READABLE);
-
-    // SNR - только чтение
-    params_[(uint8_t)ParamId::SNR] = Param<std::function<void(uint32_t)>>(
-        "SNR", 0, [](uint32_t) {}, 0, 127, PARAM_READABLE);
-
-    // SquelchOpen - только чтение, bool как 0/1
+    // ====================================================================
+    // READ-ONLY PARAMETERS (измерения)
+    // ====================================================================
+    params_[(uint8_t)ParamId::RSSI] =
+        Param<uint32_t>(0, 0, 512, PARAM_READONLY);
+    params_[(uint8_t)ParamId::Noise] =
+        Param<uint32_t>(0, 0, 255, PARAM_READONLY);
+    params_[(uint8_t)ParamId::Glitch] =
+        Param<uint32_t>(0, 0, 255, PARAM_READONLY);
+    params_[(uint8_t)ParamId::SNR] = Param<uint32_t>(0, 0, 255, PARAM_READONLY);
     params_[(uint8_t)ParamId::SquelchOpen] =
-        Param<std::function<void(uint32_t)>>(
-            nullptr, // Без имени (не для меню)
-            0, [](uint32_t) {}, 0, 1, PARAM_READABLE);
+        Param<uint32_t>(0, 0, 1, PARAM_READONLY);
+
+    // ====================================================================
+    // ACTIONS (без сохранения)
+    // ====================================================================
+    params_[(uint8_t)ParamId::PowerOn] = Param<uint32_t>(
+        0, 0, 1, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<BK4819Driver *>(ctx);
+          if (v && driver->powerState_ == 0) {
+            driver->powerOn();
+          }
+        },
+        PARAM_ACTION);
+
+    params_[(uint8_t)ParamId::PowerOff] = Param<uint32_t>(
+        0, 0, 1, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<BK4819Driver *>(ctx);
+          if (v && driver->powerState_ > 0) {
+            driver->powerOff();
+          }
+        },
+        PARAM_ACTION);
+
+    params_[(uint8_t)ParamId::RxMode] = Param<uint32_t>(
+        0, 0, 1, this,
+        [](void *ctx, uint32_t v) { (v ? BK4819_RX_TurnOn : BK4819_Idle)(); },
+        PARAM_ACTION);
   }
 
   RadioType getRadioType() const override { return RadioType::BK4819; }
   const char *getRadioName() const override { return "BK4819"; }
 
-  // operator[] - обновляем измерения перед возвратом
-  ParamProxyFunc operator[](ParamId id) override {
-    uint8_t idx = (uint8_t)id;
+  void powerOn() {
+    if (powerState_ > 0)
+      return;
+    powerState_ = 1;
+    BK4819_Init();
 
-    // ОБНОВЛЯЕМ ИЗМЕРЕНИЯ перед чтением
-    if (id == ParamId::RSSI) {
-      params_[idx].setQuiet(BK4819_GetRSSI());
-    }
-
-    if (id == ParamId::Noise) {
-      params_[idx].setQuiet(BK4819_GetNoise());
-    }
-
-    if (id == ParamId::Glitch) {
-      params_[idx].setQuiet(BK4819_GetGlitch());
-    }
-
-    if (id == ParamId::SNR) {
-      params_[idx].setQuiet(BK4819_GetSNR());
-    }
-
-    if (id == ParamId::SquelchOpen) {
-      params_[idx].setQuiet(BK4819_IsSquelchOpen());
-    }
-
-    // Возвращаем proxy с актуальным значением
-    return IRadioDriver::operator[](id);
+    // Применяем все параметры после включения
+    getParam(ParamId::Frequency).set(getParam(ParamId::Frequency).get(), true);
+    getParam(ParamId::Modulation)
+        .set(getParam(ParamId::Modulation).get(), true);
+    getParam(ParamId::Bandwidth).set(getParam(ParamId::Bandwidth).get(), true);
+    getParam(ParamId::Gain).set(getParam(ParamId::Gain).get(), true);
+    getParam(ParamId::Squelch).set(getParam(ParamId::Squelch).get(), true);
+    getParam(ParamId::Volume).set(getParam(ParamId::Volume).get(), true);
   }
+
+  void powerOff() {
+    if (powerState_ == 0)
+      return;
+    BK4819_Sleep();
+    powerState_ = 0;
+  }
+
+  // Обновление read-only параметров
+  void updateMeasurements() {
+    if (powerState_ == 0)
+      return;
+    getParam(ParamId::RSSI).set(BK4819_GetRSSI(), true);
+    getParam(ParamId::Noise).set(BK4819_GetNoise(), true);
+    getParam(ParamId::Glitch).set(BK4819_GetGlitch(), true);
+    getParam(ParamId::SNR).set(BK4819_GetSNR(), true);
+    getParam(ParamId::SquelchOpen).set(BK4819_IsSquelchOpen(), true);
+  }
+
+private:
+  bool applyingFrequency_; // защита от циклических зависимостей
 };

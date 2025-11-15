@@ -4,8 +4,8 @@
 #include "BK1080Driver.hpp"
 #include "BK4819Driver.hpp"
 #include "IRadioDriver.hpp"
-#include "SI4732Driver.hpp"
 #include "RadioCommon.hpp"
+#include "SI4732Driver.hpp"
 #include "uart.h"
 
 // ============================================================================
@@ -13,21 +13,31 @@
 // ============================================================================
 class VFOProxy {
 public:
-    VFOProxy(IRadioDriver* driver) : driver_(driver) {}
-    
-    ParamProxyFunc operator[](ParamId id) {
-        if (driver_) {
-            return (*driver_)[id];  // Разыменовываем указатель
-        }
-        static Param<std::function<void(uint32_t)>> dummy;
-        return dummy.proxy();
+  VFOProxy(IRadioDriver *driver) : driver_(driver) {}
+
+  // ИСПРАВЛЕНИЕ: Добавлены обе версии operator[] (const и non-const)
+  Param<uint32_t> &operator[](ParamId id) {
+    if (driver_) {
+      return (*driver_)[id];
     }
-    
-    IRadioDriver* operator->() { return driver_; }
-    operator bool() const { return driver_ != nullptr; }
+    static Param<uint32_t> dummy;
+    return dummy;
+  }
+
+  const Param<uint32_t> &operator[](ParamId id) const {
+    if (driver_) {
+      return (*driver_)[id];
+    }
+    static Param<uint32_t> dummy;
+    return dummy;
+  }
+
+  IRadioDriver *operator->() { return driver_; }
+  const IRadioDriver *operator->() const { return driver_; }
+  operator bool() const { return driver_ != nullptr; }
 
 private:
-    IRadioDriver* driver_;
+  IRadioDriver *driver_;
 };
 
 // ============================================================================
@@ -35,151 +45,173 @@ private:
 // ============================================================================
 class VFOBank {
 public:
-    VFOBank() : activeVFO_(0), scanning_(false), scanIndex_(0) {
-        vfoCount_ = 0;
-        for (uint8_t i = 0; i < MAX_VFO_COUNT; ++i) {
-            vfos_[i] = nullptr;
-        }
+  VFOBank() : activeVFO_(0), scanningVFO_(0xFFFF) {}
+
+  // === VFO MANAGEMENT ===
+
+  VFOProxy getActiveVFO() { return VFOProxy(radios_[activeVFO_]); }
+
+  VFOProxy getVFO(uint8_t index) {
+    if (index < 3) {
+      return VFOProxy(radios_[index]);
     }
-    
-    void loadAll() {
-        vfoCount_ = 0;
-        uint8_t vfoIdx = 0;
-        
-        for (uint16_t i = 0; i < CHANNELS_GetCountMax() && vfoIdx < MAX_VFO_COUNT; ++i) {
-            CHMeta meta = CHANNELS_GetMeta(i);
-            bool isOurType = (TYPE_FILTER_VFO & (1 << meta.type)) != 0;
-            if (!isOurType) continue;
-            
-            MR ch;
-            CHANNELS_Load(i, &ch);
-            IRadioDriver *driver = nullptr;
-            
-            if (ch.radio == RADIO_BK4819) driver = &bk4819_;
-            if (ch.radio == RADIO_BK1080) driver = &bk1080_;
-            if (ch.radio == RADIO_SI4732) driver = &si4732_;
-            
-            if (!driver) continue;
-            
-            Log("DRIVER: %u", driver);
-            vfos_[vfoIdx] = driver;
-            LogC(LOG_C_BG_BLUE, "[VFOBank] CH %u -> VFO %u", i, vfoIdx);
-            driver->loadCh(i, &ch);
-            vfoIdx++;
-        }
-        
-        vfoCount_ = vfoIdx;
-        
-        // Включаем активный VFO - правильный синтаксис!
-        if (vfos_[activeVFO_]) {
-            (*vfos_[activeVFO_])[ParamId::PowerOn] = 1;
-            (*vfos_[activeVFO_])[ParamId::RxMode] = 1;
-        }
+    return VFOProxy(nullptr);
+  }
+
+  void setActiveVFO(uint8_t index) {
+    if (index < 3) {
+      activeVFO_ = index;
     }
-    
-    void saveAll() {
-        for (uint8_t i = 0; i < vfoCount_; ++i) {
-            if (vfos_[i] && vfos_[i]->isDirty()) {
-                vfos_[i]->saveCh();
-            }
-        }
+  }
+
+  uint8_t getActiveVFOIndex() const { return activeVFO_; }
+
+  void updateMeasurements() {
+    auto vfo = getActiveVFO();
+    switch (vfo->getRadioType()) {
+    case RadioType::BK4819: {
+      BK4819Driver *drv = static_cast<BK4819Driver *>(vfo.operator->());
+      drv->updateMeasurements();
+      break;
     }
-    
-    void scanTick() {
-        if (!scanning_) return;
-        
-        IRadioDriver *driver = vfos_[scanIndex_];
-        if (!driver) {
-            scanNext();
-            return;
-        }
-        
-        // Правильный синтаксис для чтения параметра
-        uint16_t rssi = (uint32_t)(*driver)[ParamId::RSSI];
-        bool signalDetected = (rssi > SCAN_RSSI_THRESHOLD);
-        
-        if (signalDetected) {
-            stopScan();
-            switchVFO(scanIndex_);
-        } else {
-            scanNext();
-        }
+    case RadioType::SI4732: {
+      SI4732Driver *drv = static_cast<SI4732Driver *>(vfo.operator->());
+      drv->updateMeasurements();
+      break;
     }
-    
-    void startScan() {
-        scanning_ = true;
-        scanIndex_ = 0;
-        scanNext();
+    case RadioType::BK1080: {
+      BK1080Driver *drv = static_cast<BK1080Driver *>(vfo.operator->());
+      drv->updateMeasurements();
+      break;
     }
-    
-    void stopScan() { 
-        scanning_ = false; 
+    default:
+      break;
     }
-    
-    bool isScanning() const { 
-        return scanning_; 
+  }
+
+  // === RADIO SETUP ===
+
+  void setRadio(uint8_t vfoIndex, IRadioDriver *driver) {
+    if (vfoIndex < 3) {
+      radios_[vfoIndex] = driver;
     }
-    
-    void switchVFO(uint8_t index) {
-        if (index >= vfoCount_ || !vfos_[index]) return;
-        
-        // Выключаем текущий VFO - правильный синтаксис!
-        if (activeVFO_ < vfoCount_ && vfos_[activeVFO_]) {
-            (*vfos_[activeVFO_])[ParamId::RxMode] = 0;
-        }
-        
-        // Включаем новый VFO - правильный синтаксис!
-        activeVFO_ = index;
-        (*vfos_[activeVFO_])[ParamId::PowerOn] = 1;
-        (*vfos_[activeVFO_])[ParamId::RxMode] = 1;
+  }
+
+  IRadioDriver *getRadio(uint8_t vfoIndex) {
+    return (vfoIndex < 3) ? radios_[vfoIndex] : nullptr;
+  }
+
+  // === CHANNEL OPERATIONS ===
+
+  void loadChannel(uint8_t vfoIndex, uint16_t chNum) {
+    auto vfo = getVFO(vfoIndex);
+    if (vfo) {
+      vfo->loadCh(chNum);
     }
-    
-    void setActive(uint8_t index) {
-        switchVFO(index);
+  }
+
+  void saveChannel(uint8_t vfoIndex) {
+    auto vfo = getVFO(vfoIndex);
+    if (vfo) {
+      vfo->saveCh();
     }
-    
-    uint8_t getActiveIndex() const { 
-        return activeVFO_; 
+  }
+
+  bool loadChannelAuto(uint8_t vfoIndex, uint16_t chNum) {
+    if (vfoIndex >= 3)
+      return false;
+
+    // 1. Прочитать канал один раз
+    MR ch;
+    CHANNELS_Load(chNum, &ch);
+
+    // 2. Определить тип радио из канала
+    RadioType radioType = (RadioType)ch.radio;
+
+    // 3. Найти или создать нужный драйвер
+    IRadioDriver *driver = getRadioForType(radioType);
+    if (!driver)
+      return false;
+
+    // 4. Установить драйвер в VFO
+    radios_[vfoIndex] = driver;
+
+    // 5. Загрузить канал в драйвер
+    driver->loadCh(chNum);
+
+    return true;
+  }
+
+  void saveActiveChannel() { saveChannel(activeVFO_); }
+
+  // === CONVENIENCE ACCESSORS ===
+
+  // Упрощённый доступ к параметрам активного VFO
+  Param<uint32_t> &operator[](ParamId id) { return getActiveVFO()[id]; }
+
+  // Транзакции для батчинга изменений
+  void beginTransaction() {
+    auto vfo = getActiveVFO();
+    if (vfo) {
+      vfo->beginTransaction();
     }
-    
-    uint8_t getCount() const { 
-        return vfoCount_; 
+  }
+
+  void endTransaction() {
+    auto vfo = getActiveVFO();
+    if (vfo) {
+      vfo->endTransaction();
     }
-    
-    // ========================================================================
-    // ACCESS - через VFOProxy
-    // ========================================================================
-    VFOProxy operator[](uint8_t index) {
-        return VFOProxy((index < vfoCount_) ? vfos_[index] : nullptr);
-    }
-    
-    VFOProxy active() {
-        return VFOProxy((activeVFO_ < vfoCount_) ? vfos_[activeVFO_] : nullptr);
-    }
+  }
+
+  // === SCANNING ===
+
+  void startScan(uint8_t vfoIndex) { scanningVFO_ = vfoIndex; }
+
+  void stopScan() { scanningVFO_ = 0xFFFF; }
+
+  bool isScanning() const { return scanningVFO_ != 0xFFFF; }
+
+  uint8_t getScanningVFO() const {
+    return (scanningVFO_ < 3) ? scanningVFO_ : 0xFF;
+  }
+
+  // === DEBUG ===
+
+  void dumpState() {
+    auto vfo = getActiveVFO();
+    if (!vfo)
+      return;
+
+    Log("=== VFO %u: %s ===", activeVFO_, vfo->getRadioName());
+    Log("Freq: %lu Hz", vfo[ParamId::Frequency].get());
+    Log("Mod: %u", vfo[ParamId::Modulation].get());
+    Log("BW: %u", vfo[ParamId::Bandwidth].get());
+    Log("Gain: %u", vfo[ParamId::Gain].get());
+    Log("Squelch: %u", vfo[ParamId::Squelch].get());
+    Log("Step: %lu", vfo[ParamId::Step].get());
+    Log("Volume: %u", vfo[ParamId::Volume].get());
+  }
 
 private:
-    static constexpr uint8_t MAX_VFO_COUNT = 8;
-    static constexpr uint16_t SCAN_RSSI_THRESHOLD = 100;
-    
-    IRadioDriver *vfos_[MAX_VFO_COUNT];
-    uint8_t activeVFO_;
-    bool scanning_;
-    uint8_t scanIndex_;
-    uint8_t vfoCount_;
-    
-    BK1080Driver bk1080_;
-    BK4819Driver bk4819_;
-    SI4732Driver si4732_;
-    
-    void scanNext() {
-        do {
-            scanIndex_ = (scanIndex_ + 1) % vfoCount_;
-        } while (!vfos_[scanIndex_] && scanIndex_ != activeVFO_);
-        
-        if (vfos_[scanIndex_]) {
-            (*vfos_[scanIndex_])[ParamId::PowerOn] = 1;
-            (*vfos_[scanIndex_])[ParamId::RxMode] = 1;
-        }
-    }
-};
+  IRadioDriver *radios_[3] = {nullptr, nullptr, nullptr};
+  uint8_t activeVFO_;
+  uint16_t scanningVFO_;
 
+  IRadioDriver *getRadioForType(RadioType type) {
+    static BK4819Driver bk4819;
+    static SI4732Driver si4732;
+    static BK1080Driver bk1080;
+
+    switch (type) {
+    case RadioType::BK4819:
+      return &bk4819;
+    case RadioType::SI4732:
+      return &si4732;
+    case RadioType::BK1080:
+      return &bk1080;
+    default:
+      return nullptr;
+    }
+  }
+};

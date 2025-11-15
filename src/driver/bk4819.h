@@ -13,12 +13,12 @@
 #define VHF_UHF_BOUND1 24000000
 #define VHF_UHF_BOUND2 28000000
 
-/* typedef enum {
+typedef enum {
   FILTER_VHF,
   FILTER_UHF,
   FILTER_OFF,
   FILTER_AUTO,
-} Filter; */
+} Filter;
 
 enum BK4819_AF_Type_t {
   BK4819_AF_MUTE,
@@ -34,7 +34,7 @@ enum BK4819_AF_Type_t {
   BK4819_AF_BYPASS, // (fm without filter = discriminator output)
 };
 
-/* typedef enum {
+typedef enum {
   MOD_FM,
   MOD_AM,
   MOD_LSB,
@@ -42,7 +42,7 @@ enum BK4819_AF_Type_t {
   MOD_BYP,
   MOD_RAW,
   MOD_WFM,
-} ModulationType; */
+} ModulationType;
 
 typedef enum {
   XTAL_0_13M,

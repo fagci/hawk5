@@ -11,21 +11,37 @@
 class TestApp final : public App {
 public:
   void init() override {
-    vfoBank.loadAll();
-    vfoBank.setActive(gSettings.activeVFO);
+    /* vfoBank.loadAll();
+    vfoBank.setActive(gSettings.activeVFO); */
+    uint8_t vfoIdx = 0;
+    for (uint16_t i = 0; i < CHANNELS_GetCountMax(); ++i) {
+      CHMeta meta = CHANNELS_GetMeta(i);
+
+      bool isOurType = (TYPE_FILTER_VFO & (1 << meta.type)) != 0;
+      if (!isOurType) {
+        continue;
+      }
+
+      vfoBank.loadChannelAuto(vfoIdx, i);
+      vfoIdx++;
+    }
+    vfoBank.setActiveVFO(gSettings.activeVFO);
+    vfoBank.getActiveVFO()[ParamId::PowerOn] = 1;
+    vfoBank.getActiveVFO()[ParamId::RxMode] = 1;
+    vfoBank.dumpState();
   }
 
   void render() override {
-    auto vfo = vfoBank.active();
+    auto vfo = vfoBank.getActiveVFO();
     UI_BigFrequency(42, vfo[ParamId::Frequency]);
     PrintMedium(0, 16, "RSSI: %u", vfo[ParamId::RSSI].get());
     // PrintMedium(0, 24, "SQ OP: %u", vfo->isSquelchOpen());
   }
 
-  void update() override { vfoBank.scanTick(); }
+  void update() override { vfoBank.updateMeasurements(); }
 
   bool key(KEY_Code_t key, Key_State_t state) override {
-    auto vfo = vfoBank.active();
+    auto vfo = vfoBank.getActiveVFO();
 
     if (inputOverlay.isActive()) {
       inputOverlay.handleKey(key, state);
@@ -80,7 +96,7 @@ public:
         if (vfoBank.isScanning()) {
           vfoBank.stopScan();
         } else {
-          vfoBank.startScan();
+          vfoBank.startScan(vfoBank.getActiveVFOIndex());
         }
         return true;
 

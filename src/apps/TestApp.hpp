@@ -16,15 +16,16 @@ public:
   }
 
   void render() override {
-    auto *vfo = vfoBank.active();
-    UI_BigFrequency(42, vfo->getFrequency());
-    PrintMedium(0, 16, "RSSI: %u", vfo->readRSSI());
-    PrintMedium(0, 24, "SQ OP: %u", vfo->isSquelchOpen());
+    auto vfo = vfoBank.active();
+    UI_BigFrequency(42, vfo[ParamId::Frequency]);
+    PrintMedium(0, 16, "RSSI: %u", vfo[ParamId::RSSI].get());
+    // PrintMedium(0, 24, "SQ OP: %u", vfo->isSquelchOpen());
   }
 
   void update() override { vfoBank.scanTick(); }
 
   bool key(KEY_Code_t key, Key_State_t state) override {
+    auto vfo = vfoBank.active();
 
     if (inputOverlay.isActive()) {
       inputOverlay.handleKey(key, state);
@@ -34,7 +35,6 @@ public:
       textInput.handleKey(key, state);
       return true;
     }
-    const auto &vfo = vfoBank.active();
     if (state == KEY_RELEASED) {
 
       switch (key) {
@@ -49,22 +49,22 @@ public:
 
       case KEY_MENU:
         // Mute toggle
-        vfo->muteAudio(!vfo->isAudioMuted());
+        vfo[ParamId::Mute] = !vfo[ParamId::Mute];
         return true;
       case KEY_UP:
-        vfo[Frequency] += 25.0_kHz;
+        vfo[ParamId::Frequency] += 25.0_kHz;
         return true;
 
       case KEY_DOWN:
-        vfo[vfo->Frequency] -= 25.0_kHz;
+        vfo[ParamId::Frequency] -= 25.0_kHz;
         return true;
 
       case KEY_0 ... KEY_9:
         inputOverlay.open(key * MHZ, 0, 1300 * MHZ, InputUnit::MHz,
                           [&](uint32_t value) {
-                            vfo[vfo.Frequency] = value;
+                            vfo[ParamId::Frequency] = value;
                             // сразу применить — если нужно
-                            vfo.applyToHardware();
+                            // vfo[ParamId::];
                           });
         return true;
         /* case KEY_1:
@@ -84,13 +84,6 @@ public:
         }
         return true;
 
-      case KEY_F:
-        textInput.open(vfo->getName(),
-                       10, // max length
-                       "VFO Name",
-                       [&](const char *name) { vfo->setName(name); });
-        return true;
-
         /* case KEY_5:
           // Сохранить
           vfoBank.saveAll();
@@ -100,8 +93,6 @@ public:
         break;
       }
     }
-    return false;
-
     return false;
   }
 

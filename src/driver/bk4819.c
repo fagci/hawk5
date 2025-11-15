@@ -359,6 +359,7 @@ uint32_t BK4819_GetFrequency(void) {
 }
 
 void BK4819_TuneTo(uint32_t freq, bool precise) {
+  Log("BK set f %u", freq);
   BK4819_SetFrequency(freq);
   gLastFrequency = freq;
 
@@ -743,6 +744,7 @@ void BK4819_EnterTxMute(void) { BK4819_WriteRegister(BK4819_REG_50, 0xBB20); }
 void BK4819_ExitTxMute(void) { BK4819_WriteRegister(BK4819_REG_50, 0x3B20); }
 
 void BK4819_RX_TurnOn(void) {
+  Log("BK rx on");
   BK4819_WriteRegister(BK4819_REG_36, 0x0000);
   BK4819_WriteRegister(BK4819_REG_37, 0x1F0F);
   BK4819_WriteRegister(BK4819_REG_30, 0x0200);
@@ -1160,6 +1162,7 @@ void BK4819_Init(void) {
   if (isInitialized) {
     return;
   }
+  Log("BK INIT");
   gSelectedFilter = 255;
   gLastFrequency = 0;
   gLastModulation = 255;

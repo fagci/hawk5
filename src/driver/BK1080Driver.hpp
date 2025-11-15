@@ -1,107 +1,133 @@
 #pragma once
+
 #include "IRadioDriver.hpp"
+#include "RadioCommon.hpp"
 #include "bk1080.h"
 
 class BK1080Driver : public IRadioDriver {
 public:
-  BK1080Driver() : powerState_(RadioPowerState::OFF) {}
+  BK1080Driver() : IRadioDriver() {
+    // ====================================================================
+    // FREQUENCY - FM только 64-108 МГц
+    // ====================================================================
+    params_[(uint8_t)ParamId::Frequency] = Param<std::function<void(uint32_t)>>(
+        "Freq", 10000000,
+        [this](uint32_t v) {
+          if (powerState_ > 0) {
+            BK1080_SetFrequency(v);
+          }
+        },
+        6400000,  // 64 MHz
+        10800000, // 108 MHz
+        PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
+
+    // ====================================================================
+    // MODULATION - только WFM
+    // ====================================================================
+    params_[(uint8_t)ParamId::Modulation] =
+        Param<std::function<void(uint32_t)>>(
+            "Mod", MOD_WFM, [](uint32_t) {}, // Не меняется
+            MOD_WFM, MOD_WFM,                // min=max=WFM
+            PARAM_READABLE);
+
+    // ====================================================================
+    // VOLUME - через регистр
+    // ====================================================================
+    params_[(uint8_t)ParamId::Volume] = Param<std::function<void(uint32_t)>>(
+        "Vol", 15,
+        [this](uint32_t v) {
+          if (powerState_ > 0) {
+            uint16_t reg5 =
+                BK1080_ReadRegister(BK1080_REG_05_SYSTEM_CONFIGURATION2);
+            reg5 = (reg5 & 0xFFF0) | (v & 0x0F);
+            BK1080_WriteRegister(BK1080_REG_05_SYSTEM_CONFIGURATION2, reg5);
+          }
+        },
+        0, 15, PARAM_READABLE | PARAM_WRITABLE | PARAM_PERSIST);
+
+    params_[(uint8_t)ParamId::Step] = Param<std::function<void(uint32_t)>>(
+        nullptr, 10000, [](uint32_t) {}, 5000, 20000,
+        PARAM_READABLE | PARAM_WRITABLE);
+
+    // ====================================================================
+    // MEASUREMENTS
+    // ====================================================================
+    params_[(uint8_t)ParamId::RSSI] = Param<std::function<void(uint32_t)>>(
+        "RSSI", 0, [](uint32_t) {}, 0, 511, PARAM_READABLE);
+
+    params_[(uint8_t)ParamId::SNR] = Param<std::function<void(uint32_t)>>(
+        "SNR", 0, [](uint32_t) {}, 0, 15, PARAM_READABLE);
+
+    // ====================================================================
+    // STATE
+    // ====================================================================
+    params_[(uint8_t)ParamId::Mute] = Param<std::function<void(uint32_t)>>(
+        nullptr, 0,
+        [this](uint32_t v) {
+          if (powerState_ > 0) {
+            BK1080_Mute(v);
+          }
+        },
+        0, 1, PARAM_READABLE | PARAM_WRITABLE);
+
+    // ====================================================================
+    // ACTIONS
+    // ====================================================================
+    params_[(uint8_t)ParamId::PowerOn] = Param<std::function<void(uint32_t)>>(
+        nullptr, 0,
+        [this](uint32_t) {
+          if (powerState_ == 0) {
+            BK1080_Init(params_[(uint8_t)ParamId::Frequency].get(), true);
+            powerState_ = 1;
+          }
+        },
+        0, 0, PARAM_ACTION);
+
+    params_[(uint8_t)ParamId::PowerOff] = Param<std::function<void(uint32_t)>>(
+        nullptr, 0,
+        [this](uint32_t) {
+          if (powerState_ > 0) {
+            BK1080_Init(0, false);
+            powerState_ = 0;
+          }
+        },
+        0, 0, PARAM_ACTION);
+
+    params_[(uint8_t)ParamId::RxMode] = Param<std::function<void(uint32_t)>>(
+        nullptr, 0,
+        [this](uint32_t v) {
+          if (v && powerState_ == 0) {
+            params_[(uint8_t)ParamId::PowerOn].set(1);
+          }
+        },
+        0, 1, PARAM_READABLE | PARAM_WRITABLE);
+  }
+
   RadioType getRadioType() const override { return RadioType::BK1080; }
   const char *getRadioName() const override { return "BK1080"; }
 
-  void powerOn() override {
-    if (powerState_ == RadioPowerState::OFF) {
-      BK1080_Init(0, true);
-      powerState_ = RadioPowerState::STANDBY;
+  ParamProxy<std::function<void(uint32_t)>> operator[](ParamId id) override {
+    uint8_t idx = (uint8_t)id;
+
+    // Update measurements
+    if (powerState_ > 0) {
+      if (id == ParamId::RSSI) {
+        params_[idx].set(BK1080_GetRSSI());
+      }
+      if (id == ParamId::SNR) {
+        params_[idx].set(BK1080_GetSNR());
+      }
     }
+
+    return params_[idx].proxy();
   }
 
-  void powerOff() override {
-    if (powerState_ != RadioPowerState::OFF) {
-      BK1080_Init(0, false);
-      powerState_ = RadioPowerState::OFF;
+  bool isDirty() const override {
+    for (uint8_t i = 0; i < (uint8_t)ParamId::Count; ++i) {
+      if (params_[i].isDirty() && (params_[i].flags() & PARAM_PERSIST)) {
+        return true;
+      }
     }
+    return false;
   }
-
-  void setRxMode() override {
-    if (powerState_ == RadioPowerState::OFF)
-      powerOn();
-    BK1080_Init(0, true);
-    powerState_ = RadioPowerState::RX;
-  }
-
-  void setStandby() override {
-    if (powerState_ == RadioPowerState::RX) {
-      BK1080_Init(0, false);
-      powerState_ = RadioPowerState::STANDBY;
-    }
-  }
-
-  RadioPowerState getPowerState() const override { return powerState_; }
-  bool isRxActive() const override {
-    return powerState_ == RadioPowerState::RX;
-  }
-
-  void setFrequency(uint32_t freq) override {
-    if (powerState_ == RadioPowerState::OFF)
-      return;
-    currentFreq_ = freq;
-    BK1080_SetFrequency(freq / 1000); // Convert Hz to kHz
-  }
-
-  uint32_t getFrequency() const override { return currentFreq_; }
-  uint32_t getMinFrequency() const override { return 87000000; }
-  uint32_t getMaxFrequency() const override { return 108000000; }
-
-  void setModulation(ModulationType mod) override {
-    currentModulation_ = MOD_WFM;
-  }
-  ModulationType getModulation() const override { return MOD_WFM; }
-
-  void setGain(uint8_t gain) override {
-    gain_ = gain;
-    // BK1080_SetVolume(gain);
-  }
-
-  uint8_t getGain() const override { return gain_; }
-  uint8_t getMaxGain() const override { return 15; }
-
-  void setBandwidth(uint16_t bw) override { bandwidth_ = bw; }
-  uint16_t getBandwidth() const override { return bandwidth_; }
-
-  void setSquelch(uint8_t threshold) override { rssiThreshold_ = threshold; }
-  uint8_t getSquelch() const override { return rssiThreshold_; }
-
-  bool isSquelchOpen() override {
-    if (powerState_ != RadioPowerState::RX)
-      return false;
-    return readRSSI() > rssiThreshold_;
-  }
-
-  uint16_t readRSSI() const override {
-    return (powerState_ == RadioPowerState::RX) ? BK1080_GetRSSI() : 0;
-  }
-
-  uint8_t readSNR() const override {
-    return (powerState_ == RadioPowerState::RX) ? BK1080_GetSNR() : 0;
-  }
-
-  void setVolume(uint8_t volume) override {
-    // BK1080_SetVolume(volume);
-  }
-
-  void muteAudio(bool mute) override {
-    audioMuted_ = mute;
-    BK1080_Mute(mute);
-  }
-
-  bool isAudioMuted() const override { return audioMuted_; }
-
-private:
-  RadioPowerState powerState_;
-  uint32_t currentFreq_ = 90000000;
-  ModulationType currentModulation_ = MOD_WFM;
-  uint8_t gain_ = 10;
-  uint16_t bandwidth_ = 0;
-  uint8_t rssiThreshold_ = 100;
-  bool audioMuted_ = false;
 };

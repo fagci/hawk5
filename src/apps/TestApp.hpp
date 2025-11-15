@@ -1,30 +1,121 @@
 #pragma once
 
-#include "../parameters.hpp"
+#include "../driver/VFOBank.hpp"
+#include "../driver/uart.h"
+#include "../ui/NumberInputOverlay.hpp"
+#include "../ui/TextInputOverlay.hpp"
+#include "../ui/components.h"
 #include "../ui/graphics.h"
 #include "App.hpp"
 
 class TestApp final : public App {
 public:
   void init() override {
-    BK4819_Init();
-    BK4819_RX_TurnOn();
-    BK4819_SetAGC(true, AUTO_GAIN_INDEX);
-    BK4819_TuneTo(172.3_MHz, true);
-    BK4819_SetModulation(MOD_FM);
-    BK4819_SetFilterBandwidth(BK4819_FILTER_BW_12k);
-    BK4819_SelectFilterEx((BK4819_GetFrequency() < SETTINGS_GetFilterBound())
-                              ? FILTER_VHF
-                              : FILTER_UHF);
+    vfoBank.loadAll();
+    vfoBank.setActive(gSettings.activeVFO);
   }
 
   void render() override {
-    for (uint8_t i = 0; i < ARRAY_SIZE(radioParams); ++i) {
-      const Param *p = &radioParams[i];
-      PrintSmall(0, 16 + i * 6, "%s: %u", p->name, p->getValue());
-    }
+    auto *vfo = vfoBank.active();
+    UI_BigFrequency(42, vfo->getFrequency());
+    PrintMedium(0, 16, "RSSI: %u", vfo->readRSSI());
+    PrintMedium(0, 24, "SQ OP: %u", vfo->isSquelchOpen());
   }
 
+  void update() override { vfoBank.scanTick(); }
+
+  bool key(KEY_Code_t key, Key_State_t state) override {
+
+    if (inputOverlay.isActive()) {
+      inputOverlay.handleKey(key, state);
+      return true;
+    }
+    if (textInput.isActive()) {
+      textInput.handleKey(key, state);
+      return true;
+    }
+    const auto &vfo = vfoBank.active();
+    if (state == KEY_RELEASED) {
+
+      switch (key) {
+      case KEY_EXIT:
+        // Переход в standby
+        /* if (vfo->isRxActive()) {
+          vfoBank.setActiveStandby();
+        } else {
+          vfoBank.powerOnActive();
+        } */
+        return true;
+
+      case KEY_MENU:
+        // Mute toggle
+        vfo->muteAudio(!vfo->isAudioMuted());
+        return true;
+      case KEY_UP:
+        vfo[Frequency] += 25.0_kHz;
+        return true;
+
+      case KEY_DOWN:
+        vfo[vfo->Frequency] -= 25.0_kHz;
+        return true;
+
+      case KEY_0 ... KEY_9:
+        inputOverlay.open(key * MHZ, 0, 1300 * MHZ, InputUnit::MHz,
+                          [&](uint32_t value) {
+                            vfo[vfo.Frequency] = value;
+                            // сразу применить — если нужно
+                            vfo.applyToHardware();
+                          });
+        return true;
+        /* case KEY_1:
+        case KEY_2:
+        case KEY_3:
+        case KEY_4:
+          // Переключение VFO
+          vfoBank.setActive(key - KEY_1);
+          return true; */
+
+      case KEY_STAR:
+        // Старт/стоп сканирования
+        if (vfoBank.isScanning()) {
+          vfoBank.stopScan();
+        } else {
+          vfoBank.startScan();
+        }
+        return true;
+
+      case KEY_F:
+        textInput.open(vfo->getName(),
+                       10, // max length
+                       "VFO Name",
+                       [&](const char *name) { vfo->setName(name); });
+        return true;
+
+        /* case KEY_5:
+          // Сохранить
+          vfoBank.saveAll();
+          return true; */
+
+      default:
+        break;
+      }
+    }
+    return false;
+
+    return false;
+  }
+
+  void deinit() override {}
+
   uint8_t getAppId() const override { return APP_TEST; }
+
   const char *getName() const override { return "Test"; }
+
+private:
+  bool signalDetected_ = false;
+
+  NumberInputOverlay inputOverlay;
+  TextInputOverlay textInput;
+
+  VFOBank vfoBank;
 };

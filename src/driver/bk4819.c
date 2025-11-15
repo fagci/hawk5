@@ -20,10 +20,14 @@
 // ============================================================================
 
 static const uint16_t MOD_TYPE_REG47_VALUES[] = {
-    [MOD_FM] = BK4819_AF_FM,      [MOD_AM] = BK4819_AF_AM,
-    [MOD_LSB] = BK4819_AF_USB,    [MOD_USB] = BK4819_AF_USB,
-    [MOD_BYP] = BK4819_AF_BYPASS, [MOD_RAW] = BK4819_AF_RAW,
-    [MOD_WFM] = BK4819_AF_FM,
+    BK4819_AF_FM,     //
+    BK4819_AF_AM,     //
+    BK4819_AF_USB,    //
+    BK4819_AF_USB,    //
+    BK4819_AF_BYPASS, //
+    BK4819_AF_RAW,    //
+    BK4819_AF_FM,     //
+
 };
 
 static const uint8_t SQUELCH_TYPE_VALUES[4] = {0x88, 0xAA, 0xCC, 0xFF};
@@ -58,7 +62,7 @@ static const AgcConfig AGC_FAST = {0, 20, 50};
 static uint16_t gGpioOutState = 0x9000;
 static uint8_t gSelectedFilter = 255;
 static uint32_t gLastFrequency = 0;
-static ModulationType gLastModulation = 255;
+static uint8_t gLastModulation = 255;
 
 // ============================================================================
 // Low-Level GPIO and SPI Operations

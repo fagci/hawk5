@@ -112,7 +112,7 @@ typedef enum {
 } EEPROMType;
 
 extern uint32_t SCAN_TIMEOUTS[15];
-extern char *SCAN_TIMEOUT_NAMES[15];
+extern const char *SCAN_TIMEOUT_NAMES[15];
 extern const char *EEPROM_TYPE_NAMES[6];
 extern const uint32_t EEPROM_SIZES[6];
 extern const uint16_t PAGE_SIZES[6];

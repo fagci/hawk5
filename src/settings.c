@@ -46,7 +46,7 @@ uint32_t SCAN_TIMEOUTS[15] = {
     1000 * 30, 1000 * 60, 1000 * 60 * 2, 1000 * 60 * 5, UINT32_MAX,
 };
 
-char *SCAN_TIMEOUT_NAMES[15] = {
+const char *SCAN_TIMEOUT_NAMES[15] = {
     "0",  "100ms", "200ms", "300ms", "400ms", "500ms", "1s",   "3s",
     "5s", "10s",   "30s",   "1m",    "2m",    "5m",    "None",
 };

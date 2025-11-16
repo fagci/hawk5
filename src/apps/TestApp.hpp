@@ -31,8 +31,8 @@ public:
 
   void render() override {
     UI_BigFrequency(42, vfoBank[ParamId::Frequency]);
-    PrintMedium(0, 16, "RSSI: %u", vfoBank[ParamId::RSSI].get());
-    PrintMedium(0, 24, "SQ OP: %u", vfoBank[ParamId::SquelchOpen].get());
+    PrintMedium(0, 16, "RSSI: %u", vfoBank[ParamId::RSSI]);
+    PrintMedium(0, 24, "SQ OP: %u", vfoBank[ParamId::SquelchOpen]);
     PrintMedium(0, 32, "VFO %u", vfoBank.getActiveVFOIndex() + 1);
   }
 

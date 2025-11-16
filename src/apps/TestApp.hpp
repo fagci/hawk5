@@ -26,23 +26,19 @@ public:
       vfoIdx++;
     }
     vfoBank.setActiveVFO(gSettings.activeVFO);
-    vfoBank.getActiveVFO()[ParamId::PowerOn] = 1;
-    vfoBank.getActiveVFO()[ParamId::RxMode] = 1;
-    vfoBank.dumpState();
+    vfoBank.powerOnAndReceive();
   }
 
   void render() override {
-    auto vfo = vfoBank.getActiveVFO();
-    UI_BigFrequency(42, vfo[ParamId::Frequency]);
-    PrintMedium(0, 16, "RSSI: %u", vfo[ParamId::RSSI].get());
-    // PrintMedium(0, 24, "SQ OP: %u", vfo->isSquelchOpen());
+    UI_BigFrequency(42, vfoBank[ParamId::Frequency]);
+    PrintMedium(0, 16, "RSSI: %u", vfoBank[ParamId::RSSI].get());
+    PrintMedium(0, 24, "SQ OP: %u", vfoBank[ParamId::SquelchOpen].get());
+    PrintMedium(0, 32, "VFO %u", vfoBank.getActiveVFOIndex() + 1);
   }
 
   void update() override { vfoBank.updateMeasurements(); }
 
   bool key(KEY_Code_t key, Key_State_t state) override {
-    auto vfo = vfoBank.getActiveVFO();
-
     if (inputOverlay.isActive()) {
       inputOverlay.handleKey(key, state);
       return true;
@@ -55,6 +51,7 @@ public:
 
       switch (key) {
       case KEY_EXIT:
+        vfoBank.switchVFO(IncDecU(vfoBank.getActiveVFOIndex(), 0, 4, true));
         // Переход в standby
         /* if (vfo->isRxActive()) {
           vfoBank.setActiveStandby();
@@ -65,39 +62,40 @@ public:
 
       case KEY_MENU:
         // Mute toggle
-        vfo[ParamId::Mute] = !vfo[ParamId::Mute];
+        vfoBank[ParamId::Mute] = !vfoBank[ParamId::Mute];
         return true;
       case KEY_UP:
-        vfo[ParamId::Frequency] += 25.0_kHz;
+        vfoBank[ParamId::Frequency] += 25.0_kHz;
         return true;
 
       case KEY_DOWN:
-        vfo[ParamId::Frequency] -= 25.0_kHz;
+        vfoBank[ParamId::Frequency] -= 25.0_kHz;
         return true;
 
-      case KEY_0 ... KEY_9:
-        inputOverlay.open(key * MHZ, 0, 1300 * MHZ, InputUnit::MHz,
-                          [&](uint32_t value) {
-                            vfo[ParamId::Frequency] = value;
-                            // сразу применить — если нужно
-                            // vfo[ParamId::];
-                          });
-        return true;
-        /* case KEY_1:
-        case KEY_2:
-        case KEY_3:
-        case KEY_4:
-          // Переключение VFO
-          vfoBank.setActive(key - KEY_1);
+        /* case KEY_0 ... KEY_9:
+          inputOverlay.open(key * MHZ, 0, 1300 * MHZ, InputUnit::MHz,
+                            [&](uint32_t value) {
+                              vfo[ParamId::Frequency] = value;
+                              // сразу применить — если нужно
+                              // vfo[ParamId::];
+                            });
           return true; */
+      case KEY_1:
+      case KEY_2:
+      case KEY_3:
+      case KEY_4:
+        // Переключение VFO
+        vfoBank.switchVFO(key - KEY_1);
+        vfoBank.dumpState();
+        return true;
 
       case KEY_STAR:
         // Старт/стоп сканирования
-        if (vfoBank.isScanning()) {
+        /* if (vfoBank.isScanning()) {
           vfoBank.stopScan();
         } else {
           vfoBank.startScan(vfoBank.getActiveVFOIndex());
-        }
+        } */
         return true;
 
         /* case KEY_5:

@@ -9,54 +9,77 @@
 #include "uart.h"
 
 // ============================================================================
-// VFO PROXY
+// VFO STATE - хранит параметры для одного VFO
 // ============================================================================
-class VFOProxy {
+
+struct VFOState {
+  uint32_t params[(uint8_t)ParamId::Count];
+  uint16_t channelIndex;
+  RadioType radioType;
+
+  VFOState() : channelIndex(0xFFFF), radioType(RadioType::BK4819) {
+    params[(uint8_t)ParamId::Frequency] = 145500000;
+    params[(uint8_t)ParamId::Modulation] = 0;
+    params[(uint8_t)ParamId::Bandwidth] = 2;
+    params[(uint8_t)ParamId::Gain] = 34;
+    params[(uint8_t)ParamId::Squelch] = 3;
+    params[(uint8_t)ParamId::Step] = 2500;
+    params[(uint8_t)ParamId::Volume] = 8;
+    params[(uint8_t)ParamId::PowerState] = 0;
+    params[(uint8_t)ParamId::RxMode] = 0;
+    params[(uint8_t)ParamId::Mute] = 0;
+
+    for (uint8_t i = (uint8_t)ParamId::RSSI; i <= (uint8_t)ParamId::SquelchOpen;
+         ++i) {
+      params[i] = 0;
+    }
+  }
+};
+
+// Forward declaration
+class VFOBank;
+
+// ============================================================================
+// PARAM PROXY - для operator[] с поддержкой +=, -=, =
+// ============================================================================
+
+class ParamProxy {
 public:
-  VFOProxy(IRadioDriver *driver) : driver_(driver) {}
+  ParamProxy(VFOBank *bank, ParamId id) : bank_(bank), id_(id) {}
 
-  // ИСПРАВЛЕНИЕ: Добавлены обе версии operator[] (const и non-const)
-  Param<uint32_t> &operator[](ParamId id) {
-    if (driver_) {
-      return (*driver_)[id];
-    }
-    static Param<uint32_t> dummy;
-    return dummy;
-  }
+  // Чтение значения
+  uint32_t get() const;
 
-  const Param<uint32_t> &operator[](ParamId id) const {
-    if (driver_) {
-      return (*driver_)[id];
-    }
-    static Param<uint32_t> dummy;
-    return dummy;
-  }
+  // Операторы присваивания
+  ParamProxy &operator=(uint32_t value);
+  ParamProxy &operator+=(uint32_t value);
+  ParamProxy &operator-=(uint32_t value);
 
-  IRadioDriver *operator->() { return driver_; }
-  const IRadioDriver *operator->() const { return driver_; }
-  operator bool() const { return driver_ != nullptr; }
+  // Неявное преобразование в uint32_t для удобства
+  operator uint32_t() const { return get(); }
 
 private:
-  IRadioDriver *driver_;
+  VFOBank *bank_;
+  ParamId id_;
 };
 
 // ============================================================================
-// VFO BANK
+// VFO BANK С РАЗДЕЛЬНЫМ ХРАНЕНИЕМ ПАРАМЕТРОВ
 // ============================================================================
+
 class VFOBank {
 public:
-  VFOBank() : activeVFO_(0), scanningVFO_(0xFFFF) {}
+  VFOBank() : activeVFO_(0), scanningVFO_(0xFFFF) {
+    bk4819_ = nullptr;
+    si4732_ = nullptr;
+    bk1080_ = nullptr;
+  }
+
+  // === OPERATOR[] ДЛЯ УДОБНОГО ДОСТУПА ===
+
+  ParamProxy operator[](ParamId id) { return ParamProxy(this, id); }
 
   // === VFO MANAGEMENT ===
-
-  VFOProxy getActiveVFO() { return VFOProxy(radios_[activeVFO_]); }
-
-  VFOProxy getVFO(uint8_t index) {
-    if (index < 3) {
-      return VFOProxy(radios_[index]);
-    }
-    return VFOProxy(nullptr);
-  }
 
   void setActiveVFO(uint8_t index) {
     if (index < 3) {
@@ -66,152 +89,273 @@ public:
 
   uint8_t getActiveVFOIndex() const { return activeVFO_; }
 
+  // === УМНОЕ ПЕРЕКЛЮЧЕНИЕ VFO ===
+
+  void switchVFO(uint8_t newVFO) {
+    if (newVFO >= 3 || newVFO == activeVFO_)
+      return;
+
+    saveDriverStateToVFO(activeVFO_);
+    states_[activeVFO_].params[(uint8_t)ParamId::RxMode] = 0;
+
+    activeVFO_ = newVFO;
+
+    loadVFOStateToDriver(newVFO);
+
+    if (states_[newVFO].params[(uint8_t)ParamId::PowerState] == 0) {
+      applyParam(ParamId::PowerOn, 1);
+    }
+    applyParam(ParamId::RxMode, 1);
+  }
+
+  // === CHANNEL OPERATIONS ===
+
+  bool loadChannelAuto(uint8_t vfoIndex, uint16_t chNum) {
+    if (vfoIndex >= 3 || chNum == 0xFFFF)
+      return false;
+
+    MR ch;
+    CHANNELS_Load(chNum, &ch);
+
+    RadioType radioType = (RadioType)ch.radio;
+    states_[vfoIndex].radioType = radioType;
+    states_[vfoIndex].channelIndex = chNum;
+
+    states_[vfoIndex].params[(uint8_t)ParamId::Frequency] = ch.rxF;
+    states_[vfoIndex].params[(uint8_t)ParamId::Modulation] = ch.modulation;
+    states_[vfoIndex].params[(uint8_t)ParamId::Bandwidth] = ch.bw;
+    states_[vfoIndex].params[(uint8_t)ParamId::Gain] = ch.gainIndex;
+    states_[vfoIndex].params[(uint8_t)ParamId::Squelch] = ch.squelch.value;
+    states_[vfoIndex].params[(uint8_t)ParamId::Step] = ch.step;
+
+    if (vfoIndex == activeVFO_) {
+      loadVFOStateToDriver(vfoIndex);
+    }
+
+    return true;
+  }
+
+  bool loadActiveChannelAuto(uint16_t chNum) {
+    return loadChannelAuto(activeVFO_, chNum);
+  }
+
+  void saveChannel(uint8_t vfoIndex) {
+    if (vfoIndex >= 3)
+      return;
+
+    uint16_t chNum = states_[vfoIndex].channelIndex;
+    if (chNum == 0xFFFF)
+      return;
+
+    if (vfoIndex == activeVFO_) {
+      saveDriverStateToVFO(vfoIndex);
+    }
+
+    MR ch;
+    CHANNELS_Load(chNum, &ch);
+
+    ch.rxF = states_[vfoIndex].params[(uint8_t)ParamId::Frequency];
+    ch.modulation = states_[vfoIndex].params[(uint8_t)ParamId::Modulation];
+    ch.bw = states_[vfoIndex].params[(uint8_t)ParamId::Bandwidth];
+    ch.gainIndex = states_[vfoIndex].params[(uint8_t)ParamId::Gain];
+    ch.squelch.value = states_[vfoIndex].params[(uint8_t)ParamId::Squelch];
+    ch.step = states_[vfoIndex].params[(uint8_t)ParamId::Step];
+    ch.radio = (uint8_t)states_[vfoIndex].radioType;
+
+    CHANNELS_Save(chNum, &ch);
+  }
+
+  void saveActiveChannel() { saveChannel(activeVFO_); }
+
+  // === ВНУТРЕННИЕ МЕТОДЫ ДЛЯ ParamProxy ===
+
+  uint32_t get(ParamId id) { return states_[activeVFO_].params[(uint8_t)id]; }
+
+  void set(ParamId id, uint32_t value) {
+    states_[activeVFO_].params[(uint8_t)id] = value;
+    applyParam(id, value);
+  }
+
+  void add(ParamId id, uint32_t value) {
+    uint32_t current = states_[activeVFO_].params[(uint8_t)id];
+
+    // Получить границы из драйвера
+    IRadioDriver *driver = getDriverForVFO(activeVFO_);
+    if (driver) {
+      uint32_t maxVal = driver->getParam(id).getMax();
+      if (current <= maxVal - value) {
+        set(id, current + value);
+      } else {
+        set(id, maxVal);
+      }
+    } else {
+      set(id, current + value);
+    }
+  }
+
+  void subtract(ParamId id, uint32_t value) {
+    uint32_t current = states_[activeVFO_].params[(uint8_t)id];
+
+    // Получить границы из драйвера
+    IRadioDriver *driver = getDriverForVFO(activeVFO_);
+    if (driver) {
+      uint32_t minVal = driver->getParam(id).getMin();
+      if (current >= minVal + value) {
+        set(id, current - value);
+      } else {
+        set(id, minVal);
+      }
+    } else {
+      if (current >= value) {
+        set(id, current - value);
+      } else {
+        set(id, 0);
+      }
+    }
+  }
+
   void updateMeasurements() {
-    auto vfo = getActiveVFO();
-    switch (vfo->getRadioType()) {
+    IRadioDriver *driver = getDriverForVFO(activeVFO_);
+    if (!driver)
+      return;
+
+    // Вызвать updateMeasurements() драйвера
+    switch (driver->getRadioType()) {
     case RadioType::BK4819: {
-      BK4819Driver *drv = static_cast<BK4819Driver *>(vfo.operator->());
+      BK4819Driver *drv = static_cast<BK4819Driver *>(driver);
       drv->updateMeasurements();
       break;
     }
     case RadioType::SI4732: {
-      SI4732Driver *drv = static_cast<SI4732Driver *>(vfo.operator->());
+      SI4732Driver *drv = static_cast<SI4732Driver *>(driver);
       drv->updateMeasurements();
       break;
     }
     case RadioType::BK1080: {
-      BK1080Driver *drv = static_cast<BK1080Driver *>(vfo.operator->());
+      BK1080Driver *drv = static_cast<BK1080Driver *>(driver);
       drv->updateMeasurements();
       break;
     }
     default:
       break;
     }
+
+    // Скопировать измерения из драйвера в VFOState
+    states_[activeVFO_].params[(uint8_t)ParamId::RSSI] =
+        driver->getParam(ParamId::RSSI).get();
+    states_[activeVFO_].params[(uint8_t)ParamId::Noise] =
+        driver->getParam(ParamId::Noise).get();
+    states_[activeVFO_].params[(uint8_t)ParamId::Glitch] =
+        driver->getParam(ParamId::Glitch).get();
+    states_[activeVFO_].params[(uint8_t)ParamId::SNR] =
+        driver->getParam(ParamId::SNR).get();
+    states_[activeVFO_].params[(uint8_t)ParamId::SquelchOpen] =
+        driver->getParam(ParamId::SquelchOpen).get();
   }
 
-  // === RADIO SETUP ===
+  // === HELPER ФУНКЦИИ ===
 
-  void setRadio(uint8_t vfoIndex, IRadioDriver *driver) {
-    if (vfoIndex < 3) {
-      radios_[vfoIndex] = driver;
-    }
-  }
-
-  IRadioDriver *getRadio(uint8_t vfoIndex) {
-    return (vfoIndex < 3) ? radios_[vfoIndex] : nullptr;
-  }
-
-  // === CHANNEL OPERATIONS ===
-
-  void loadChannel(uint8_t vfoIndex, uint16_t chNum) {
-    auto vfo = getVFO(vfoIndex);
-    if (vfo) {
-      vfo->loadCh(chNum);
-    }
-  }
-
-  void saveChannel(uint8_t vfoIndex) {
-    auto vfo = getVFO(vfoIndex);
-    if (vfo) {
-      vfo->saveCh();
-    }
-  }
-
-  bool loadChannelAuto(uint8_t vfoIndex, uint16_t chNum) {
-    if (vfoIndex >= 3)
-      return false;
-
-    // 1. Прочитать канал один раз
-    MR ch;
-    CHANNELS_Load(chNum, &ch);
-
-    // 2. Определить тип радио из канала
-    RadioType radioType = (RadioType)ch.radio;
-
-    // 3. Найти или создать нужный драйвер
-    IRadioDriver *driver = getRadioForType(radioType);
-    if (!driver)
-      return false;
-
-    // 4. Установить драйвер в VFO
-    radios_[vfoIndex] = driver;
-
-    // 5. Загрузить канал в драйвер
-    driver->loadCh(chNum);
-
-    return true;
-  }
-
-  void saveActiveChannel() { saveChannel(activeVFO_); }
-
-  // === CONVENIENCE ACCESSORS ===
-
-  // Упрощённый доступ к параметрам активного VFO
-  Param<uint32_t> &operator[](ParamId id) { return getActiveVFO()[id]; }
-
-  // Транзакции для батчинга изменений
-  void beginTransaction() {
-    auto vfo = getActiveVFO();
-    if (vfo) {
-      vfo->beginTransaction();
-    }
-  }
-
-  void endTransaction() {
-    auto vfo = getActiveVFO();
-    if (vfo) {
-      vfo->endTransaction();
-    }
-  }
-
-  // === SCANNING ===
-
-  void startScan(uint8_t vfoIndex) { scanningVFO_ = vfoIndex; }
-
-  void stopScan() { scanningVFO_ = 0xFFFF; }
-
-  bool isScanning() const { return scanningVFO_ != 0xFFFF; }
-
-  uint8_t getScanningVFO() const {
-    return (scanningVFO_ < 3) ? scanningVFO_ : 0xFF;
+  void powerOnAndReceive() {
+    set(ParamId::PowerOn, 1);
+    set(ParamId::RxMode, 1);
   }
 
   // === DEBUG ===
 
   void dumpState() {
-    auto vfo = getActiveVFO();
-    if (!vfo)
-      return;
+    VFOState &state = states_[activeVFO_];
+    IRadioDriver *driver = getDriverForVFO(activeVFO_);
 
-    Log("=== VFO %u: %s ===", activeVFO_, vfo->getRadioName());
-    Log("Freq: %lu Hz", vfo[ParamId::Frequency].get());
-    Log("Mod: %u", vfo[ParamId::Modulation].get());
-    Log("BW: %u", vfo[ParamId::Bandwidth].get());
-    Log("Gain: %u", vfo[ParamId::Gain].get());
-    Log("Squelch: %u", vfo[ParamId::Squelch].get());
-    Log("Step: %lu", vfo[ParamId::Step].get());
-    Log("Volume: %u", vfo[ParamId::Volume].get());
+    Log("=== VFO %u ===", activeVFO_);
+    if (driver) {
+      Log("Radio: %s", driver->getRadioName());
+    }
+    Log("Freq: %lu Hz", state.params[(uint8_t)ParamId::Frequency]);
+    Log("Mod: %u", state.params[(uint8_t)ParamId::Modulation]);
+    Log("BW: %u", state.params[(uint8_t)ParamId::Bandwidth]);
+    Log("Gain: %u", state.params[(uint8_t)ParamId::Gain]);
+    Log("Squelch: %u", state.params[(uint8_t)ParamId::Squelch]);
+    Log("Step: %lu", state.params[(uint8_t)ParamId::Step]);
+    Log("Volume: %u", state.params[(uint8_t)ParamId::Volume]);
   }
 
 private:
-  IRadioDriver *radios_[3] = {nullptr, nullptr, nullptr};
+  VFOState states_[3];
   uint8_t activeVFO_;
   uint16_t scanningVFO_;
 
-  IRadioDriver *getRadioForType(RadioType type) {
-    static BK4819Driver bk4819;
-    static SI4732Driver si4732;
-    static BK1080Driver bk1080;
+  BK4819Driver *bk4819_;
+  SI4732Driver *si4732_;
+  BK1080Driver *bk1080_;
+
+  IRadioDriver *getDriverForVFO(uint8_t vfo) {
+    RadioType type = states_[vfo].radioType;
 
     switch (type) {
     case RadioType::BK4819:
-      return &bk4819;
+      if (!bk4819_)
+        bk4819_ = new BK4819Driver();
+      return bk4819_;
     case RadioType::SI4732:
-      return &si4732;
+      if (!si4732_)
+        si4732_ = new SI4732Driver();
+      return si4732_;
     case RadioType::BK1080:
-      return &bk1080;
+      if (!bk1080_)
+        bk1080_ = new BK1080Driver();
+      return bk1080_;
     default:
       return nullptr;
     }
   }
+
+  void saveDriverStateToVFO(uint8_t vfo) {
+    IRadioDriver *driver = getDriverForVFO(vfo);
+    if (!driver)
+      return;
+
+    for (uint8_t i = 0; i < (uint8_t)ParamId::Count; ++i) {
+      states_[vfo].params[i] = driver->getParam((ParamId)i).get();
+    }
+  }
+
+  void loadVFOStateToDriver(uint8_t vfo) {
+    IRadioDriver *driver = getDriverForVFO(vfo);
+    if (!driver)
+      return;
+
+    for (uint8_t i = 0; i < (uint8_t)ParamId::Count; ++i) {
+      driver->getParam((ParamId)i).set(states_[vfo].params[i], true);
+    }
+  }
+
+  void applyParam(ParamId id, uint32_t value) {
+    IRadioDriver *driver = getDriverForVFO(activeVFO_);
+    if (driver) {
+      driver->getParam(id).set(value, true);
+    }
+  }
+
+  friend class ParamProxy;
 };
+
+// ============================================================================
+// РЕАЛИЗАЦИЯ ParamProxy
+// ============================================================================
+
+inline uint32_t ParamProxy::get() const { return bank_->get(id_); }
+
+inline ParamProxy &ParamProxy::operator=(uint32_t value) {
+  bank_->set(id_, value);
+  return *this;
+}
+
+inline ParamProxy &ParamProxy::operator+=(uint32_t value) {
+  bank_->add(id_, value);
+  return *this;
+}
+
+inline ParamProxy &ParamProxy::operator-=(uint32_t value) {
+  bank_->subtract(id_, value);
+  return *this;
+}

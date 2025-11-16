@@ -7,6 +7,7 @@
 #include "../helper/numnav.h"
 #include "../helper/regs-menu.h"
 #include "../helper/scan.h"
+#include "../scheduler.h"
 #include "../ui/components.h"
 #include "../ui/graphics.h"
 #include "../ui/spectrum.h"
@@ -43,7 +44,7 @@ public:
     PrintMediumEx(LCD_WIDTH - 1, BASE - 12, POS_R, C_FILL, mod);
     renderChannelName(21, vfoBank[ParamId::Channel]);
 
-    const uint32_t step = StepFrequencyTable[ctx->step];
+    const uint32_t step = vfoBank[ParamId::Step].getRealValue();
     PrintSmallEx(LCD_WIDTH, BASE + 6, POS_R, C_FILL, "%d.%02d", step / KHZ,
                  step % KHZ);
 
@@ -54,10 +55,10 @@ public:
     if (gMonitorMode) {
       renderMonitorMode(BASE);
     } else {
-      if (vfo->msm.open) {
+      if (vfoBank[ParamId::SquelchOpen].get()) {
         UI_RSSIBar(BASE + 1);
       }
-      if (ctx->tx_state.is_active) {
+      if ((TxState)vfoBank[ParamId::TxState].get() == TxState::TX_ON) {
         UI_TxBar(BASE + 1);
       }
     }
@@ -79,7 +80,7 @@ public:
 
     // PTT
     if (key == KEY_PTT && !gIsNumNavInput) {
-      RADIO_ToggleTX(ctx, state != KEY_RELEASED);
+      vfoBank[ParamId::TxState] = state != KEY_RELEASED;
       return true;
     }
 
@@ -109,7 +110,7 @@ public:
 
 private:
   void updateBand(void) {
-    uint32_t f = RADIO_GetParam(ctx, PARAM_FREQUENCY);
+    uint32_t f = vfoBank[ParamId::Frequency].get();
     if (!BANDS_InRange(f, gCurrentBand) ||
         gCurrentBand.meta.type == TYPE_BAND_DETACHED) {
       BANDS_SelectByFrequency(f, ctx->fixed_bounds);
@@ -123,8 +124,7 @@ private:
 
   void tuneTo(uint32_t f, uint32_t _) {
     (void)_;
-    RADIO_SetParam(ctx, PARAM_FREQUENCY, f, true);
-    RADIO_ApplySettings(ctx);
+    vfoBank[ParamId::Frequency] = f;
     updateBand();
   }
 
@@ -135,7 +135,7 @@ private:
     }
 
     if (key <= KEY_9) {
-      NUMNAV_Init(vfo->channel_index, 0, CHANNELS_GetCountMax() - 1);
+      NUMNAV_Init(vfoBank[ParamId::Channel], 0, CHANNELS_GetCountMax() - 1);
       gNumNavCallback = setChannel;
       return false;
     }
@@ -157,13 +157,11 @@ private:
   }
 
   bool handleSSBFineTune(KEY_Code_t key) {
-    if (ctx->radio_type != RADIO_SI4732 || !RADIO_IsSSB(ctx))
+    if (vfoBank.getRadioType() != RadioType::SI4732 || !RADIO_IsSSB(ctx))
       return false;
     if (key != KEY_SIDE1 && key != KEY_SIDE2)
       return false;
-
-    RADIO_AdjustParam(ctx, PARAM_FREQUENCY, key == KEY_SIDE1 ? 5 : -5, true);
-    // TODO: SAVE
+    vfoBank[ParamId::Frequency] += key == KEY_SIDE1 ? 5 : -5; // TODO: need save
     return true;
   }
 
@@ -196,10 +194,11 @@ private:
 
     case KEY_6:
       RADIO_IncDecParam(ctx, PARAM_POWER, true, true);
+      vfoBank[ParamId::TxPower] += 1;
       return true;
 
     case KEY_7:
-      RADIO_IncDecParam(ctx, PARAM_STEP, true, true);
+      vfoBank[ParamId::Step] += 1;
       return true;
 
     case KEY_8:
@@ -207,7 +206,7 @@ private:
       return true;
 
     case KEY_0:
-      RADIO_IncDecParam(ctx, PARAM_MODULATION, true, true);
+      vfoBank[ParamId::Modulation] += 1;
       return true;
 
     case KEY_SIDE1:
@@ -277,14 +276,15 @@ private:
   }
 
   void renderTxRxState(uint8_t y, bool isTx) {
+    char buf[16];
     if (isTx) {
-      if (ctx->tx_state.is_active) {
+      if ((TxState)vfoBank[ParamId::TxState].get() == TxState::TX_ON) {
         PrintMediumEx(0, 21, POS_L, C_FILL, "TX");
       } else {
-        PrintMediumBoldEx(LCD_XCENTER, y, POS_C, C_FILL, "%s",
-                          RADIO_GetParamValueString(ctx, PARAM_TX_STATE));
+        vfoBank[ParamId::TxState].toString(buf, ARRAY_SIZE(buf));
+        PrintMediumBoldEx(LCD_XCENTER, y, POS_C, C_FILL, "%s", buf);
       }
-    } else if (vfo->msm.open) {
+    } else if (vfoBank[ParamId::SquelchOpen].get()) {
       PrintMediumEx(0, 21, POS_L, C_FILL, "RX");
     }
   }
@@ -312,11 +312,12 @@ private:
       return;
     }
 
-    if (!gSettings.mWatch || vfo->is_open) {
+    if (!gSettings.mWatch || vfoBank[ParamId::SquelchOpen].get()) {
       STATUSLINE_RenderRadioSettings();
     } else {
-      STATUSLINE_SetText("Radio: %s",
-                         RADIO_GetParamValueString(ctx, PARAM_RADIO));
+      char buf[16];
+      vfoBank[ParamId::Radio].toString(buf, ARRAY_SIZE(buf));
+      STATUSLINE_SetText("Radio: %s", buf);
     }
   }
 
@@ -326,12 +327,14 @@ private:
     } else {
       const char *format =
           (gCurrentBand.meta.type == TYPE_BAND_DETACHED) ? "*%s" : "%s:%u";
-      uint32_t channel = CHANNELS_GetChannel(&gCurrentBand, ctx->frequency) + 1;
 
       if (gCurrentBand.meta.type == TYPE_BAND_DETACHED) {
         PrintSmallEx(32, 12, POS_L, C_FILL, format, gCurrentBand.name);
       } else {
-        PrintSmallEx(32, 12, POS_L, C_FILL, format, gCurrentBand.name, channel);
+        uint32_t channel = CHANNELS_GetChannel(
+            &gCurrentBand, vfoBank[ParamId::Frequency].get());
+        PrintSmallEx(32, 12, POS_L, C_FILL, format, gCurrentBand.name,
+                     channel + 1);
       }
     }
   }
@@ -348,19 +351,20 @@ private:
   }
 
   void renderExtraInfo(uint8_t BASE) {
-    uint32_t txF = RADIO_GetParam(ctx, PARAM_TX_FREQUENCY_FACT);
-    uint32_t rxF = RADIO_GetParam(ctx, PARAM_FREQUENCY);
+    char buf[16];
+    uint32_t rxF = vfoBank[ParamId::Frequency].get();
+    uint32_t txF = vfoBank[ParamId::TxFrequency].get();
     bool isTxFDifferent = (txF != rxF);
 
     if (gSettings.iAmPro && !isTxFDifferent) {
-      uint32_t lambda = 29979246 / (ctx->frequency / 100);
+      uint32_t lambda = 29979246 / (rxF / 100);
       PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "L=%u/%ucm", lambda,
                    lambda / 4);
     }
 
     if (isTxFDifferent) {
-      PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "TX: %s",
-                   RADIO_GetParamValueString(ctx, PARAM_TX_FREQUENCY_FACT));
+      vfoBank[ParamId::TxFrequency].toString(buf, ARRAY_SIZE(buf));
+      PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "TX: %s", buf);
     }
   }
 
@@ -425,4 +429,6 @@ private:
 
 private:
   VFOBank vfoBank;
+  /* bool ctx;
+  bool vfo; */
 };

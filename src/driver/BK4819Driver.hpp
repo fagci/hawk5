@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../board.h"
+#include "../helper/bands.h"
 #include "../helper/battery.h"
 #include "IRadioDriver.hpp"
 #include "RadioCommon.hpp"
@@ -77,6 +78,17 @@ public:
                         },
                         PARAM_ACTION // Не сохраняем в EEPROM
         );
+
+    params_[(uint8_t)ParamId::TxPower] = Param<uint32_t>(
+        (uint32_t)TXOutputPower::TX_POW_ULOW, (uint32_t)0,
+        (uint32_t)TXOutputPower::TX_POW_HIGH, this,
+        [](void *ctx, uint32_t v) {
+          auto *driver = static_cast<BK4819Driver *>(ctx);
+          driver->power_ = (TXOutputPower)v;
+          driver->powerValue_ = BANDS_CalculateOutputPower(
+              driver->power_, driver->getParam(ParamId::Frequency));
+        },
+        PARAM_PERSIST);
 
     // ====================================================================
     // MODULATION
@@ -242,6 +254,8 @@ public:
 private:
   bool applyingFrequency_; // защита от циклических зависимостей
   TxState txState_;
+  uint8_t powerValue_;
+  TXOutputPower power_;
 
   // Проверка возможности передачи
   TxState checkTxPossible() {
@@ -297,7 +311,6 @@ private:
 
     // Включаем передачу на железе
     uint32_t freq = getParam(ParamId::Frequency).get();
-    uint8_t power = 2; // Можно добавить параметр TxPower
 
     Log("TX START at %u Hz", freq);
 
@@ -318,7 +331,7 @@ private:
     TIMER_DelayMs(5);
 
     // Установить мощность
-    BK4819_SetupPowerAmplifier(power, freq);
+    BK4819_SetupPowerAmplifier(powerValue_, freq);
     TIMER_DelayMs(10);
 
     // Состояние успешно!

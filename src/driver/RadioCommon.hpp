@@ -46,6 +46,7 @@ enum class ParamId : uint8_t {
   Frequency,
   TxFrequency,
   TxState,
+  TxPower,
   Channel,
   Gain,
   Bandwidth,
@@ -65,6 +66,7 @@ enum class ParamId : uint8_t {
   PowerOff,
   StartTX,
   StopTX,
+  Radio,
   Count
 };
 

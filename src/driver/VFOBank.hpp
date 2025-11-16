@@ -4,6 +4,7 @@
 #include "BK1080Driver.hpp"
 #include "BK4819Driver.hpp"
 #include "IRadioDriver.hpp"
+#include "ParamFormat.hpp"
 #include "RadioCommon.hpp"
 #include "SI4732Driver.hpp"
 #include "uart.h"
@@ -190,10 +191,17 @@ public:
   }
 
   // === ВНУТРЕННИЕ МЕТОДЫ ДЛЯ ParamProxy ===
-
-  uint32_t get(ParamId id) { return states_[activeVFO_].params[(uint8_t)id]; }
+  uint32_t get(ParamId id) {
+    if (id == ParamId::Radio)
+      return (uint32_t)states_[activeVFO_].radioType;
+    return states_[activeVFO_].params[(uint8_t)id];
+  }
 
   void set(ParamId id, uint32_t value) {
+    if (id == ParamId::Radio) {
+      states_[activeVFO_].radioType = (RadioType)value;
+      return;
+    }
     states_[activeVFO_].params[(uint8_t)id] = value;
     applyParam(id, value);
   }
@@ -359,10 +367,6 @@ private:
   friend class ParamProxy;
 };
 
-// ============================================================================
-// РЕАЛИЗАЦИЯ ParamProxy (ПОСЛЕ ОПРЕДЕЛЕНИЯ VFOBank!)
-// ============================================================================
-
 inline uint32_t ParamProxy::get() const { return bank_->get(id_); }
 
 inline const char *ParamProxy::toString(char *buf, size_t bufSize) const {
@@ -374,13 +378,20 @@ inline const char *ParamProxy::toString(char *buf, size_t bufSize) const {
   uint32_t value = bank_->get(id_);
 
   switch (id_) {
+  case ParamId::Radio:
+    snprintf(buf, bufSize, "%s",
+             ParamFormat::getRadioTypeName((RadioType)value));
+    break;
+
   case ParamId::Modulation:
-    snprintf(buf, bufSize, "%u", value); // Заглушка, добавь ParamFormat
+    snprintf(buf, bufSize, "%s", ParamFormat::getModulationName(value));
     break;
 
   case ParamId::Bandwidth: {
     RadioType radioType = bank_->getRadioType();
-    snprintf(buf, bufSize, "%u", value); // Заглушка
+    snprintf(buf, bufSize, "%s",
+             ParamFormat::getBandwidthName(
+                 radioType, bank_->get(ParamId::Modulation), value));
     break;
   }
 

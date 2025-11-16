@@ -28,12 +28,25 @@ enum class ModType : uint8_t {
   WFM = 6
 };
 
+enum class TxState : uint8_t {
+  TX_OFF = 0,      // Передача выключена
+  TX_ON = 1,       // Передача активна
+  TX_CHARGING = 2, // Идёт зарядка
+  TX_BAT_LOW = 3,  // Низкий заряд батареи
+  TX_DISABLED = 4, // Передача запрещена
+  TX_UPCONV = 5,   // Активен upconverter
+  TX_HIGH_POW = 6  // Высокое напряжение
+};
+
 // ============================================================================
 // PARAMETER IDS
 // ============================================================================
 
 enum class ParamId : uint8_t {
   Frequency,
+  TxFrequency,
+  TxState,
+  Channel,
   Gain,
   Bandwidth,
   Modulation,

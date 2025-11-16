@@ -47,20 +47,25 @@ class ParamProxy {
 public:
   ParamProxy(VFOBank *bank, ParamId id) : bank_(bank), id_(id) {}
 
-  // Чтение значения
+  // ОБЪЯВЛЕНИЯ (реализация ПОСЛЕ VFOBank)
   uint32_t get() const;
+  const char *toString(char *buf, size_t bufSize) const;
+  uint32_t getRealValue() const;
 
   // Операторы присваивания
   ParamProxy &operator=(uint32_t value);
   ParamProxy &operator+=(uint32_t value);
   ParamProxy &operator-=(uint32_t value);
 
-  // Неявное преобразование в uint32_t для удобства
+  // Неявное преобразование в uint32_t
   operator uint32_t() const { return get(); }
 
 private:
   VFOBank *bank_;
   ParamId id_;
+
+  // Friend для доступа к VFOBank
+  friend class VFOBank;
 };
 
 // ============================================================================
@@ -88,6 +93,8 @@ public:
   }
 
   uint8_t getActiveVFOIndex() const { return activeVFO_; }
+
+  RadioType getRadioType() const { return states_[activeVFO_].radioType; }
 
   // === УМНОЕ ПЕРЕКЛЮЧЕНИЕ VFO ===
 
@@ -167,6 +174,21 @@ public:
 
   void saveActiveChannel() { saveChannel(activeVFO_); }
 
+  void loadVfos() {
+    uint8_t vfoIdx = 0;
+    for (uint16_t i = 0; i < CHANNELS_GetCountMax(); ++i) {
+      CHMeta meta = CHANNELS_GetMeta(i);
+
+      bool isOurType = (TYPE_FILTER_VFO & (1 << meta.type)) != 0;
+      if (!isOurType) {
+        continue;
+      }
+
+      loadChannelAuto(vfoIdx, i);
+      vfoIdx++;
+    }
+  }
+
   // === ВНУТРЕННИЕ МЕТОДЫ ДЛЯ ParamProxy ===
 
   uint32_t get(ParamId id) { return states_[activeVFO_].params[(uint8_t)id]; }
@@ -179,7 +201,6 @@ public:
   void add(ParamId id, uint32_t value) {
     uint32_t current = states_[activeVFO_].params[(uint8_t)id];
 
-    // Получить границы из драйвера
     IRadioDriver *driver = getDriverForVFO(activeVFO_);
     if (driver) {
       uint32_t maxVal = driver->getParam(id).getMax();
@@ -196,7 +217,6 @@ public:
   void subtract(ParamId id, uint32_t value) {
     uint32_t current = states_[activeVFO_].params[(uint8_t)id];
 
-    // Получить границы из драйвера
     IRadioDriver *driver = getDriverForVFO(activeVFO_);
     if (driver) {
       uint32_t minVal = driver->getParam(id).getMin();
@@ -214,12 +234,13 @@ public:
     }
   }
 
+  // === UPDATE MEASUREMENTS ===
+
   void updateMeasurements() {
     IRadioDriver *driver = getDriverForVFO(activeVFO_);
     if (!driver)
       return;
 
-    // Вызвать updateMeasurements() драйвера
     switch (driver->getRadioType()) {
     case RadioType::BK4819: {
       BK4819Driver *drv = static_cast<BK4819Driver *>(driver);
@@ -240,7 +261,6 @@ public:
       break;
     }
 
-    // Скопировать измерения из драйвера в VFOState
     states_[activeVFO_].params[(uint8_t)ParamId::RSSI] =
         driver->getParam(ParamId::RSSI).get();
     states_[activeVFO_].params[(uint8_t)ParamId::Noise] =
@@ -340,10 +360,59 @@ private:
 };
 
 // ============================================================================
-// РЕАЛИЗАЦИЯ ParamProxy
+// РЕАЛИЗАЦИЯ ParamProxy (ПОСЛЕ ОПРЕДЕЛЕНИЯ VFOBank!)
 // ============================================================================
 
 inline uint32_t ParamProxy::get() const { return bank_->get(id_); }
+
+inline const char *ParamProxy::toString(char *buf, size_t bufSize) const {
+  if (!bank_) {
+    snprintf(buf, bufSize, "N/A");
+    return buf;
+  }
+
+  uint32_t value = bank_->get(id_);
+
+  switch (id_) {
+  case ParamId::Modulation:
+    snprintf(buf, bufSize, "%u", value); // Заглушка, добавь ParamFormat
+    break;
+
+  case ParamId::Bandwidth: {
+    RadioType radioType = bank_->getRadioType();
+    snprintf(buf, bufSize, "%u", value); // Заглушка
+    break;
+  }
+
+  case ParamId::Frequency:
+    snprintf(buf, bufSize, "%lu", value);
+    break;
+
+  default:
+    snprintf(buf, bufSize, "%u", value);
+    break;
+  }
+
+  return buf;
+}
+
+inline uint32_t ParamProxy::getRealValue() const {
+  if (!bank_)
+    return 0;
+
+  uint32_t value = bank_->get(id_);
+
+  switch (id_) {
+  case ParamId::Bandwidth: {
+    RadioType radioType = bank_->getRadioType();
+    // Добавь логику преобразования
+    return value;
+  }
+
+  default:
+    return value;
+  }
+}
 
 inline ParamProxy &ParamProxy::operator=(uint32_t value) {
   bank_->set(id_, value);

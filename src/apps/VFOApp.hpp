@@ -2,14 +2,11 @@
 
 #include "../board.h"
 #include "../dcs.h"
-#include "../driver/bk4819.h"
-#include "../external/printf/printf.h"
+#include "../driver/VFOBank.hpp"
 #include "../helper/bands.h"
 #include "../helper/numnav.h"
 #include "../helper/regs-menu.h"
 #include "../helper/scan.h"
-#include "../radio.h"
-#include "../scheduler.h"
 #include "../ui/components.h"
 #include "../ui/graphics.h"
 #include "../ui/spectrum.h"
@@ -19,16 +16,10 @@
 class VFOApp final : public RadioApp {
 public:
   void init() override {
-    gRadioState = &radioState;
-    RADIO_InitState(gRadioState, 16);
-    RADIO_LoadVFOs(gRadioState);
+    vfoBank.loadVfos();
 
-    gLastActiveLoot = NULL;
-    CHANNELS_LoadScanlist(TYPE_FILTER_CH, gSettings.currentScanlist);
-    if (vfo->mode == MODE_CHANNEL) {
-      setChannel(vfo->channel_index);
-    }
-    updateBand();
+    vfoBank.setActiveVFO(gSettings.activeVFO);
+    vfoBank.powerOnAndReceive();
 
     SCAN_SetMode(SCAN_MODE_SINGLE);
   }
@@ -38,21 +29,19 @@ public:
 
     renderStatusLine();
 
-    uint32_t f =
-        RADIO_GetParam(ctx, ctx->tx_state.is_active ? PARAM_TX_FREQUENCY_FACT
-                                                    : PARAM_FREQUENCY);
-    const char *mod = RADIO_GetParamValueString(ctx, PARAM_MODULATION);
+    uint32_t f = vfoBank[ParamId::TxFrequency];
+    char mod[4];
+    vfoBank[ParamId::Modulation].toString(mod, 3);
 
     renderBandInfo(BASE);
-    renderTxRxState(BASE - 4,
-                    ctx->tx_state.is_active || ctx->tx_state.last_error);
+    renderTxRxState(BASE - 4, vfoBank[ParamId::TxState]);
 
-    if (!ctx->tx_state.last_error) {
+    if (vfoBank[ParamId::TxState] == TX_ON) {
       UI_BigFrequency(BASE, f);
     }
 
     PrintMediumEx(LCD_WIDTH - 1, BASE - 12, POS_R, C_FILL, mod);
-    renderChannelName(21, vfo->channel_index);
+    renderChannelName(21, vfoBank[ParamId::Channel]);
 
     const uint32_t step = StepFrequencyTable[ctx->step];
     PrintSmallEx(LCD_WIDTH, BASE + 6, POS_R, C_FILL, "%d.%02d", step / KHZ,
@@ -433,4 +422,7 @@ private:
       UI_RSSIBar(BASE + 1);
     }
   }
+
+private:
+  VFOBank vfoBank;
 };

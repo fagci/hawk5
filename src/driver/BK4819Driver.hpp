@@ -1,10 +1,12 @@
 #pragma once
 
+#include "../board.h"
+#include "../helper/battery.h"
 #include "IRadioDriver.hpp"
 #include "RadioCommon.hpp"
-#include "bk1080.h"
 #include "bk4819-regs.h"
 #include "bk4819.h"
+#include "systick.h"
 #include "uart.h"
 
 // ============================================================================
@@ -13,7 +15,8 @@
 
 class BK4819Driver : public IRadioDriver {
 public:
-  BK4819Driver() : IRadioDriver(), applyingFrequency_(false) {
+  BK4819Driver()
+      : IRadioDriver(), applyingFrequency_(false), txState_(TxState::TX_OFF) {
 
     // ====================================================================
     // FREQUENCY - контекстно-зависимые границы
@@ -54,6 +57,26 @@ public:
           driver->applyingFrequency_ = false;
         },
         PARAM_PERSIST);
+
+    params_[(uint8_t)ParamId::TxState] =
+        Param<uint32_t>((uint32_t)TxState::TX_OFF, 0, 6, this,
+                        [](void *ctx, uint32_t v) {
+                          auto *driver = static_cast<BK4819Driver *>(ctx);
+
+                          if (v == 0) {
+                            // Выключить передачу
+                            driver->stopTx();
+                          } else if (v == 1) {
+                            // Попытка включить передачу
+                            driver->startTx();
+                          }
+
+                          // После попытки - обновить реальное состояние
+                          driver->getParam(ParamId::TxState)
+                              .set((uint32_t)driver->txState_, true);
+                        },
+                        PARAM_ACTION // Не сохраняем в EEPROM
+        );
 
     // ====================================================================
     // MODULATION
@@ -218,4 +241,126 @@ public:
 
 private:
   bool applyingFrequency_; // защита от циклических зависимостей
+  TxState txState_;
+
+  // Проверка возможности передачи
+  TxState checkTxPossible() {
+    // 1. Проверка upconverter
+    if (gSettings.upconverter) {
+      return TxState::TX_UPCONV;
+    }
+
+    // 2. Проверка батареи
+    if (gBatteryPercent == 0) {
+      return TxState::TX_BAT_LOW;
+    }
+
+    // 3. Проверка зарядки
+    if (gChargingWithTypeC || gBatteryVoltage > 880) {
+      return TxState::TX_CHARGING;
+    }
+
+    // 4. Проверка что радио BK4819 (другие не поддерживают TX)
+    if (getRadioType() != RadioType::BK4819) {
+      return TxState::TX_DISABLED;
+    }
+
+    // 5. Проверка состояния питания
+    if (powerState_ == 0) {
+      return TxState::TX_DISABLED;
+    }
+
+    // Всё ОК!
+    return TxState::TX_ON;
+  }
+
+  // Включить передачу
+  void startTx() {
+    // Проверка ограничений
+    TxState checkResult = checkTxPossible();
+
+    if (checkResult != TxState::TX_ON) {
+      // Ошибка! Установить состояние ошибки
+      txState_ = checkResult;
+
+      // Обновить параметры для UI
+      getParam(ParamId::TxState).set((uint32_t)txState_, true);
+
+      Log("TX FAILED: %u", (uint32_t)checkResult);
+      return;
+    }
+
+    // Уже в TX?
+    if (txState_ == TxState::TX_ON) {
+      return;
+    }
+
+    // Включаем передачу на железе
+    uint32_t freq = getParam(ParamId::Frequency).get();
+    uint8_t power = 2; // Можно добавить параметр TxPower
+
+    Log("TX START at %u Hz", freq);
+
+    // Отключить RX
+    BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, false);
+
+    // Настроить частоту TX
+    BK4819_SelectFilter(freq);
+    BK4819_TuneTo(freq, true);
+
+    // Подготовить TX
+    BK4819_PrepareTransmit();
+    TIMER_DelayMs(10);
+
+    // Включить PA
+    bool paEnabled = true; // Можно добавить параметр
+    BK4819_ToggleGpioOut(BK4819_GPIO1_PIN29_PA_ENABLE, paEnabled);
+    TIMER_DelayMs(5);
+
+    // Установить мощность
+    BK4819_SetupPowerAmplifier(power, freq);
+    TIMER_DelayMs(10);
+
+    // Состояние успешно!
+    txState_ = TxState::TX_ON;
+
+    // Обновить параметры
+    getParam(ParamId::TxState).set((uint32_t)txState_, true);
+
+    // Индикатор (красный LED)
+    BOARD_ToggleRed(true);
+  }
+
+  // Выключить передачу
+  void stopTx() {
+    if (txState_ != TxState::TX_ON) {
+      return;
+    }
+
+    Log("TX STOP");
+
+    // EOT (end of transmission) tone
+    BK4819_ExitSubAu();
+    if (gSettings.roger) {
+      BK4819_PlayRogerTiny();
+    }
+
+    // Выключить PA и TX
+    BK4819_TurnsOffTones_TurnsOnRX();
+    BK4819_SetupPowerAmplifier(0, 0);
+    BK4819_ToggleGpioOut(BK4819_GPIO1_PIN29_PA_ENABLE, false);
+    BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, true);
+
+    // Вернуть частоту RX
+    uint32_t freq = getParam(ParamId::Frequency).get();
+    BK4819_SelectFilter(freq);
+    BK4819_TuneTo(freq, true);
+
+    // Состояние
+    txState_ = TxState::TX_OFF;
+    getParam(ParamId::TxState).set((uint32_t)txState_, true);
+
+    // Индикатор
+    BOARD_ToggleRed(false);
+  }
 };

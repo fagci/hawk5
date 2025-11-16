@@ -13,18 +13,7 @@ public:
   void init() override {
     /* vfoBank.loadAll();
     vfoBank.setActive(gSettings.activeVFO); */
-    uint8_t vfoIdx = 0;
-    for (uint16_t i = 0; i < CHANNELS_GetCountMax(); ++i) {
-      CHMeta meta = CHANNELS_GetMeta(i);
-
-      bool isOurType = (TYPE_FILTER_VFO & (1 << meta.type)) != 0;
-      if (!isOurType) {
-        continue;
-      }
-
-      vfoBank.loadChannelAuto(vfoIdx, i);
-      vfoIdx++;
-    }
+    vfoBank.loadVfos();
     vfoBank.setActiveVFO(gSettings.activeVFO);
     vfoBank.powerOnAndReceive();
   }

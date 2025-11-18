@@ -206,13 +206,14 @@ struct K5 {
   struct KeyboardController {
     Key lastKey = Key::None;
     uint32_t lastDebounceTime = 0;
-    static constexpr uint32_t debounceDelay = 50; // ms
+    static constexpr uint32_t debounceDelay = 1; // ms
 
     void update() {
       int rawKey = K5::Keyboard::scan();
       Key key = rawKey == -1 ? Key::None : static_cast<Key>(rawKey);
 
       uint32_t now = K5::Timer::millis();
+      printf("key %d\n", key);
       if (key != lastKey) {
         lastDebounceTime = now;
       }

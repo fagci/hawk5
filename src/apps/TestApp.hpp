@@ -16,7 +16,7 @@ public:
 
   void render() override {
     PrintMedium(0, 16, "PTT: %u", K5::Button::isPTTPressed());
-    PrintMedium(0, 24, "Key: %u", rawKey);
+    PrintMedium(0, 24, "Key: %d", rawKey);
   }
 
   void update() override {

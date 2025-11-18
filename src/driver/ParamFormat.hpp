@@ -163,16 +163,16 @@ static const char *STEP_NAMES[] = {
 //   "TX Off", "TX On", "CHARGING", "BAT LOW", "DISABLED", "UPCONV", "HIGH POW",
 // };
 
-static const char *TX_POWER_NAMES[] = {
+/* static const char *TX_POWER_NAMES[] = {
     "Low",    // 0
     "Mid",    // 1
     "High",   // 2
     "Higher", // 3
     "Highest" // 4
-};
+}; */
 
-static const char *TX_STATE_NAMES[] = {
-    "TX Off", "TX On", "CHARGING", "BAT LOW", "DISABLED", "UPCONV", "HIGH POW"};
+/* static const char *TX_STATE_NAMES[] = {
+    "TX Off", "TX On", "CHARGING", "BAT LOW", "DISABLED", "UPCONV", "HIGH POW"}; */
 
 // ============================================================================
 // SQUELCH TYPE - из radio.c

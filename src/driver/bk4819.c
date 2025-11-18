@@ -359,7 +359,7 @@ uint32_t BK4819_GetFrequency(void) {
 }
 
 void BK4819_TuneTo(uint32_t freq, bool precise) {
-  Log("BK set f %u", freq);
+  // Log("BK set f %u", freq);
   BK4819_SetFrequency(freq);
   gLastFrequency = freq;
 

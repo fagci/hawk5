@@ -6,6 +6,8 @@
 #include "systick.h"
 #include "uart.h"
 #include <cstdint>
+#include <cstring>
+#include <functional>
 
 // ============================================================================
 // HAL Layer - Универсальные примитивы
@@ -246,6 +248,12 @@ struct K5 {
     static bool isPTTPressed() { return !PTT::read(); } // Active low
   };
 
+  struct Actions {
+    static void toggleFlashlight() { Flashlight::toggle(); }
+
+    static void toggleMonitor() { Log("Toggle monitor mode =)"); }
+  };
+
   enum class KeyEvent {
     None,
     Pressed,
@@ -254,12 +262,132 @@ struct K5 {
     LongPressRepeat, // каждые 100ms
     DoubleClick      // в течение 300ms
   };
+  enum class KeyAction : uint8_t {
+    None = 0,
+    ToggleFlashlight,
+    ToggleMonitor,
+    LockKeyboard,
+    StartScan,
+    StopScan,
+    SwitchVFO,
+    FrequencyUp,
+    FrequencyDown,
+    EnterMenu,
+    QuickSave,
+    TransmitStart,
+    TransmitStop,
+    VolumeUp,
+    VolumeDown,
+    ChannelUp,
+    ChannelDown,
+    // ... добавляй по мере необходимости
+    MaxActions
+  };
+
+  struct KeyBinding {
+    Key key;
+    KeyEvent event;
+    KeyAction action;
+    bool supportsDoubleClick; // Новый флаг
+  };
+
+  struct KeyMapper {
+    // Текущая активная таблица привязок (может быть изменена через настройки)
+    inline static KeyBinding bindings[32]; // Достаточно для большинства случаев
+    inline static uint8_t bindingsCount;
+
+    static constexpr KeyBinding defaultBindings[] = {
+        // Боковые кнопки
+        {Key::SIDE1, KeyEvent::Pressed, KeyAction::ToggleMonitor},
+        {Key::SIDE1, KeyEvent::DoubleClick, KeyAction::ToggleFlashlight},
+        {Key::SIDE1, KeyEvent::LongPressed, KeyAction::LockKeyboard},
+
+        {Key::SIDE2, KeyEvent::Pressed, KeyAction::StartScan},
+        {Key::SIDE2, KeyEvent::LongPressed, KeyAction::StopScan},
+
+        // Основные клавиши
+        {Key::Menu, KeyEvent::Pressed, KeyAction::EnterMenu},
+        {Key::Up, KeyEvent::Pressed, KeyAction::FrequencyUp},
+        {Key::Down, KeyEvent::Pressed, KeyAction::FrequencyDown},
+        {Key::Up, KeyEvent::LongPressRepeat, KeyAction::FrequencyUp},
+        {Key::Down, KeyEvent::LongPressRepeat, KeyAction::FrequencyDown},
+
+        {Key::Exit, KeyEvent::Pressed, KeyAction::SwitchVFO},
+        {Key::Star, KeyEvent::LongPressed, KeyAction::QuickSave},
+
+        // Цифры для быстрого переключения каналов
+        // ...
+    };
+
+    static constexpr KeyBinding vfoBindings[] = {
+        {Key::SIDE1, KeyEvent::Pressed, KeyAction::ToggleMonitor, true},
+        {Key::SIDE1, KeyEvent::DoubleClick, KeyAction::ToggleFlashlight, true},
+        // ...
+    };
+
+    // Инициализация дефолтными значениями
+    static void init() {
+      bindingsCount = sizeof(defaultBindings) / sizeof(KeyBinding);
+      memcpy(bindings, defaultBindings, sizeof(defaultBindings));
+    }
+
+    void setKeymap(const KeyBinding *bindings, uint8_t count) {
+      currentBindings = bindings;
+      bindingsCount = count;
+    }
+
+    /* KeyAction findAction(Key key, KeyEvent event) const {
+      for (uint8_t i = 0; i < bindingsCount; i++) {
+        if (currentBindings[i].key == key &&
+            currentBindings[i].event == event) {
+          return currentBindings[i].action;
+        }
+      }
+      return KeyAction::None;
+    } */
+
+    // Поиск действия для комбинации клавиша+событие
+    static KeyAction findAction(Key key, KeyEvent event) {
+      for (uint8_t i = 0; i < bindingsCount; i++) {
+        if (bindings[i].key == key && bindings[i].event == event) {
+          return bindings[i].action;
+        }
+      }
+      return KeyAction::None;
+    }
+
+    // Выполнение действия
+    static void executeAction(KeyAction action) {
+      switch (action) {
+      case KeyAction::ToggleFlashlight:
+        Actions::toggleFlashlight();
+        break;
+      case KeyAction::ToggleMonitor:
+        Actions::toggleMonitor();
+        break;
+      // ... остальные действия
+      case KeyAction::None:
+      default:
+        break;
+      }
+    }
+
+    // Обработчик событий клавиатуры
+    static void handleKeyEvent(Key key, KeyEvent event) {
+      KeyAction action = findAction(key, event);
+      if (action != KeyAction::None) {
+        executeAction(action);
+      }
+    }
+
+  private:
+    const KeyBinding *currentBindings;
+  };
 
   struct KeyboardController {
     Key lastKey = Key::None;
     Key currentKey = Key::None;
-    Key lastReleasedKey =
-        Key::None; // ✅ Запоминаем, какая клавиша была отпущена
+    Key lastReleasedKey = Key::None;
     uint32_t lastDebounceTime = 0;
     uint32_t keyPressTime = 0;
     uint32_t lastReleaseTime = 0;
@@ -271,66 +399,67 @@ struct K5 {
     static constexpr uint32_t doubleClickWindow = 300;
 
     bool isLongPressed = false;
+    bool suppressPressed = false;
+
+    bool waitingForDoubleClick = false;
+
+    Key pendingKey =
+        Key::None; // Клавиша, ожидающая решения по single/double click
+    uint32_t doubleClickDeadline = 0; // Таймер ожидания второго клика
 
     void update() {
+      uint32_t now = K5::Timer::millis();
       int rawKey = K5::Keyboard::scan();
       Key key = rawKey == -1 ? Key::None : static_cast<Key>(rawKey);
-      uint32_t now = K5::Timer::millis();
 
-      // Дебаунсинг
       if (key != currentKey) {
         currentKey = key;
         lastDebounceTime = now;
       }
 
       if ((now - lastDebounceTime) > debounceDelay) {
-        // Клавиша нажата
+        // Если кнопка нажата
         if (currentKey != Key::None && lastKey == Key::None) {
-          keyPressTime = now;
-          isLongPressed = false;
           lastKey = currentKey;
-          onKeyEvent(currentKey, KeyEvent::Pressed);
+          keyPressTime = now;
 
-          // ✅ Double-click только если та же клавиша нажата повторно
-          if (currentKey == lastReleasedKey &&
-              (now - lastReleaseTime) < doubleClickWindow) {
+          // Если это повторный клик по той же клавише и в пределах окна double
+          // click
+          if (pendingKey == currentKey && now <= doubleClickDeadline) {
+            // Отменяем одиночный клик
+            pendingKey = Key::None;
             onKeyEvent(currentKey, KeyEvent::DoubleClick);
+            doubleClickDeadline = 0;
+          } else {
+            // Устанавливаем в ожидание одиночного клика
+            pendingKey = currentKey;
+            doubleClickDeadline = now + doubleClickWindow;
           }
         }
-        // Клавиша удерживается
-        else if (currentKey != Key::None && currentKey == lastKey) {
-          uint32_t holdTime = now - keyPressTime;
-
-          // Первое долгое нажатие
-          if (holdTime >= longPressDelay && !isLongPressed) {
-            isLongPressed = true;
-            longPressRepeatTime = now;
-            onKeyEvent(currentKey, KeyEvent::LongPressed);
-          }
-          // Повторяющееся долгое нажатие (авто-повтор)
-          else if (isLongPressed &&
-                   (now - longPressRepeatTime) >= longPressRepeat) {
-            longPressRepeatTime = now;
-            onKeyEvent(currentKey, KeyEvent::LongPressRepeat);
-          }
-        }
-        // Клавиша отпущена
+        // Кнопка отпущена
         else if (currentKey == Key::None && lastKey != Key::None) {
-          lastReleasedKey = lastKey; // ✅ Сохраняем, какую клавишу отпустили
           lastReleaseTime = now;
           onKeyEvent(lastKey, KeyEvent::Released);
           lastKey = Key::None;
         }
       }
+
+      // Проверяем тайм-аут ожидания двойного клика, для одиночного события
+      if (pendingKey != Key::None && now > doubleClickDeadline) {
+        onKeyEvent(pendingKey, KeyEvent::Pressed);
+        pendingKey = Key::None;
+        doubleClickDeadline = 0;
+      }
     }
 
-    void onKeyEvent(Key key, KeyEvent event) {
+    /* void onKeyEvent(Key key, KeyEvent event) {
       const char *eventNames[] = {
           "None",        "Pressed",         "Released",
           "LongPressed", "LongPressRepeat", "DoubleClick"};
       Log("Key %d: %s", static_cast<int>(key),
           eventNames[static_cast<int>(event)]);
-    }
+    } */
+    std::function<void(Key, KeyEvent)> onKeyEvent;
   };
 
   struct Timer {

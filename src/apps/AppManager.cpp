@@ -32,6 +32,14 @@ void AppManager::run(uint8_t appId) {
   // Инициализировать новое
   currentApp_ = newApp;
   currentAppId_ = appId;
+
+  K5::Keyboard::init();
+  K5::KeyMapper::init();
+  keymapManager.setKeymap(K5::KeyMapper::vfoBindings,
+                          ARRAY_SIZE(K5::KeyMapper::vfoBindings));
+
+  kbd.onKeyEvent = K5::KeyMapper::handleKeyEvent;
+
   currentApp_->init();
 
   if (RadioState *state = currentApp_->getRadioState()) {
@@ -49,6 +57,7 @@ void AppManager::exit() {
 }
 
 void AppManager::update() {
+  kbd.update();
   if (currentApp_) {
     currentApp_->update();
   }

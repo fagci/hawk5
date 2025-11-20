@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../radio.h"
+#include "../driver/K5.hpp"
 #include "App.hpp"
 #include <stddef.h>
 
@@ -22,7 +22,6 @@ public:
   App *getCurrentApp() { return currentApp_; }
   uint8_t getCurrentAppId() const { return currentAppId_; }
 
-
 private:
   AppManager() = default;
 
@@ -32,4 +31,7 @@ private:
 
   App *currentApp_ = nullptr;
   uint8_t currentAppId_ = 0xFF;
+
+  K5::KeyboardController kbd;
+  K5::KeyMapper keymapManager;
 };

@@ -252,6 +252,9 @@ struct K5 {
     static void toggleFlashlight() { Flashlight::toggle(); }
 
     static void toggleMonitor() { Log("Toggle monitor mode =)"); }
+
+    static void frequencyUp() { vfo.frequencyUp(25 * KHZ); }
+    static void frequencyDown() { vfo.frequencyDown(25 * KHZ); }
   };
 
   enum class KeyEvent {
@@ -300,17 +303,9 @@ struct K5 {
         // Боковые кнопки
         {Key::SIDE1, KeyEvent::Pressed, KeyAction::ToggleMonitor},
         {Key::SIDE1, KeyEvent::DoubleClick, KeyAction::ToggleFlashlight},
-        {Key::SIDE1, KeyEvent::LongPressed, KeyAction::LockKeyboard},
-
-        {Key::SIDE2, KeyEvent::Pressed, KeyAction::StartScan},
-        {Key::SIDE2, KeyEvent::LongPressed, KeyAction::StopScan},
 
         // Основные клавиши
         {Key::Menu, KeyEvent::Pressed, KeyAction::EnterMenu},
-        {Key::Up, KeyEvent::Pressed, KeyAction::FrequencyUp},
-        {Key::Down, KeyEvent::Pressed, KeyAction::FrequencyDown},
-        {Key::Up, KeyEvent::LongPressRepeat, KeyAction::FrequencyUp},
-        {Key::Down, KeyEvent::LongPressRepeat, KeyAction::FrequencyDown},
 
         {Key::Exit, KeyEvent::Pressed, KeyAction::SwitchVFO},
         {Key::Star, KeyEvent::LongPressed, KeyAction::QuickSave},
@@ -322,6 +317,11 @@ struct K5 {
     static constexpr KeyBinding vfoBindings[] = {
         {Key::SIDE1, KeyEvent::Pressed, KeyAction::ToggleMonitor, true},
         {Key::SIDE1, KeyEvent::DoubleClick, KeyAction::ToggleFlashlight, true},
+
+        {Key::Up, KeyEvent::Pressed, KeyAction::FrequencyUp},
+        {Key::Down, KeyEvent::Pressed, KeyAction::FrequencyDown},
+        {Key::Up, KeyEvent::LongPressRepeat, KeyAction::FrequencyUp},
+        {Key::Down, KeyEvent::LongPressRepeat, KeyAction::FrequencyDown},
         // ...
     };
 
@@ -569,4 +569,79 @@ struct K5 {
     MCU::LED::init();
     BK4819::init();
   }
+
+  // Перечисление для приёмников
+  enum class Receiver : uint8_t { Rx1 = 0, Rx2 = 1, MaxReceivers };
+
+  // Структура одного VFO
+  struct VFO {
+    uint32_t frequencyHz = 0;
+    Receiver activeReceiver = Receiver::Rx1;
+    bool monitorMode = false;
+    bool multiwatchEnabled = false;
+
+    void setFrequency(uint32_t freq) {
+      frequencyHz = freq;
+      // Обновить приемник, если нужно (вызовы драйверов)
+    }
+
+    void switchReceiver() {
+      if (activeReceiver == Receiver::Rx1)
+        activeReceiver = Receiver::Rx2;
+      else
+        activeReceiver = Receiver::Rx1;
+      // Переключить аппаратный приемник
+    }
+
+    void toggleMonitor() {
+      monitorMode = !monitorMode;
+      // Включить/выключить режим мониторинга на активном приемнике
+    }
+
+    void toggleMultiwatch() {
+      multiwatchEnabled = !multiwatchEnabled;
+      // Управление Multiwatch (переключение приемников или DSP)
+    }
+  };
+
+  // Класс управления группой из 4 VFO
+  struct VFOBank {
+    static constexpr int VFO_COUNT = 4;
+    VFO vfos[VFO_COUNT];
+
+    int activeVFOIndex = 0;
+
+    VFO &activeVFO() { return vfos[activeVFOIndex]; }
+
+    void setActiveVFO(int index) {
+      if (index >= 0 && index < VFO_COUNT) {
+        activeVFOIndex = index;
+        // Возможно переход логики на новый VFO
+      }
+    }
+
+    void frequencyUp(uint32_t stepHz) {
+      vfos[activeVFOIndex].setFrequency(vfos[activeVFOIndex].frequencyHz +
+                                        stepHz);
+    }
+
+    void frequencyDown(uint32_t stepHz) {
+      vfos[activeVFOIndex].setFrequency(vfos[activeVFOIndex].frequencyHz -
+                                        stepHz);
+    }
+
+    uint32_t getFrequency() { return vfos[activeVFOIndex].frequencyHz; }
+    void setFrequency(uint32_t f) { vfos[activeVFOIndex].frequencyHz = f; }
+
+    void switchReceiver() { vfos[activeVFOIndex].switchReceiver(); }
+
+    void toggleMonitor() { vfos[activeVFOIndex].toggleMonitor(); }
+
+    void toggleMultiwatch() { vfos[activeVFOIndex].toggleMultiwatch(); }
+
+    // Можно добавить методы сохранения/загрузки, переключения VFO по кругу и
+    // др.
+  };
+
+  inline static VFOBank vfo;
 };

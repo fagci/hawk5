@@ -2,6 +2,7 @@
 #include "../inc/dp32g030/gpio.h"
 #include "bk4819-regs.h" // Для BK4819_REG_33
 #include "bk4819.h"
+#include "gpio.h"
 #include "systick.h"
 #include "uart.h"
 #include <cstdint>
@@ -90,146 +91,250 @@ struct K5 {
     };
   };
 
-  // Строки — входы с pull-up, PA3..PA6
-  using Row0 = Pin<GPIOA_BASE, 3>;
-  using Row1 = Pin<GPIOA_BASE, 4>;
-  using Row2 = Pin<GPIOA_BASE, 5>;
-  using Row3 = Pin<GPIOA_BASE, 6>;
+  enum class Key {
+    None = -1,
+    Key_0 = 0,
+    Key_1 = 1,
+    Key_2 = 2,
+    Key_3 = 3,
+    Key_4 = 4,
+    Key_5 = 5,
+    Key_6 = 6,
+    Key_7 = 7,
+    Key_8 = 8,
+    Key_9 = 9,
+    Menu = 10,
+    Up = 11,
+    Down = 12,
+    Exit = 13,
+    Star = 14,
+    F = 15,
+    SIDE1 = 16,
+    SIDE2 = 17,
+    PTT = 18,
+    Invalid = 0xFF
+  };
 
-  // Колонки — выходы PA10..PA13
-  using Col0 = Pin<GPIOA_BASE, 10>;
-  using Col1 = Pin<GPIOA_BASE, 11>;
-  using Col2 = Pin<GPIOA_BASE, 12>;
-  using Col3 = Pin<GPIOA_BASE, 13>;
+  struct Keyboard {
+    // КОЛОНКИ — входы с pull-up PA0..PA3
+    using Col0 = Pin<GPIOA_BASE, GPIOA_PIN_KEYBOARD_0>; // PA0
+    using Col1 = Pin<GPIOA_BASE, GPIOA_PIN_KEYBOARD_1>; // PA1
+    using Col2 = Pin<GPIOA_BASE, GPIOA_PIN_KEYBOARD_2>; // PA2
+    using Col3 = Pin<GPIOA_BASE, GPIOA_PIN_KEYBOARD_3>; // PA3
+
+    // СТРОКИ — выходы PA10..PA13
+    using Row0 = Pin<GPIOA_BASE, GPIOA_PIN_KEYBOARD_4>; // PA10
+    using Row1 = Pin<GPIOA_BASE, GPIOA_PIN_KEYBOARD_5>; // PA11
+    using Row2 = Pin<GPIOA_BASE, GPIOA_PIN_KEYBOARD_6>; // PA12
+    using Row3 = Pin<GPIOA_BASE, GPIOA_PIN_KEYBOARD_7>; // PA13
+
+    static void init() {
+      // Колонки — входы с pull-up
+      Col0::setInput();
+      Col1::setInput();
+      Col2::setInput();
+      Col3::setInput();
+
+      // Строки — выходы
+      Row0::setOutput();
+      Row1::setOutput();
+      Row2::setOutput();
+      Row3::setOutput();
+
+      // Все строки в HIGH (неактивны)
+      Row0::set();
+      Row1::set();
+      Row2::set();
+      Row3::set();
+    }
+
+    static uint16_t readStableGpioData() {
+      uint16_t reg = 0, reg2 = 0;
+      for (int i = 0; i < 3; i++) {
+        for (volatile int j = 0; j < 10; j++)
+          ;
+        reg2 = GPIOA->DATA;
+        if (reg != reg2) {
+          reg = reg2;
+          i = 0;
+        }
+      }
+      return reg;
+    }
+
+    static void resetKeyboardRow(uint8_t row) {
+      // Сначала все строки в HIGH
+      Row0::set();
+      Row1::set();
+      Row2::set();
+      Row3::set();
+
+      // Активировать нужную строку (LOW)
+      switch (row) {
+      case 0: /* Zero row - боковые кнопки, ничего не активируем */
+        break;
+      case 1:
+        Row0::clear();
+        break; // First row
+      case 2:
+        Row1::clear();
+        break; // Second row
+      case 3:
+        Row2::clear();
+        break; // Third row
+      case 4:
+        Row3::clear();
+        break; // Fourth row
+      }
+
+      // Задержка для стабилизации
+      for (volatile int i = 0; i < 10; i++)
+        ;
+    }
+
+    static int scan() {
+      // Правильная карта согласно keyboard.c
+      static const int8_t keyMap[5][4] = {
+          {16, 17, 17, 17}, // Zero row: SIDE1, SIDE2, SIDE2, SIDE2
+          {10, 1, 4, 7},    // First row: MENU, 1, 4, 7
+          {11, 2, 5, 8},    // Second row: UP, 2, 5, 8
+          {12, 3, 6, 9},    // Third row: DOWN, 3, 6, 9
+          {13, 14, 0, 15}   // Fourth row: EXIT, *, 0, F
+      };
+
+      for (uint8_t row = 0; row < 5; row++) {
+        resetKeyboardRow(row);
+        uint16_t reg = readStableGpioData();
+
+        // Проверяем колонки (активны при LOW)
+        if (!(reg & (1 << GPIOA_PIN_KEYBOARD_0))) {
+          if (row == 0 && 0 > 1)
+            continue; // игнорируем дубли
+          return keyMap[row][0];
+        }
+        if (!(reg & (1 << GPIOA_PIN_KEYBOARD_1))) {
+          if (row == 0 && 1 > 1)
+            continue;
+          return keyMap[row][1];
+        }
+        if (!(reg & (1 << GPIOA_PIN_KEYBOARD_2))) {
+          if (row == 0 && 2 > 1)
+            continue;
+          return keyMap[row][2];
+        }
+        if (!(reg & (1 << GPIOA_PIN_KEYBOARD_3))) {
+          if (row == 0 && 3 > 1)
+            continue;
+          return keyMap[row][3];
+        }
+      }
+
+      return -1;
+    }
+  };
 
   struct Button {
     using PTT = Pin<GPIOC_BASE, 5>;
 
     static void init() {
       /* PTT::setInput();
-      Menu::setInput();
-      Up::setInput();
-      Down::setInput(); */
+        Menu::setInput();
+        Up::setInput();
+        Down::setInput(); */
     }
 
     static bool isPTTPressed() { return !PTT::read(); } // Active low
   };
 
-  struct Keyboard {
-    static void init() {
-      return;
-      // Настроить строки как input с pull-up
-      Row0::setInput();
-      Row1::setInput();
-      Row2::setInput();
-      Row3::setInput();
-
-      // Настроить колонки как output и установить HIGH
-      Col0::setOutput();
-      Col1::setOutput();
-      Col2::setOutput();
-      Col3::setOutput();
-
-      Col0::set();
-      Col1::set();
-      Col2::set();
-      Col3::set();
-    }
-
-    static int scan() {
-      // Проще — явно по каждому
-      bool hit[4][4] = {};
-
-      // 4 колонки
-      for (int col = 0; col < 4; ++col) {
-        // Перед каждой итерацией устанавливай все HIGH
-        Col0::set();
-        Col1::set();
-        Col2::set();
-        Col3::set();
-
-        // Обнуляй одну нужную колонку
-        switch (col) {
-        case 0:
-          Col0::clear();
-          break;
-        case 1:
-          Col1::clear();
-          break;
-        case 2:
-          Col2::clear();
-          break;
-        case 3:
-          Col3::clear();
-          break;
-        }
-
-        // Проверяй строки
-        if (!Row0::read())
-          return 0 * 4 + col;
-        if (!Row1::read())
-          return 1 * 4 + col;
-        if (!Row2::read())
-          return 2 * 4 + col;
-        if (!Row3::read())
-          return 3 * 4 + col;
-      }
-
-      return -1; // Нет нажатий
-    }
-  };
-
-  enum class Key {
-    None = -1,
-    M = 0,
-    Up = 1,
-    Down = 2,
-    Exit = 3,
-    Key_1 = 4,
-    Key_2 = 5,
-    Key_3 = 6,
-    Key_4 = 7,
-    Key_5 = 8,
-    Key_6 = 9,
-    Key_7 = 10,
-    Key_8 = 11,
-    Key_9 = 12,
-    Key_A = 13,
-    Key_B = 14,
-    Key_C = 15
-  };
-
-  struct Timer {
-    static uint32_t millis() { return GetUptimeMs(); }
+  enum class KeyEvent {
+    None,
+    Pressed,
+    Released,
+    LongPressed,     // 500ms
+    LongPressRepeat, // каждые 100ms
+    DoubleClick      // в течение 300ms
   };
 
   struct KeyboardController {
     Key lastKey = Key::None;
+    Key currentKey = Key::None;
+    Key lastReleasedKey =
+        Key::None; // ✅ Запоминаем, какая клавиша была отпущена
     uint32_t lastDebounceTime = 0;
-    static constexpr uint32_t debounceDelay = 1; // ms
+    uint32_t keyPressTime = 0;
+    uint32_t lastReleaseTime = 0;
+    uint32_t longPressRepeatTime = 0;
+
+    static constexpr uint32_t debounceDelay = 50;
+    static constexpr uint32_t longPressDelay = 500;
+    static constexpr uint32_t longPressRepeat = 100;
+    static constexpr uint32_t doubleClickWindow = 300;
+
+    bool isLongPressed = false;
 
     void update() {
       int rawKey = K5::Keyboard::scan();
       Key key = rawKey == -1 ? Key::None : static_cast<Key>(rawKey);
-
       uint32_t now = K5::Timer::millis();
-      printf("key %d\n", key);
-      if (key != lastKey) {
+
+      // Дебаунсинг
+      if (key != currentKey) {
+        currentKey = key;
         lastDebounceTime = now;
       }
 
       if ((now - lastDebounceTime) > debounceDelay) {
-        if (key != lastKey) {
-          lastKey = key;
-          onKeyPress(key);
+        // Клавиша нажата
+        if (currentKey != Key::None && lastKey == Key::None) {
+          keyPressTime = now;
+          isLongPressed = false;
+          lastKey = currentKey;
+          onKeyEvent(currentKey, KeyEvent::Pressed);
+
+          // ✅ Double-click только если та же клавиша нажата повторно
+          if (currentKey == lastReleasedKey &&
+              (now - lastReleaseTime) < doubleClickWindow) {
+            onKeyEvent(currentKey, KeyEvent::DoubleClick);
+          }
+        }
+        // Клавиша удерживается
+        else if (currentKey != Key::None && currentKey == lastKey) {
+          uint32_t holdTime = now - keyPressTime;
+
+          // Первое долгое нажатие
+          if (holdTime >= longPressDelay && !isLongPressed) {
+            isLongPressed = true;
+            longPressRepeatTime = now;
+            onKeyEvent(currentKey, KeyEvent::LongPressed);
+          }
+          // Повторяющееся долгое нажатие (авто-повтор)
+          else if (isLongPressed &&
+                   (now - longPressRepeatTime) >= longPressRepeat) {
+            longPressRepeatTime = now;
+            onKeyEvent(currentKey, KeyEvent::LongPressRepeat);
+          }
+        }
+        // Клавиша отпущена
+        else if (currentKey == Key::None && lastKey != Key::None) {
+          lastReleasedKey = lastKey; // ✅ Сохраняем, какую клавишу отпустили
+          lastReleaseTime = now;
+          onKeyEvent(lastKey, KeyEvent::Released);
+          lastKey = Key::None;
         }
       }
     }
 
-    void onKeyPress(Key key) {
-      // Тут можно обрабатывать событие клавиши
-      printf("Key pressed: %d\n", static_cast<int>(key));
+    void onKeyEvent(Key key, KeyEvent event) {
+      const char *eventNames[] = {
+          "None",        "Pressed",         "Released",
+          "LongPressed", "LongPressRepeat", "DoubleClick"};
+      Log("Key %d: %s", static_cast<int>(key),
+          eventNames[static_cast<int>(event)]);
     }
+  };
+
+  struct Timer {
+    static uint32_t millis() { return GetUptimeMs(); }
   };
 
   struct Serial {

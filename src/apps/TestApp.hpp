@@ -29,6 +29,7 @@ public:
   void render() override {
     UI_BigFrequency(32, f);
     PrintMedium(0, 16, "RSSI: %u", BK4819_GetRSSI());
+    PrintMedium(0, 24, "AGC: %u", (BK4819_ReadRegister((BK4819_REGISTER_t)0x7E) >> 6) &0b111111);
   }
 
   void update() override {

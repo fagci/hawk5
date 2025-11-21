@@ -25,13 +25,18 @@ template <uint32_t PortBase, uint8_t PinNum> struct Pin {
 
   static void setOutput() { port()->DIR |= (1U << PinNum); }
   static void setInput() { port()->DIR &= ~(1U << PinNum); }
+
+  static void write(bool state) {
+    if (state)
+      set();
+    else
+      clear();
+  }
 };
 
 // ============================================================================
 // BK4819 GPIO Pin - управление через SPI регистры
 // ============================================================================
-
-inline uint16_t gGpioOutState = 0x9000;
 
 enum class BK4819_GPIO_PIN : uint8_t {
   GPIO0, // GREEN
@@ -42,6 +47,8 @@ enum class BK4819_GPIO_PIN : uint8_t {
   GPIO5, // PA
   GPIO6, // RX
 };
+
+inline uint16_t gGpioOutState = 0x9000 | (1 << 6);
 
 template <BK4819_GPIO_PIN PinNum> struct BK4819_Pin {
   static constexpr uint16_t pin_bit = 1 << static_cast<uint8_t>(PinNum);
@@ -77,6 +84,39 @@ struct K5 {
   static constexpr uint32_t GPIOA_BASE = GPIOA_BASE_ADDR;
   static constexpr uint32_t GPIOB_BASE = GPIOB_BASE_ADDR;
   static constexpr uint32_t GPIOC_BASE = GPIOC_BASE_ADDR;
+
+  struct Audio {
+    using AudioPath = Pin<GPIOC_BASE, 4>;
+    static inline bool _on = false;
+
+    static void write(bool on) {
+      if (_on != on) {
+        _on = on;
+        if (on) {
+          BK4819_ToggleAFDAC(true);
+          BK4819_ToggleAFBit(true);
+          TIMER_DelayMs(8);
+          AudioPath::set();
+        } else {
+          AudioPath::clear();
+          TIMER_DelayMs(8);
+          BK4819_ToggleAFDAC(false);
+          BK4819_ToggleAFBit(false);
+        }
+        BK4819::LED::Green::write(on);
+      }
+    }
+  };
+
+  struct LNA {
+    using VHF = BK4819_Pin<BK4819_GPIO_PIN::GPIO2>;
+    using UHF = BK4819_Pin<BK4819_GPIO_PIN::GPIO3>;
+
+    static void select(Filter flt) {
+      VHF::write(flt == FILTER_VHF);
+      UHF::write(flt == FILTER_UHF);
+    }
+  };
 
   // === MCU GPIO (прямое управление) ===
   struct MCU {
@@ -253,8 +293,8 @@ struct K5 {
 
     static void toggleMonitor() { Log("Toggle monitor mode =)"); }
 
-    static void frequencyUp() { vfo.frequencyUp(25 * KHZ); }
-    static void frequencyDown() { vfo.frequencyDown(25 * KHZ); }
+    static void frequencyUp() {}
+    static void frequencyDown() {}
   };
 
   enum class KeyEvent {
@@ -410,6 +450,11 @@ struct K5 {
     void update() {
       uint32_t now = K5::Timer::millis();
       int rawKey = K5::Keyboard::scan();
+
+      // Reset to prevent voice
+      Keyboard::Row2::clear();
+      Keyboard::Row3::clear();
+
       Key key = rawKey == -1 ? Key::None : static_cast<Key>(rawKey);
 
       if (key != currentKey) {
@@ -569,79 +614,4 @@ struct K5 {
     MCU::LED::init();
     BK4819::init();
   }
-
-  // Перечисление для приёмников
-  enum class Receiver : uint8_t { Rx1 = 0, Rx2 = 1, MaxReceivers };
-
-  // Структура одного VFO
-  struct VFO {
-    uint32_t frequencyHz = 0;
-    Receiver activeReceiver = Receiver::Rx1;
-    bool monitorMode = false;
-    bool multiwatchEnabled = false;
-
-    void setFrequency(uint32_t freq) {
-      frequencyHz = freq;
-      // Обновить приемник, если нужно (вызовы драйверов)
-    }
-
-    void switchReceiver() {
-      if (activeReceiver == Receiver::Rx1)
-        activeReceiver = Receiver::Rx2;
-      else
-        activeReceiver = Receiver::Rx1;
-      // Переключить аппаратный приемник
-    }
-
-    void toggleMonitor() {
-      monitorMode = !monitorMode;
-      // Включить/выключить режим мониторинга на активном приемнике
-    }
-
-    void toggleMultiwatch() {
-      multiwatchEnabled = !multiwatchEnabled;
-      // Управление Multiwatch (переключение приемников или DSP)
-    }
-  };
-
-  // Класс управления группой из 4 VFO
-  struct VFOBank {
-    static constexpr int VFO_COUNT = 4;
-    VFO vfos[VFO_COUNT];
-
-    int activeVFOIndex = 0;
-
-    VFO &activeVFO() { return vfos[activeVFOIndex]; }
-
-    void setActiveVFO(int index) {
-      if (index >= 0 && index < VFO_COUNT) {
-        activeVFOIndex = index;
-        // Возможно переход логики на новый VFO
-      }
-    }
-
-    void frequencyUp(uint32_t stepHz) {
-      vfos[activeVFOIndex].setFrequency(vfos[activeVFOIndex].frequencyHz +
-                                        stepHz);
-    }
-
-    void frequencyDown(uint32_t stepHz) {
-      vfos[activeVFOIndex].setFrequency(vfos[activeVFOIndex].frequencyHz -
-                                        stepHz);
-    }
-
-    uint32_t getFrequency() { return vfos[activeVFOIndex].frequencyHz; }
-    void setFrequency(uint32_t f) { vfos[activeVFOIndex].frequencyHz = f; }
-
-    void switchReceiver() { vfos[activeVFOIndex].switchReceiver(); }
-
-    void toggleMonitor() { vfos[activeVFOIndex].toggleMonitor(); }
-
-    void toggleMultiwatch() { vfos[activeVFOIndex].toggleMultiwatch(); }
-
-    // Можно добавить методы сохранения/загрузки, переключения VFO по кругу и
-    // др.
-  };
-
-  inline static VFOBank vfo;
 };

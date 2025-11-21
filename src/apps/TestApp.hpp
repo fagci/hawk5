@@ -1,7 +1,10 @@
 #pragma once
 
+#include "../board.h"
 #include "../driver/K5.hpp"
+#include "../driver/audio.h"
 #include "../driver/systick.h"
+#include "../scheduler.h"
 #include "../ui/components.h"
 #include "../ui/graphics.h"
 #include "App.hpp"
@@ -12,18 +15,30 @@ public:
 
   void init() override {
     BK4819_Init();
-    K5::vfo.setActiveVFO(0);
-    K5::vfo.switchReceiver();
-    K5::vfo.setFrequency(434 * MHZ);
+    BK4819_RX_TurnOn();
+
+    K5::LNA::select(FILTER_VHF);
+    BK4819_SetAGC(true, AUTO_GAIN_INDEX);
+    BK4819_TuneTo(f, true);
+    BK4819_SetModulation(MOD_FM);
+    BK4819_SetFilterBandwidth(BK4819_FILTER_BW_12k);
+
+    BK4819_Squelch(4, 0, 0);
   }
 
-  void render() override { UI_BigFrequency(32, K5::vfo.getFrequency()); }
+  void render() override {
+    UI_BigFrequency(32, f);
+    PrintMedium(0, 16, "RSSI: %u", BK4819_GetRSSI());
+  }
 
-  void update() override {}
+  void update() override {
+    bool on = BK4819_IsSquelchOpen();
+    K5::Audio::write(on);
+  }
 
   uint8_t getAppId() const override { return APP_TEST; }
   const char *getName() const override { return "Test"; }
 
 private:
-  int rawKey;
+  uint32_t f = 17230000;
 };

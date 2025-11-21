@@ -7,11 +7,13 @@
 static bool speakerOn = false;
 
 void AUDIO_ToggleSpeaker(bool on) {
-  speakerOn = on;
-  if (on) {
-    GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
-  } else {
-    GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
+  if (speakerOn != on) {
+    speakerOn = on;
+    if (on) {
+      GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
+    } else {
+      GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
+    }
   }
 }
 

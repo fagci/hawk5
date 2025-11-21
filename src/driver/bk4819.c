@@ -1110,26 +1110,34 @@ static void initialize_dtmf_coefficients(void) {
 }
 
 static void initialize_registers(void) {
+  // Soft Reset RF
   BK4819_WriteRegister(BK4819_REG_00, 0x8000);
   BK4819_WriteRegister(BK4819_REG_00, 0x0000);
+
+  // Power Up RF
   BK4819_WriteRegister(BK4819_REG_37, 0x1D0F);
-  BK4819_WriteRegister(BK4819_REG_36, 0x0022);
-  BK4819_SetAGC(true, 0);
-  BK4819_WriteRegister(BK4819_REG_19, 0x1041);
-  BK4819_WriteRegister(BK4819_REG_7D, 0xE94F);
+
+  // Setup PA
+  BK4819_ToggleGpioOut(BK4819_GPIO1_PIN29_PA_ENABLE, false);
+  BK4819_SetupPowerAmplifier(0, 0);
+
+  BK4819_SetAGC(true, AUTO_GAIN_INDEX);
+
+  // Band sel treshold
+  BK4819_WriteRegister(BK4819_REG_3E, 0xA037);
+
+  // Disable interrupts
+  BK4819_WriteRegister(BK4819_REG_3F, 0);
+
+  gGpioOutState = 0x9000;
+  BK4819_WriteRegister(BK4819_REG_33, gGpioOutState);
 }
 
 static void initialize_audio(void) {
   BK4819_WriteRegister(BK4819_REG_1E, 0x4c58);
+
+  // RF PLL, VCO
   BK4819_WriteRegister(BK4819_REG_1F, 0x5454);
-  BK4819_WriteRegister(BK4819_REG_3E, 0xA037);
-
-  gGpioOutState = 0x9000;
-  BK4819_WriteRegister(BK4819_REG_33, 0x9000);
-  BK4819_WriteRegister(BK4819_REG_3F, 0);
-
-  BK4819_ToggleGpioOut(BK4819_GPIO1_PIN29_PA_ENABLE, false);
-  BK4819_SetupPowerAmplifier(0, 0);
 }
 
 static void wait_for_crystal_stabilization(void) {
@@ -1140,9 +1148,8 @@ static void wait_for_crystal_stabilization(void) {
 }
 
 static void configure_microphone_and_tx(void) {
-  BK4819_WriteRegister(BK4819_REG_3F, 0);
-  BK4819_WriteRegister(BK4819_REG_7D, 0xE94F | 10);
-  BK4819_SetRegValue(RS_MIC, gSettings.mic);
+  BK4819_WriteRegister(BK4819_REG_19, 0x1041);                 // pga
+  BK4819_WriteRegister(BK4819_REG_7D, 0xE940 | gSettings.mic); // sens
   BK4819_WriteRegister(0x74, 0xAF1F); // 3kHz response TX
 }
 

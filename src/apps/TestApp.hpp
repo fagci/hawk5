@@ -5,6 +5,7 @@
 #include "../driver/audio.h"
 #include "../driver/systick.h"
 #include "../scheduler.h"
+#include "../ui/NumberInputOverlay.hpp"
 #include "../ui/components.h"
 #include "../ui/graphics.h"
 #include "App.hpp"
@@ -17,19 +18,22 @@ public:
     BK4819_Init();
     BK4819_RX_TurnOn();
 
-    K5::LNA::select(FILTER_VHF);
-    BK4819_SetAGC(true, AUTO_GAIN_INDEX);
+    K5::LNA::select(FILTER_UHF);
     BK4819_TuneTo(f, true);
     BK4819_SetModulation(MOD_FM);
     BK4819_SetFilterBandwidth(BK4819_FILTER_BW_12k);
 
-    BK4819_Squelch(4, 0, 0);
+    BK4819_Squelch(3, 0, 0);
   }
 
   void render() override {
-    UI_BigFrequency(32, f);
+    if (K5::numberInput.isActive()) {
+      K5::numberInput.render();
+    }
+    // UI_BigFrequency(32, f);
     PrintMedium(0, 16, "RSSI: %u", BK4819_GetRSSI());
-    PrintMedium(0, 24, "AGC: %u", (BK4819_ReadRegister((BK4819_REGISTER_t)0x7E) >> 6) &0b111111);
+    PrintMedium(0, 24, "AGC: %u", BK4819_GetAgcLevel());
+    PrintMedium(0, 32, "LNA P R: %u", BK4819_GetLnaPeakRSSI());
   }
 
   void update() override {
@@ -41,5 +45,5 @@ public:
   const char *getName() const override { return "Test"; }
 
 private:
-  uint32_t f = 17230000;
+  uint32_t f = 43422500;
 };

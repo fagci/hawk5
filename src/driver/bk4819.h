@@ -174,6 +174,7 @@ uint16_t BK4819_GetRSSI(void);
 uint8_t BK4819_GetNoise(void);
 uint8_t BK4819_GetGlitch(void);
 uint8_t BK4819_GetSNR(void);
+uint8_t BK4819_GetAgcLevel(void);
 uint16_t BK4819_GetVoiceAmplitude(void);
 uint8_t BK4819_GetAfTxRx(void);
 uint8_t BK4819_GetSignalPower(void);

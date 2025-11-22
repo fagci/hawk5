@@ -1,8 +1,11 @@
 #pragma once
 #include "../inc/dp32g030/gpio.h"
+#include "../ui/NumberInputOverlay.hpp"
 #include "bk4819-regs.h" // Для BK4819_REG_33
 #include "bk4819.h"
 #include "gpio.h"
+#include "keyboard.h"
+#include "st7565.h"
 #include "systick.h"
 #include "uart.h"
 #include <cstdint>
@@ -84,6 +87,8 @@ struct K5 {
   static constexpr uint32_t GPIOA_BASE = GPIOA_BASE_ADDR;
   static constexpr uint32_t GPIOB_BASE = GPIOB_BASE_ADDR;
   static constexpr uint32_t GPIOC_BASE = GPIOC_BASE_ADDR;
+
+  static inline NumberInputOverlay numberInput;
 
   struct Audio {
     using AudioPath = Pin<GPIOC_BASE, 4>;
@@ -295,6 +300,14 @@ struct K5 {
 
     static void frequencyUp() {}
     static void frequencyDown() {}
+
+    static void frequencyEnter() {
+      numberInput.open(0, 0, 130000000, InputUnit::MHz, [](uint32_t f) {
+        LNA::select(f < SETTINGS_GetFilterBound() ? Filter::FILTER_VHF
+                                                  : Filter::FILTER_UHF);
+        BK4819_TuneTo(f, true);
+      });
+    }
   };
 
   enum class KeyEvent {
@@ -315,6 +328,9 @@ struct K5 {
     SwitchVFO,
     FrequencyUp,
     FrequencyDown,
+    FrequencyEnter,
+    InputOverlayKey,
+    InputOverlayConfirm,
     EnterMenu,
     QuickSave,
     TransmitStart,
@@ -336,7 +352,6 @@ struct K5 {
 
   struct KeyMapper {
     // Текущая активная таблица привязок (может быть изменена через настройки)
-    inline static KeyBinding bindings[32]; // Достаточно для большинства случаев
     inline static uint8_t bindingsCount;
 
     static constexpr KeyBinding defaultBindings[] = {
@@ -363,12 +378,22 @@ struct K5 {
         {Key::Up, KeyEvent::LongPressRepeat, KeyAction::FrequencyUp},
         {Key::Down, KeyEvent::LongPressRepeat, KeyAction::FrequencyDown},
         // ...
+        {Key::Key_0, KeyEvent::Released, KeyAction::FrequencyEnter},
+        {Key::Key_1, KeyEvent::Released, KeyAction::FrequencyEnter},
+        {Key::Key_2, KeyEvent::Released, KeyAction::FrequencyEnter},
+        {Key::Key_3, KeyEvent::Released, KeyAction::FrequencyEnter},
+        {Key::Key_4, KeyEvent::Released, KeyAction::FrequencyEnter},
+        {Key::Key_5, KeyEvent::Released, KeyAction::FrequencyEnter},
+        {Key::Key_6, KeyEvent::Released, KeyAction::FrequencyEnter},
+        {Key::Key_7, KeyEvent::Released, KeyAction::FrequencyEnter},
+        {Key::Key_8, KeyEvent::Released, KeyAction::FrequencyEnter},
+        {Key::Key_9, KeyEvent::Released, KeyAction::FrequencyEnter},
     };
 
     // Инициализация дефолтными значениями
     static void init() {
       bindingsCount = sizeof(defaultBindings) / sizeof(KeyBinding);
-      memcpy(bindings, defaultBindings, sizeof(defaultBindings));
+      currentBindings = defaultBindings;
     }
 
     void setKeymap(const KeyBinding *bindings, uint8_t count) {
@@ -376,21 +401,12 @@ struct K5 {
       bindingsCount = count;
     }
 
-    /* KeyAction findAction(Key key, KeyEvent event) const {
+    // Поиск действия для комбинации клавиша+событие
+    static KeyAction findAction(Key key, KeyEvent event) {
       for (uint8_t i = 0; i < bindingsCount; i++) {
         if (currentBindings[i].key == key &&
             currentBindings[i].event == event) {
           return currentBindings[i].action;
-        }
-      }
-      return KeyAction::None;
-    } */
-
-    // Поиск действия для комбинации клавиша+событие
-    static KeyAction findAction(Key key, KeyEvent event) {
-      for (uint8_t i = 0; i < bindingsCount; i++) {
-        if (bindings[i].key == key && bindings[i].event == event) {
-          return bindings[i].action;
         }
       }
       return KeyAction::None;
@@ -405,7 +421,10 @@ struct K5 {
       case KeyAction::ToggleMonitor:
         Actions::toggleMonitor();
         break;
-      // ... остальные действия
+      case KeyAction::FrequencyEnter:
+        Log("Freq enter action");
+        Actions::frequencyEnter();
+        break;
       case KeyAction::None:
       default:
         break;
@@ -414,6 +433,12 @@ struct K5 {
 
     // Обработчик событий клавиатуры
     static void handleKeyEvent(Key key, KeyEvent event) {
+      Log("Handle key event %u %u", currentBindings, vfoBindings);
+      if (numberInput.isActive() && event == KeyEvent::Released) {
+        numberInput.handleKey((KEY_Code_t)key, KEY_RELEASED);
+        gRedrawScreen = true;
+        return;
+      }
       KeyAction action = findAction(key, event);
       if (action != KeyAction::None) {
         executeAction(action);
@@ -421,7 +446,7 @@ struct K5 {
     }
 
   private:
-    const KeyBinding *currentBindings;
+    static inline const KeyBinding *currentBindings;
   };
 
   struct KeyboardController {

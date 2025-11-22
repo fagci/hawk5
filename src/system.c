@@ -149,8 +149,8 @@ void SYS_Main() {
   BATTERY_UpdateBatteryInfo();
   APPS_Init();
 
-  SystemMessages n = KEYBOARD_GetKey();
-  if (resetNeeded() || n.key == KEY_EXIT) {
+  // SystemMessages n = KEYBOARD_GetKey();
+  if (resetNeeded() /*  || n.key == KEY_EXIT */) {
     initDisplay();
     gSettings.batteryCalibration = 2000;
     gSettings.backlight = 5;
@@ -188,10 +188,10 @@ void SYS_Main() {
       gRedrawScreen = true;
     }
 
-    if (Now() - appsKeyboardTimer >= 14) {
+    /* if (Now() - appsKeyboardTimer >= 14) {
       processKeyboard();
       appsKeyboardTimer = Now();
-    }
+    } */
 
     if (Now() - secondTimer >= 1000) {
       STATUSLINE_update();

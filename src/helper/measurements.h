@@ -19,7 +19,9 @@ typedef struct {
 } SQL;
 
 static const uint8_t rssi2s[2][15] = {
+    // VHF
     {121, 115, 109, 103, 97, 91, 85, 79, 73, 63, 53, 43, 33, 23, 13},
+    // UHF
     {141, 135, 129, 123, 117, 111, 105, 99, 93, 83, 73, 63, 53, 43, 33},
 };
 
@@ -29,8 +31,8 @@ uint32_t ClampF(uint32_t v, uint32_t min, uint32_t max);
 uint32_t ConvertDomainF(uint32_t aValue, uint32_t aMin, uint32_t aMax,
                         uint32_t bMin, uint32_t bMax);
 uint8_t Rssi2PX(uint16_t rssi, uint8_t pxMin, uint8_t pxMax);
-uint8_t DBm2S(int dbm, bool isVHF);
-int Rssi2DBm(uint16_t rssi);
+uint8_t DBm2S(int dbm, bool isUHF);
+int16_t Rssi2DBm(uint16_t rssi);
 uint16_t DBm2Rssi(int16_t dbm);
 uint16_t Mid(const uint16_t *array, size_t n);
 uint16_t Min(const uint16_t *array, size_t n);

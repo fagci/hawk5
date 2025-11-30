@@ -33,18 +33,18 @@ uint32_t ConvertDomainF(uint32_t aValue, uint32_t aMin, uint32_t aMax,
   return (uint32_t)ClampF(result, bMin, bMax);
 }
 
-uint8_t DBm2S(int dbm, bool isVHF) {
+uint8_t DBm2S(int dbm, bool isUHF) {
   uint8_t i = 0;
   dbm *= -1;
   for (i = 0; i < 15; i++) {
-    if (dbm >= rssi2s[isVHF][i]) {
+    if (dbm >= rssi2s[isUHF][i]) {
       return i;
     }
   }
   return i;
 }
 
-int Rssi2DBm(uint16_t rssi) { return (rssi >> 1) - 160; }
+int16_t Rssi2DBm(uint16_t rssi) { return (rssi >> 1) - 160; }
 uint16_t DBm2Rssi(int16_t dbm) { return (dbm + 160) << 1; }
 
 // applied x2 to prevent initial rounding

@@ -38,6 +38,12 @@ static void initBand(void) {
       gCurrentBand = defaultBand;
     }
   }
+  /* if (gCurrentBand.rxF == defaultBand.rxF &&
+      gCurrentBand.txF == defaultBand.txF) {
+    uint32_t step = StepFrequencyTable[RADIO_GetParam(ctx, PARAM_STEP)];
+    gCurrentBand.rxF = ctx->frequency - 64 * step;
+    gCurrentBand.txF = gCurrentBand.rxF + 128 * step;
+  } */
 }
 
 void SCANER_init(void) {

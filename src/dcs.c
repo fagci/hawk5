@@ -108,7 +108,7 @@ void PrintRTXCode(char *Output, uint8_t codeType, uint8_t code) {
     sprintf(Output, "DCS:D%03oN", DCS_Options[code]);
   } else if (codeType == CODE_TYPE_REVERSE_DIGITAL) {
     sprintf(Output, "DCS:D%03oI", DCS_Options[code]);
-  } else {
+  } else if (codeType == CODE_TYPE_OFF) {
     sprintf(Output, "No code");
   }
 }

@@ -1652,6 +1652,7 @@ bool RADIO_ToggleVFOMode(RadioState *state, uint8_t vfo_index) {
   CHANNELS_Save(vfo->vfo_ch_index, &ch);
 
   if (new_mode == MODE_CHANNEL) {
+    // TODO: if wrong CH num in VFO, load one from current SL
     RADIO_LoadChannelToVFO(state, vfo_index, ch.channel);
   } else {
     RADIO_LoadVFOFromStorage(state, vfo_index, &ch);

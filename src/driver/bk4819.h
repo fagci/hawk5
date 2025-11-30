@@ -109,6 +109,7 @@ void BK4819_WriteU8(uint8_t Data);
 void BK4819_WriteU16(uint16_t Data);
 
 void BK4819_SetAGC(bool useDefault, uint8_t gainIndex);
+uint8_t BK4819_GetAttenuation();
 
 void BK4819_ToggleGpioOut(BK4819_GPIO_PIN_t Pin, bool bSet);
 

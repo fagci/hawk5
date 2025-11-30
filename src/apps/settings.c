@@ -26,14 +26,14 @@ static void doCalibrate(uint32_t v, uint32_t _) {
 
 static bool calibrate(const MenuItem *item, KEY_Code_t key, Key_State_t state) {
   (void)item;
-  
+
   if (state != KEY_RELEASED || key != KEY_MENU) {
     return false;
   }
-  
-  uint32_t currentVoltage = BATTERY_GetPreciseVoltage(
-      SETTINGS_GetValue(SETTING_BATTERYCALIBRATION));
-  
+
+  uint32_t currentVoltage =
+      BATTERY_GetPreciseVoltage(SETTINGS_GetValue(SETTING_BATTERYCALIBRATION));
+
   gFInputValue1 = currentVoltage / 100;
   gFInputCallback = doCalibrate;
   FINPUT_setup(500, 860, UNIT_VOLTS, false);
@@ -47,11 +47,9 @@ static const MenuItem sqlMenuItems[] = {
     {"Close t", SETTING_SQLCLOSETIME, getValS, updateValS},
 };
 
-static Menu sqlMenu = {
-    .title = "SQL",
-    .items = sqlMenuItems,
-    .num_items = ARRAY_SIZE(sqlMenuItems)
-};
+static Menu sqlMenu = {.title = "SQL",
+                       .items = sqlMenuItems,
+                       .num_items = ARRAY_SIZE(sqlMenuItems)};
 
 // Scan submenu
 static const MenuItem scanMenuItems[] = {
@@ -62,11 +60,9 @@ static const MenuItem scanMenuItems[] = {
     {"Skip X_X", SETTING_SKIPGARBAGEFREQUENCIES, getValS, updateValS},
 };
 
-static Menu scanMenu = {
-    .title = "Scan",
-    .items = scanMenuItems,
-    .num_items = ARRAY_SIZE(scanMenuItems)
-};
+static Menu scanMenu = {.title = "Scan",
+                        .items = scanMenuItems,
+                        .num_items = ARRAY_SIZE(scanMenuItems)};
 
 // Display submenu
 static const MenuItem displayMenuItems[] = {
@@ -79,11 +75,9 @@ static const MenuItem displayMenuItems[] = {
     {"Level in VFO", SETTING_SHOWLEVELINVFO, getValS, updateValS},
 };
 
-static Menu displayMenu = {
-    .title = "Display",
-    .items = displayMenuItems,
-    .num_items = ARRAY_SIZE(displayMenuItems)
-};
+static Menu displayMenu = {.title = "Display",
+                           .items = displayMenuItems,
+                           .num_items = ARRAY_SIZE(displayMenuItems)};
 
 // Radio submenu
 static const MenuItem radioMenuItems[] = {
@@ -98,11 +92,9 @@ static const MenuItem radioMenuItems[] = {
     {"Freq corr", SETTING_FREQ_CORRECTION, getValS, updateValS},
 };
 
-static Menu radioMenu = {
-    .title = "Radio",
-    .items = radioMenuItems,
-    .num_items = ARRAY_SIZE(radioMenuItems)
-};
+static Menu radioMenu = {.title = "Radio",
+                         .items = radioMenuItems,
+                         .num_items = ARRAY_SIZE(radioMenuItems)};
 
 // Battery submenu
 static const MenuItem batMenuItems[] = {
@@ -111,11 +103,9 @@ static const MenuItem batMenuItems[] = {
     {"BAT cal", SETTING_BATTERYCALIBRATION, getValS, .action = calibrate},
 };
 
-static Menu batteryMenu = {
-    .title = "Battery",
-    .items = batMenuItems,
-    .num_items = ARRAY_SIZE(batMenuItems)
-};
+static Menu batteryMenu = {.title = "Battery",
+                           .items = batMenuItems,
+                           .num_items = ARRAY_SIZE(batMenuItems)};
 
 // Main menu
 static const MenuItem menuItems[] = {
@@ -134,9 +124,7 @@ static Menu settingsMenu = {
     .num_items = ARRAY_SIZE(menuItems),
 };
 
-void SETTINGS_init(void) {
-  MENU_Init(&settingsMenu);
-}
+void SETTINGS_init(void) { MENU_Init(&settingsMenu); }
 
 void SETTINGS_deinit(void) {}
 
@@ -144,6 +132,4 @@ bool SETTINGS_key(KEY_Code_t key, Key_State_t state) {
   return MENU_HandleInput(key, state);
 }
 
-void SETTINGS_render(void) {
-  MENU_Render();
-}
+void SETTINGS_render(void) { MENU_Render(); }

@@ -57,7 +57,7 @@ const Gain GAIN_TABLE[32] = {
     {0x295, 33}, // Auto
     {0x295, 33}, //
     {0x2B6, 31}, //
-    {0x354, 28}, //
+    {0x354, 28}, // +5
     {0x36C, 23}, //
     {0x38C, 20}, //
     {0x38D, 17}, //
@@ -272,6 +272,14 @@ static void configure_agc_registers(void) {
   BK4819_WriteRegister(0x14, (0u << 8) | (0u << 5) | (3u << 3) | (1u << 0));
 }
 
+uint8_t BK4819_GetAttenuation() {
+  uint16_t v = BK4819_ReadRegister(BK4819_REG_13);
+  return (uint8_t[]){19, 16, 11, 0}[(v >> 8) & 3] +
+         (uint8_t[]){24, 19, 14, 9, 6, 4, 2, 0}[(v >> 5) & 7] +
+         (uint8_t[]){8, 3, 6, 0}[(v >> 3) & 3] +
+         (uint8_t[]){33, 27, 21, 15, 9, 6, 3, 0}[v & 7];
+}
+
 void BK4819_SetAGC(bool useDefault, uint8_t gainIndex) {
   const bool enableAgc = (gainIndex == AUTO_GAIN_INDEX);
   uint16_t regVal = BK4819_ReadRegister(BK4819_REG_7E);
@@ -352,11 +360,6 @@ void BK4819_SetFilterBandwidth(BK4819_FilterBandwidth_t bw) {
 // ============================================================================
 // Frequency Management
 // ============================================================================
-
-/* void BK4819_SetFrequency(uint32_t freq) {
-  BK4819_WriteRegister(BK4819_REG_38, freq & 0xFFFF);
-  BK4819_WriteRegister(BK4819_REG_39, (freq >> 16) & 0xFFFF);
-} */
 
 void BK4819_SetFrequency(uint32_t freq) {
   static uint16_t prev_low = 0;

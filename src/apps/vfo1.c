@@ -317,7 +317,7 @@ static void renderCodes(uint8_t BASE) {
   }
   if (ctx->tx_state.code.type) {
     PrintSmallEx(0, BASE, POS_L, C_FILL, "T%s",
-                 RADIO_GetParamValueString(ctx, PARAM_RX_CODE));
+                 RADIO_GetParamValueString(ctx, PARAM_TX_CODE));
   }
 }
 
@@ -330,11 +330,11 @@ static void renderExtraInfo(uint8_t BASE) {
   if (afcVal != 0) {
     PrintSmallEx(14, 21, POS_L, C_FILL, "%+d", BK4819_GetAFCValue() * 10);
   }
-  if (gSettings.iAmPro && !isTxFDifferent) {
+  /* if (gSettings.iAmPro && !isTxFDifferent) {
     uint32_t lambda = 29979246 / (ctx->frequency / 100);
     PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "L=%u/%ucm", lambda,
                  lambda / 4);
-  }
+  } */
 
   if (isTxFDifferent) {
     PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "TX: %s",

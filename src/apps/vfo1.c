@@ -2,6 +2,7 @@
 #include "../dcs.h"
 #include "../driver/gpio.h"
 #include "../driver/uart.h"
+#include "../external/printf/printf.h"
 #include "../helper/bands.h"
 #include "../helper/channels.h"
 #include "../helper/measurements.h"
@@ -19,6 +20,7 @@
 #include "chcfg.h"
 #include "chlist.h"
 #include "finput.h"
+#include <stdint.h>
 
 static char String[16];
 static const Step liveStep = STEP_5_0kHz;
@@ -324,6 +326,10 @@ static void renderExtraInfo(uint8_t BASE) {
   uint32_t rxF = RADIO_GetParam(ctx, PARAM_FREQUENCY);
   bool isTxFDifferent = (txF != rxF);
 
+  int16_t afcVal = BK4819_GetAFCValue();
+  if (afcVal != 0) {
+    PrintSmallEx(14, 21, POS_L, C_FILL, "%+d", BK4819_GetAFCValue() * 10);
+  }
   if (gSettings.iAmPro && !isTxFDifferent) {
     uint32_t lambda = 29979246 / (ctx->frequency / 100);
     PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "L=%u/%ucm", lambda,

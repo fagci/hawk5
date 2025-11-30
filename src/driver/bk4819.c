@@ -3,12 +3,15 @@
 #include "../driver/system.h"
 #include "../driver/systick.h"
 #include "../driver/uart.h"
+#include "../external/printf/printf.h"
 #include "../inc/dp32g030/gpio.h"
 #include "../inc/dp32g030/portcon.h"
 #include "../misc.h"
 #include "../settings.h"
 #include "audio.h"
 #include "bk4819-regs.h"
+#include <stdint.h>
+#include <stdio.h>
 
 #define SHORT_DELAY()                                                          \
   __asm volatile("nop\n nop\n nop\n nop\n nop\n"                               \
@@ -32,13 +35,39 @@ static const uint8_t DTMF_COEFFS[] = {111, 107, 103, 98, 80,  71,  58,  44,
                                       65,  55,  37,  23, 228, 203, 181, 159};
 
 const Gain GAIN_TABLE[32] = {
-    {0x10, 90},  {0x1, 88},   {0x9, 87},   {0x2, 83},   {0xA, 81},
-    {0x12, 79},  {0x2A, 77},  {0x32, 75},  {0x3A, 70},  {0x20B, 68},
-    {0x213, 64}, {0x21B, 62}, {0x214, 59}, {0x21C, 56}, {0x22D, 52},
-    {0x23C, 50}, {0x23D, 48}, {0x255, 44}, {0x25D, 42}, {0x275, 39},
-    {0x295, 33}, {0x2B6, 31}, {0x354, 28}, {0x36C, 23}, {0x38C, 20},
-    {0x38D, 17}, {0x3B5, 13}, {0x3B6, 9},  {0x3D6, 8},  {0x3BF, 3},
-    {0x3DF, 2},  {0x3FF, 0},
+    {0x1, 88},   //
+    {0x9, 87},   //
+    {0x2, 83},   //
+    {0xA, 81},   //
+    {0x12, 79},  //
+    {0x2A, 77},  //
+    {0x32, 75},  //
+    {0x3A, 70},  //
+    {0x20B, 68}, //
+    {0x213, 64}, //
+    {0x21B, 62}, //
+    {0x214, 59}, //
+    {0x21C, 56}, //
+    {0x22D, 52}, //
+    {0x23C, 50}, //
+    {0x23D, 48}, //
+    {0x255, 44}, //
+    {0x25D, 42}, //
+    {0x275, 39}, //
+    {0x295, 33}, // Auto
+    {0x295, 33}, //
+    {0x2B6, 31}, //
+    {0x354, 28}, //
+    {0x36C, 23}, //
+    {0x38C, 20}, //
+    {0x38D, 17}, //
+    {0x3B5, 13}, //
+    {0x3B6, 9},  //
+    {0x3D6, 8},  //
+    {0x3BF, 3},  //
+    {0x3DF, 2},  //
+    {0x3FF, 0},  //
+
 };
 
 // AGC configuration constants
@@ -265,7 +294,7 @@ void BK4819_SetAGC(bool useDefault, uint8_t gainIndex) {
   const AgcConfig *config = useDefault ? &AGC_DEFAULT : &AGC_FAST;
   BK4819_WriteRegister(BK4819_REG_49, (config->lo << 14) | (config->high << 7) |
                                           (config->low << 0));
-  BK4819_WriteRegister(BK4819_REG_7B, 0x318C); // 0x8420
+  BK4819_WriteRegister(BK4819_REG_7B, 0x8420); // 0x8420
 }
 
 // ============================================================================
@@ -334,6 +363,7 @@ void BK4819_SetFrequency(uint32_t freq) {
   static uint16_t prev_high = 0;
 
   freq += (gSettings.freqCorrection - 127);
+  // printf("f=%u\n", freq);
 
   uint16_t low = freq & 0xFFFF;
   uint16_t high = (freq >> 16) & 0xFFFF;
@@ -406,7 +436,6 @@ void BK4819_SetModulation(ModulationType type) {
   const bool isFm = (type == MOD_FM || type == MOD_WFM);
 
   BK4819_SetAF(MOD_TYPE_REG47_VALUES[type]);
-  BK4819_SetRegValue(RS_AF_DAC_GAIN, 8);
   BK4819_SetRegValue(RS_AFC_DIS, !isFm);
 
   if (type == MOD_WFM) {
@@ -993,6 +1022,12 @@ uint8_t BK4819_GetSignalPower(void) {
   return (BK4819_ReadRegister(0x7E) >> 6) & 0b111111;
 }
 
+int32_t BK4819_GetAFCValue() {
+  int32_t signedAfc = (int64_t)BK4819_ReadRegister(0x6D);
+  // * 3.3(3)
+  return (int32_t)((signedAfc * 0xAAAAAAABLL) >> 33);
+}
+
 uint8_t BK4819_GetSNR(void) { return BK4819_ReadRegister(0x61) & 0xFF; }
 
 uint16_t BK4819_GetVoiceAmplitude(void) { return BK4819_ReadRegister(0x64); }
@@ -1104,26 +1139,35 @@ static void initialize_dtmf_coefficients(void) {
 }
 
 static void initialize_registers(void) {
+  // soft reset
   BK4819_WriteRegister(BK4819_REG_00, 0x8000);
   BK4819_WriteRegister(BK4819_REG_00, 0x0000);
+  // power up rf
   BK4819_WriteRegister(BK4819_REG_37, 0x1D0F);
-  BK4819_WriteRegister(BK4819_REG_36, 0x0022);
-  BK4819_SetAGC(true, 0);
-  BK4819_WriteRegister(BK4819_REG_19, 0x1041);
-  BK4819_WriteRegister(BK4819_REG_7D, 0xE94F);
+
+  gGpioOutState = 0x9000;
+  BK4819_WriteRegister(BK4819_REG_33, gGpioOutState);
+
+  // PA
+  BK4819_SetupPowerAmplifier(0, 0);
+
+  BK4819_WriteRegister(BK4819_REG_1E, 0x4c58); // for some revisions
+  BK4819_WriteRegister(BK4819_REG_1F, 0x5454); // VCO, PLL
+
+  BK4819_SetAGC(true, AUTO_GAIN_INDEX);
+
+  BK4819_WriteRegister(BK4819_REG_3F, 0); // interrupts
+
+  BK4819_WriteRegister(BK4819_REG_3E, 0xA037); // band sel tres
 }
 
 static void initialize_audio(void) {
-  BK4819_WriteRegister(BK4819_REG_1E, 0x4c58);
-  BK4819_WriteRegister(BK4819_REG_1F, 0x5454);
-  BK4819_WriteRegister(BK4819_REG_3E, 0xA037);
-
-  gGpioOutState = 0x9000;
-  BK4819_WriteRegister(BK4819_REG_33, 0x9000);
-  BK4819_WriteRegister(BK4819_REG_3F, 0);
-
-  BK4819_ToggleGpioOut(BK4819_GPIO1_PIN29_PA_ENABLE, false);
-  BK4819_SetupPowerAmplifier(0, 0);
+  BK4819_WriteRegister(BK4819_REG_48,
+                       (11u << 12) |   // Reserved
+                           (0 << 10) | // AF Rx ATT-1: 0..-18dB (-6dB/step)
+                           (58 << 4) | // AF Rx Gain-2 (-26..5.5 dB, 0.5dB/step)
+                           (8 << 0)    // AF DAC Gain (0..15max 2dB/step)
+  );
 }
 
 static void wait_for_crystal_stabilization(void) {
@@ -1134,20 +1178,13 @@ static void wait_for_crystal_stabilization(void) {
 }
 
 static void configure_microphone_and_tx(void) {
-  BK4819_WriteRegister(BK4819_REG_3F, 0);
-  BK4819_WriteRegister(BK4819_REG_7D, 0xE94F | 10);
-  BK4819_SetRegValue(RS_MIC, gSettings.mic);
+  BK4819_WriteRegister(BK4819_REG_19, 0x1041);                 // MIC PGA
+  BK4819_WriteRegister(BK4819_REG_7D, 0xE940 | gSettings.mic); // MIC sens
   BK4819_WriteRegister(0x74, 0xAF1F); // 3kHz response TX
 }
 
 static void configure_receiver(void) {
   BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, true);
-  BK4819_WriteRegister(BK4819_REG_48,
-                       (11u << 12) |   // Reserved
-                           (0 << 10) | // AF Rx Gain-1: 0dB
-                           (58 << 4) | // AF Rx Gain-2
-                           (8 << 0)    // AF DAC Gain
-  );
 }
 
 static bool isInitialized = false;

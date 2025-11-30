@@ -525,8 +525,8 @@ static bool setParamBK4819(VFOContext *ctx, ParamType p) {
     BK4819_SetRegValue(RS_DEV, ctx->dev);
     return true;
   case PARAM_VOLUME:
-    BK4819_SetRegValue(RS_AF_DAC_GAIN,
-                       ConvertDomain(ctx->volume, 0, 100, 0, 15));
+    /* BK4819_SetRegValue(RS_AF_DAC_GAIN,
+                       ConvertDomain(ctx->volume, 0, 100, 0, 15)); */
     return true;
   case PARAM_RADIO:
   case PARAM_PRECISE_F_CHANGE:
@@ -1532,7 +1532,7 @@ static void setCommonParamsFromCh(VFOContext *ctx, const VFO *storage) {
   RADIO_SetParam(ctx, PARAM_FILTER, FILTER_AUTO, false);
 
   RADIO_SetParam(ctx, PARAM_PRECISE_F_CHANGE, true, false);
-  RADIO_SetParam(ctx, PARAM_VOLUME, 100, false);
+  // RADIO_SetParam(ctx, PARAM_VOLUME, 80, false);
 
   // RADIO_UpdateCurrentBand(ctx);
   // RADIO_ApplyCorrections(ctx, false);
@@ -1850,7 +1850,6 @@ void RADIO_LoadVFOs(RadioState *state) {
     vfoIdx++;
   }
   state->num_vfos = vfoIdx;
-  printf("nm vfos: %u", vfoIdx);
 
   VFOContext *ctx = &state->vfos[state->active_vfo_index].context;
   for (uint8_t p = 0; p < PARAM_COUNT; ++p) {

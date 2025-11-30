@@ -95,10 +95,10 @@ typedef struct {
 typedef enum BK4819_CssScanResult_t BK4819_CssScanResult_t;
 extern const Gain GAIN_TABLE[32];
 
-#define AUTO_GAIN_INDEX 20
-#define PLUS2_GAIN_INDEX 21
-#define PLUS10_GAIN_INDEX 23
-#define PLUS33_GAIN_INDEX 31
+#define AUTO_GAIN_INDEX 19
+#define PLUS2_GAIN_INDEX 20
+#define PLUS10_GAIN_INDEX 22
+#define PLUS33_GAIN_INDEX 30
 
 // extern const uint8_t SQ[2][6][11];
 
@@ -176,6 +176,7 @@ uint8_t BK4819_GetSNR(void);
 uint16_t BK4819_GetVoiceAmplitude(void);
 uint8_t BK4819_GetAfTxRx(void);
 uint8_t BK4819_GetSignalPower(void);
+int32_t BK4819_GetAFCValue();
 
 bool BK4819_GetFrequencyScanResult(uint32_t *pFrequency);
 BK4819_CssScanResult_t BK4819_GetCxCSSScanResult(uint32_t *pCdcssFreq,

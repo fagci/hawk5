@@ -17,6 +17,8 @@ jobs:
       run: sudo apt-get update
     - name: install build tool
       run: sudo apt-get install gcc-arm-none-eabi
+    - name: install crcmod
+      run: pip install crcmod
     - name: pre build
       run: git submodule update --init --recursive --depth=1
     - name: make

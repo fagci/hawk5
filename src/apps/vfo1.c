@@ -330,11 +330,6 @@ static void renderExtraInfo(uint8_t BASE) {
   if (afcVal != 0) {
     PrintSmallEx(14, 21, POS_L, C_FILL, "%+d", BK4819_GetAFCValue() * 10);
   }
-  /* if (gSettings.iAmPro && !isTxFDifferent) {
-    uint32_t lambda = 29979246 / (ctx->frequency / 100);
-    PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "L=%u/%ucm", lambda,
-                 lambda / 4);
-  } */
 
   if (isTxFDifferent) {
     PrintSmallEx(LCD_XCENTER, BASE + 6, POS_C, C_FILL, "TX: %s",
@@ -372,7 +367,7 @@ static void renderMonitorMode(uint8_t BASE) {
   SPECTRUM_Y = BASE + 2;
   SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
 
-  if (gSettings.showLevelInVFO) {
+  if (false && gSettings.showLevelInVFO) {
     static char *graphMeasurementNames[] = {
         [GRAPH_RSSI] = "RSSI",
         [GRAPH_NOISE] = "Noise",

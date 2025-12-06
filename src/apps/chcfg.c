@@ -252,7 +252,8 @@ static void getValS(const MenuItem *item, char *buf, uint8_t _) {
     sprintf(buf, "%u", v);
     break;
   case MEM_GAIN:
-    sprintf(buf, "%ddB", -GAIN_TABLE[gChEd.gainIndex].gainDb + 33);
+    snprintf(buf, 15, gChEd.gainIndex == AUTO_GAIN_INDEX ? "Auto" : "%udB",
+             GAIN_TABLE[gChEd.gainIndex].gainDb);
     break;
   case MEM_MODULATION:
     strncpy(buf, MOD_NAMES_BK4819[gChEd.modulation], 31);

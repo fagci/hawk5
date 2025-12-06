@@ -56,7 +56,7 @@ const char *PARAM_NAMES[] = {
     [PARAM_SQUELCH_VALUE] = "SQ",            //
     [PARAM_SQUELCH_TYPE] = "SQ type",        //
     [PARAM_VOLUME] = "Volume",               //
-    [PARAM_GAIN] = "Gain",                   //
+    [PARAM_GAIN] = "ATT",                    //
     [PARAM_BANDWIDTH] = "BW",                //
     [PARAM_TX_STATE] = "TX state",           //
     [PARAM_RADIO] = "Radio",                 //
@@ -1957,8 +1957,8 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
     break;
   case PARAM_GAIN:
     if (ctx->radio_type == RADIO_BK4819) {
-      snprintf(buf, 15, v == AUTO_GAIN_INDEX ? "Auto" : "%+ddB",
-               -GAIN_TABLE[v].gainDb + 33);
+      snprintf(buf, 15, v == AUTO_GAIN_INDEX ? "Auto" : "%udB",
+               GAIN_TABLE[v].gainDb);
       break;
     } else if (ctx->radio_type == RADIO_SI4732) {
       snprintf(buf, 15, v == 0 ? "Auto" : "%u", v - 1);

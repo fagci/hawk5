@@ -367,6 +367,11 @@ static void renderMonitorMode(uint8_t BASE) {
   SPECTRUM_Y = BASE + 2;
   SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
 
+  SQL sql = GetSql(ctx->squelch.value);
+  PrintSmallEx(0, 26, POS_L, C_FILL, "%03u %03u %03u", vfo->msm.rssi,
+               vfo->msm.noise, vfo->msm.glitch);
+  PrintSmallEx(0, 32, POS_L, C_FILL, "%03u %03u %03u", sql.ro, sql.no, sql.go);
+
   if (false && gSettings.showLevelInVFO) {
     static char *graphMeasurementNames[] = {
         [GRAPH_RSSI] = "RSSI",

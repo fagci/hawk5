@@ -299,7 +299,8 @@ void BK4819_SetAGC(bool useDefault, uint8_t gainIndex) {
 
   configure_agc_registers();
 
-  const AgcConfig *config = useDefault ? &AGC_DEFAULT : &AGC_FAST;
+  // const AgcConfig *config = useDefault ? &AGC_DEFAULT : &AGC_FAST;
+  const AgcConfig *config = &AGC_DEFAULT;
   BK4819_WriteRegister(BK4819_REG_49, (config->lo << 14) | (config->high << 7) |
                                           (config->low << 0));
   BK4819_WriteRegister(BK4819_REG_7B, 0x8420); // 0x8420
@@ -350,10 +351,18 @@ void BK4819_SetFilterBandwidth(BK4819_FilterBandwidth_t bw) {
   static const uint8_t af[] = {4, 5, 6, 7, 0, 0, 3, 0, 2, 1};
   static const uint8_t bs[] = {2, 2, 2, 2, 2, 2, 0, 0, 1, 1};
 
-  const uint16_t value = (0u << 15) | (rf[bw] << 12) | (rf[bw] << 9) |
-                         (af[bw] << 6) | (bs[bw] << 4) | (1u << 3) | (0u << 2) |
-                         (0u << 0);
+  const uint16_t value = //
+      (0u << 15)         //
+      | (rf[bw] << 12)   //
+      | (rf[bw] << 9)    //
+      | (af[bw] << 6)    //
+      | (bs[bw] << 4)    //
+      | (1u << 3)        //
+      | (0u << 2)        //
+      | (0u << 0);       //
 
+  // BK4819_WriteRegister(0x43, 0x347C); // AM 0b11010001111100
+  // BK4819_WriteRegister(0x43, 0x3028); // FM 0b11000000101000
   BK4819_WriteRegister(BK4819_REG_43, value);
 }
 
@@ -436,10 +445,10 @@ void BK4819_SetModulation(ModulationType type) {
   gLastModulation = type;
 
   const bool isSsb = (type == MOD_LSB || type == MOD_USB);
-  const bool isFm = (type == MOD_FM || type == MOD_WFM);
+  // const bool isFm = (type == MOD_FM || type == MOD_WFM);
 
   BK4819_SetAF(MOD_TYPE_REG47_VALUES[type]);
-  BK4819_SetRegValue(RS_AFC_DIS, !isFm);
+  BK4819_SetRegValue(RS_AFC_DIS, isSsb);
 
   if (type == MOD_WFM) {
     BK4819_SetRegValue(RS_RF_FILT_BW, 7);
@@ -452,23 +461,23 @@ void BK4819_SetModulation(ModulationType type) {
   } else {
     BK4819_XtalSet(XTAL_2_26M);
   }
-  if (type != MOD_AM) {
-    uint16_t uVar1 = BK4819_ReadRegister(0x31);
-    BK4819_WriteRegister(0x31, uVar1 & 0xfffffffe);
-    BK4819_WriteRegister(0x42, 0x6b5a);
-    BK4819_WriteRegister(0x43, 0x3028);
-    BK4819_WriteRegister(0x2a, 0x7400);
-    BK4819_WriteRegister(0x2b, 0);
-    BK4819_WriteRegister(0x2f, 0x9890);
-    // BK4819_WriteRegister(0x48, 0xb3a8); // set AF RX gain and DAC settings
-  } else {
-    uint16_t uVar1 = BK4819_ReadRegister(0x31);
+
+  // https://github.com/armel/uv-k1-k5v3-firmware-custom/pull/15
+  uint16_t uVar1 = BK4819_ReadRegister(0x31);
+  if (type == MOD_AM) {
     BK4819_WriteRegister(0x31, uVar1 | 1);
-    BK4819_WriteRegister(0x42, 0x6f5c);
-    BK4819_WriteRegister(0x43, 0x347c);
-    BK4819_WriteRegister(0x2a, 0x7434);
-    BK4819_WriteRegister(0x2b, 0x600);
-    BK4819_WriteRegister(0x2f, 0x9990);
+    BK4819_WriteRegister(0x42, 0x6F5C);
+    // BK4819_WriteRegister(0x43, 0x347C);
+    BK4819_WriteRegister(0x2A, 0x7434); // noise gate time constants
+    BK4819_WriteRegister(0x2B, 0x600);  // AF RX HPF300 filter is disabled
+    BK4819_WriteRegister(0x2F, 0x9990);
+  } else {
+    BK4819_WriteRegister(0x31, uVar1 & 0xFFFFFFFE);
+    BK4819_WriteRegister(0x42, 0x6B5A);
+    // BK4819_WriteRegister(0x43, 0x3028);
+    BK4819_WriteRegister(0x2A, 0x7400);
+    BK4819_WriteRegister(0x2B, 0);
+    BK4819_WriteRegister(0x2F, 0x9890);
   }
 }
 

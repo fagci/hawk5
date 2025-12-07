@@ -39,7 +39,8 @@ void UI_RSSIBar(uint8_t y) {
   const int16_t DBM_MIN = -r2dBm[0];
   const int16_t DBM_MAX = -r2dBm[numTicks - 1];
 
-  int16_t dBm = Rssi2DBm(rssi) + GAIN_TABLE[ctx->gain].gainDb;
+  uint8_t att = ctx->radio_type == RADIO_BK4819 ? BK4819_GetAttenuation() : 0;
+  int16_t dBm = Rssi2DBm(rssi) + att;
   uint8_t rssiW = ConvertDomain(dBm, DBM_MIN, DBM_MAX, 0, BAR_WIDTH);
   uint8_t barH = ConvertDomain(snr, 0, 30, 1, 6);
 

@@ -280,11 +280,37 @@ static void configure_agc_registers(void) {
   BK4819_WriteRegister(0x14, (0u << 8) | (0u << 5) | (3u << 3) | (1u << 0));
 }
 
+int8_t BK4819_GetAgcIndex() {
+  int8_t idx = (BK4819_ReadRegister(BK4819_REG_7E) >> 12) & 7;
+  if (idx > 3) {
+    idx -= 8;
+  }
+  return idx;
+}
+
 uint8_t BK4819_GetAttenuation() {
-  uint16_t v = BK4819_ReadRegister(BK4819_REG_13);
+  BK4819_REGISTER_t reg;
+  switch (BK4819_GetAgcIndex()) {
+  case 0:
+    reg = BK4819_REG_10;
+    break;
+  case 1:
+    reg = BK4819_REG_11;
+    break;
+  case 2:
+    reg = BK4819_REG_12;
+    break;
+  case 3:
+    reg = BK4819_REG_13;
+    break;
+  case -1:
+    reg = BK4819_REG_14;
+    break;
+  }
+  uint16_t v = BK4819_ReadRegister(reg);
   return (uint8_t[]){19, 16, 11, 0}[(v >> 8) & 3] +
          (uint8_t[]){24, 19, 14, 9, 6, 4, 2, 0}[(v >> 5) & 7] +
-         (uint8_t[]){8, 3, 6, 0}[(v >> 3) & 3] +
+         (uint8_t[]){8, 6, 3, 0}[(v >> 3) & 3] +
          (uint8_t[]){33, 27, 21, 15, 9, 6, 3, 0}[v & 7];
 }
 

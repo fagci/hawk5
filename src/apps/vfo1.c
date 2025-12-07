@@ -367,6 +367,9 @@ static void renderMonitorMode(uint8_t BASE) {
   SPECTRUM_Y = BASE + 2;
   SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
 
+  PrintSmallEx(LCD_WIDTH, 18, POS_R, C_FILL, "%d %u", BK4819_GetAgcIndex(),
+               BK4819_GetAttenuation());
+
   if (false && gSettings.showLevelInVFO) {
     static char *graphMeasurementNames[] = {
         [GRAPH_RSSI] = "RSSI",

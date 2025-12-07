@@ -20,7 +20,7 @@ static void initMenu();
 
 static void getValS(const MenuItem *item, char *buf, uint8_t buf_size) {
   VFOContext *ctx = &RADIO_GetCurrentVFO(gRadioState)->context;
-  snprintf(buf, buf_size, "%s", RADIO_GetParamValueString(ctx, item->setting));
+  sprintf(buf, "%s", RADIO_GetParamValueString(ctx, item->setting));
 }
 
 static void updateVal(const MenuItem *item, bool up) {

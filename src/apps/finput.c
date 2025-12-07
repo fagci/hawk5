@@ -144,10 +144,10 @@ static void fillFromCurrentValue() {
       fractionalPart /= 10;
       displayFractionalDigits--;
     }
-    snprintf(inputBuffer, MAX_INPUT_LENGTH + 1, "%lu.%0*lu", integerPart,
-             displayFractionalDigits, fractionalPart);
+    sprintf(inputBuffer, "%lu.%0*lu", integerPart, displayFractionalDigits,
+            fractionalPart);
   } else {
-    snprintf(inputBuffer, MAX_INPUT_LENGTH + 1, "%lu", integerPart);
+    sprintf(inputBuffer, "%lu", integerPart);
   }
 
   cursorPos = strlen(inputBuffer);
@@ -390,7 +390,7 @@ void FINPUT_render(void) {
 
   // Only copy buffer to display if it's not empty
   if (inputBuffer[0] != '\0') {
-    strncpy(displayStr, inputBuffer, MAX_INPUT_LENGTH);
+    strcpy(displayStr, inputBuffer);
   }
 
   const char *unitSuffix = "";
@@ -435,15 +435,11 @@ void FINPUT_render(void) {
   if (currentConfig.is_range) {
     char rangeStr[32];
     if (inputStage == INPUT_FIRST_VALUE) {
-      if (cursorPos > 0) {
-        snprintf(rangeStr, sizeof(rangeStr), "Start: %lu",
-                 convertFromDisplayValue());
-      } else {
-        snprintf(rangeStr, sizeof(rangeStr), "Start: %lu", gFInputValue1);
-      }
+      sprintf(rangeStr, "Start: %lu",
+              cursorPos > 0 ? convertFromDisplayValue() : gFInputValue1);
     } else {
-      snprintf(rangeStr, sizeof(rangeStr), "End: %lu-%lu", gFInputValue1,
-               cursorPos > 0 ? convertFromDisplayValue() : gFInputValue1);
+      sprintf(rangeStr, "End: %lu-%lu", gFInputValue1,
+              cursorPos > 0 ? convertFromDisplayValue() : gFInputValue1);
     }
     PrintSmall(0, 16, rangeStr);
   }

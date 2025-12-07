@@ -208,41 +208,42 @@ static uint32_t getValue(MemProp p) {
 static void getValS(const MenuItem *item, char *buf, uint8_t _) {
   (void)_;
   const uint32_t v = getValue(item->setting);
+
+  // Группировка похожих случаев
   switch (item->setting) {
   case MEM_BOUNDS: {
     const uint32_t fs = gChEd.rxF;
     const uint32_t fe = gChEd.txF;
     sprintf(buf, "%lu.%05lu - %lu.%05lu", fs / MHZ, fs % MHZ, fe / MHZ,
             fe % MHZ);
-  } break;
-  /* case MEM_START:
-    sprintf(buf, "%lu.%03lu", fs / MHZ, fs / 100 % 1000);
-    break;
-  case MEM_END:
-    sprintf(buf, "%lu.%03lu", fe / MHZ, fe / 100 % 1000);
-    break; */
+    return;
+  }
+
   case MEM_NAME:
-    strncpy(buf, gChEd.name, 31);
-    break;
+    strcpy(buf, gChEd.name);
+    return;
+
   case MEM_BW:
     if (gChEd.radio == RADIO_BK4819) {
-      strncpy(buf, BW_NAMES_BK4819[gChEd.bw], 31);
+      strcpy(buf, BW_NAMES_BK4819[gChEd.bw]);
     } else if (gChEd.radio == RADIO_SI4732) {
-      strncpy(buf,
-              ((gChEd.modulation == MOD_LSB || gChEd.modulation == MOD_USB)
-                   ? BW_NAMES_SI47XX_SSB
-                   : BW_NAMES_SI47XX)[gChEd.bw],
-              31);
+      strcpy(buf, ((gChEd.modulation == MOD_LSB || gChEd.modulation == MOD_USB)
+                       ? BW_NAMES_SI47XX_SSB
+                       : BW_NAMES_SI47XX)[gChEd.bw]);
     } else {
-      strncpy(buf, "WFM", 31);
+      strcpy(buf, "WFM");
     }
-    break;
+    return;
+
   case MEM_SQ_TYPE:
-    strncpy(buf, SQ_TYPE_NAMES[gChEd.squelch.type], 31);
-    break;
+    strcpy(buf, SQ_TYPE_NAMES[gChEd.squelch.type]);
+    return;
+
   case MEM_PPM:
     sprintf(buf, "%+d", gChEd.ppm);
-    break;
+    return;
+
+  // Объединение простых sprintf случаев
   case MEM_SQ:
   case MEM_SCRAMBLER:
   case MEM_BANK:
@@ -250,54 +251,68 @@ static void getValS(const MenuItem *item, char *buf, uint8_t _) {
   case MEM_P_CAL_M:
   case MEM_P_CAL_H:
     sprintf(buf, "%u", v);
-    break;
+    return;
+
   case MEM_GAIN:
-    snprintf(buf, 15, gChEd.gainIndex == AUTO_GAIN_INDEX ? "Auto" : "%udB",
-             GAIN_TABLE[gChEd.gainIndex].gainDb);
-    break;
+    bkAttToS(buf, gChEd.gainIndex);
+    return;
+
   case MEM_MODULATION:
-    strncpy(buf, MOD_NAMES_BK4819[gChEd.modulation], 31);
-    break;
+    strcpy(buf, MOD_NAMES_BK4819[gChEd.modulation]);
+    return;
+
   case MEM_STEP:
     sprintf(buf, "%u.%02uKHz", StepFrequencyTable[gChEd.step] / 100,
             StepFrequencyTable[gChEd.step] % 100);
-    break;
+    return;
+
   case MEM_TX:
-    strncpy(buf, YES_NO[gChEd.allowTx], 31);
-    break;
+    strcpy(buf, YES_NO[gChEd.allowTx]);
+    return;
+
+  // Объединение частотных случаев
   case MEM_F_RX:
   case MEM_F_TX:
   case MEM_LAST_F:
   case MEM_TX_OFFSET:
     mhzToS(buf, v);
-    break;
+    return;
+
   case MEM_RX_CODE_TYPE:
-    strncpy(buf, TX_CODE_TYPES[gChEd.code.rx.type], 31);
-    break;
+    strcpy(buf, TX_CODE_TYPES[gChEd.code.rx.type]);
+    return;
+
   case MEM_RX_CODE:
     PrintRTXCode(buf, gChEd.code.rx.type, gChEd.code.rx.value);
-    break;
+    return;
+
   case MEM_TX_CODE_TYPE:
-    strncpy(buf, TX_CODE_TYPES[gChEd.code.tx.type], 31);
-    break;
+    strcpy(buf, TX_CODE_TYPES[gChEd.code.tx.type]);
+    return;
+
   case MEM_TX_CODE:
     PrintRTXCode(buf, gChEd.code.tx.type, gChEd.code.tx.value);
-    break;
+    return;
+
   case MEM_TX_OFFSET_DIR:
-    snprintf(buf, 15, TX_OFFSET_NAMES[gChEd.offsetDir]);
-    break;
+    strcpy(buf, TX_OFFSET_NAMES[gChEd.offsetDir]);
+    return;
+
   case MEM_F_TXP:
-    snprintf(buf, 15, TX_POWER_NAMES[gChEd.power]);
-    break;
+    strcpy(buf, TX_POWER_NAMES[gChEd.power]);
+    return;
+
   case MEM_READONLY:
-    snprintf(buf, 15, YES_NO[gChEd.meta.readonly]);
-    break;
+    strcpy(buf, YES_NO[gChEd.meta.readonly]);
+    return;
+
   case MEM_TYPE:
-    snprintf(buf, 15, CH_TYPE_NAMES[gChEd.meta.type]);
-    break;
+    strcpy(buf, CH_TYPE_NAMES[gChEd.meta.type]);
+    return;
+
   case MEM_RADIO:
-    snprintf(buf, 15, RADIO_NAMES[gChEd.radio]);
-    break;
+    strcpy(buf, RADIO_NAMES[gChEd.radio]);
+    return;
   }
 }
 

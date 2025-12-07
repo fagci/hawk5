@@ -24,7 +24,7 @@
 
 #define RADIO_SAVE_DELAY_MS 1000
 
-// #define DEBUG_PARAMS 1
+#define DEBUG_PARAMS 1
 
 bool gShowAllRSSI = false;
 bool gMonitorMode = false;
@@ -1515,7 +1515,7 @@ static void setCommonParamsFromCh(VFOContext *ctx, const VFO *storage) {
   RADIO_SetParam(ctx, PARAM_TX_OFFSET, storage->txF, false);
   RADIO_SetParam(ctx, PARAM_TX_OFFSET_DIR, storage->offsetDir, false);
 
-  strncpy(ctx->name, storage->name, 9);
+  strcpy(ctx->name, storage->name);
 
   ctx->code = storage->code.rx;
   ctx->tx_state.code = storage->code.tx;
@@ -1722,7 +1722,7 @@ void RADIO_UpdateSquelch(RadioState *state) {
   RADIO_UpdateMeasurement(&state->vfos[state->active_vfo_index]);
   if (vfo->msm.open != vfo->is_open) {
     gRedrawScreen = true; // TODO: mv
-    RADIO_SetParam(ctx, PARAM_AFC_SPD, vfo->msm.open ? 57 : 63, false);
+    // RADIO_SetParam(ctx, PARAM_AFC_SPD, vfo->msm.open ? 57 : 63, false);
     RADIO_ApplySettings(ctx);
     vfo->is_open = vfo->msm.open;
     RADIO_SwitchAudioToVFO(state, state->active_vfo_index);
@@ -1916,7 +1916,7 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
   uint32_t v = RADIO_GetParam(ctx, param);
   switch (param) {
   case PARAM_RSSI:
-    snprintf(buf, 15, "%+ddB", Rssi2DBm(v));
+    sprintf(buf, "%+ddB", Rssi2DBm(v));
     break;
   case PARAM_MODULATION:
     if (ctx->radio_type == RADIO_BK4819) {
@@ -1940,8 +1940,8 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
     }
     return "?(WIP)";
   case PARAM_STEP:
-    snprintf(buf, 15, "%d.%02d", StepFrequencyTable[v] / KHZ,
-             StepFrequencyTable[v] % KHZ);
+    sprintf(buf, "%d.%02d", StepFrequencyTable[v] / KHZ,
+            StepFrequencyTable[v] % KHZ);
     break;
   case PARAM_FREQUENCY:
   case PARAM_TX_OFFSET:
@@ -1950,21 +1950,20 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
     mhzToS(buf, v);
     break;
   case PARAM_RADIO:
-    snprintf(buf, 15, "%s", RADIO_NAMES[ctx->radio_type]);
+    sprintf(buf, "%s", RADIO_NAMES[ctx->radio_type]);
     break;
   case PARAM_TX_OFFSET_DIR:
-    snprintf(buf, 15, "%s", TX_OFFSET_NAMES[ctx->radio_type]);
+    sprintf(buf, "%s", TX_OFFSET_NAMES[ctx->radio_type]);
     break;
   case PARAM_GAIN:
     if (ctx->radio_type == RADIO_BK4819) {
-      snprintf(buf, 15, v == AUTO_GAIN_INDEX ? "Auto" : "%udB",
-               GAIN_TABLE[v].gainDb);
+      bkAttToS(buf, v);
       break;
     } else if (ctx->radio_type == RADIO_SI4732) {
-      snprintf(buf, 15, v == 0 ? "Auto" : "%u", v - 1);
+      sprintf(buf, v == 0 ? "Auto" : "%u", v - 1);
       break;
     }
-    snprintf(buf, 15, "Auto");
+    sprintf(buf, "Auto");
     break;
 
   case PARAM_RX_CODE:
@@ -1992,13 +1991,13 @@ const char *RADIO_GetParamValueString(const VFOContext *ctx, ParamType param) {
   case PARAM_SQUELCH_VALUE:
   case PARAM_PRECISE_F_CHANGE:
   case PARAM_COUNT:
-    snprintf(buf, 15, "%u", v);
+    sprintf(buf, "%u", v);
     break;
   case PARAM_VOLUME:
-    snprintf(buf, 15, "%u%", v);
+    sprintf(buf, "%u%", v);
     break;
   case PARAM_SQUELCH_TYPE:
-    snprintf(buf, 15, "%s", SQ_TYPE_NAMES[ctx->squelch.type]);
+    sprintf(buf, "%s", SQ_TYPE_NAMES[ctx->squelch.type]);
     break;
   }
   return buf;

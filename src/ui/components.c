@@ -59,24 +59,6 @@ void UI_RSSIBar(uint8_t y) {
   }
 }
 
-static void drawTicks(uint8_t y, uint32_t fs, uint32_t fe, uint32_t div,
-                      uint8_t h) {
-  for (uint32_t f = fs - (fs % div) + div; f < fe; f += div) {
-    DrawVLine(ConvertDomainF(f, fs, fe, 0, LCD_WIDTH - 1), y, h, C_FILL);
-  }
-}
-
-void UI_DrawTicks(uint8_t y, const Band *band) {
-  uint32_t fs = band->rxF, fe = band->txF, bw = fe - fs;
-  for (uint32_t p = 100000000; p >= 10; p /= 10) {
-    if (p < bw) {
-      drawTicks(y, fs, fe, p / 2, 2);
-      drawTicks(y, fs, fe, p, 3);
-      return;
-    }
-  }
-}
-
 void UI_Scanlists(uint8_t baseX, uint8_t baseY, uint16_t sl) {
   for (uint8_t i = 0; i < 16; ++i) {
     bool isActive = (sl >> i) & 1;

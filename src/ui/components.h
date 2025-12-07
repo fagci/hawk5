@@ -1,9 +1,9 @@
 #ifndef COMPONENTS_H
 #define COMPONENTS_H
 
+#include "../helper/lootlist.h"
 #include "../radio.h"
 #include "graphics.h"
-#include "../helper/lootlist.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -12,7 +12,6 @@
 void UI_Battery(uint8_t Level);
 void UI_TxBar(uint8_t y);
 void UI_RSSIBar(uint8_t y);
-void UI_DrawTicks(uint8_t y, const Band *band);
 void UI_ShowWait();
 void UI_Scanlists(uint8_t baseX, uint8_t baseY, uint16_t sl);
 void UI_DrawLoot(const Loot *loot, uint8_t x, uint8_t y, TextPos pos);

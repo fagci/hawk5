@@ -42,7 +42,7 @@ static void nextWithTimeout() {
 void CHSCAN_init(void) {
   CHANNELS_LoadScanlist(TYPE_FILTER_CH, gSettings.currentScanlist);
   SCAN_SetMode(SCAN_MODE_CHANNEL);
-  SCAN_Init(false);
+  // SCAN_Init(false);
 }
 
 void CHSCAN_deinit(void) {}

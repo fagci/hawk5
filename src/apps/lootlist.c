@@ -8,6 +8,7 @@
 #include "../helper/lootlist.h"
 #include "../helper/measurements.h"
 #include "../helper/menu.h"
+#include "../helper/scan.h"
 #include "../radio.h"
 #include "../scheduler.h"
 #include "../ui/components.h"
@@ -268,18 +269,7 @@ static bool action(const uint16_t index, KEY_Code_t key, Key_State_t state) {
   return false;
 }
 
-static uint32_t lastSqCheck;
-void LOOTLIST_update() {
-  RADIO_UpdateMultiwatch(gRadioState);
-  RADIO_CheckAndSaveVFO(gRadioState);
-
-  if (Now() - lastSqCheck >= 55) {
-    RADIO_UpdateSquelch(gRadioState);
-    lastSqCheck = Now();
-  }
-  gRedrawScreen = true;
-  SYS_DelayMs(SQL_DELAY);
-}
+void LOOTLIST_update() {}
 
 static Menu lootMenu = {"Loot", .render_item = renderItem, .action = action};
 
@@ -292,6 +282,8 @@ static void initMenu() {
 void LOOTLIST_render(void) { MENU_Render(); }
 
 void LOOTLIST_init(void) {
+  SCAN_SetMode(SCAN_MODE_SINGLE);
+  // SCAN_Init(false);
   initMenu();
   sortType = SORT_F;
   sort(SORT_LOT);

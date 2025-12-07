@@ -25,5 +25,6 @@ unsigned int SQRT16(unsigned int value);
 void _putchar(char c);
 void ScanlistStr(uint32_t sl, char *buf);
 void mhzToS(char *buf, uint32_t f);
+void bkAttToS(char *buf, uint8_t v);
 
 #endif /* end of include guard: MISC_H */

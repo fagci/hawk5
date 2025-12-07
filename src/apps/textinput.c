@@ -72,7 +72,7 @@ static void backspace(void) {
 }
 
 void TEXTINPUT_init(void) {
-  strncpy(inputField, gTextinputText, 15);
+  strcpy(inputField, gTextinputText);
   inputIndex = strlen(inputField);
 }
 
@@ -179,7 +179,7 @@ bool TEXTINPUT_key(KEY_Code_t key, Key_State_t state) {
       }
       return true;
     case KEY_MENU:
-      strncpy(gTextinputText, inputField, gTextInputSize);
+      strcpy(gTextinputText, inputField);
       if (gTextInputCallback) {
         gTextInputCallback();
         gTextInputCallback = NULL;
@@ -233,7 +233,7 @@ void TEXTINPUT_render(void) {
           PrintMedium(xPos + 10, line * 8 + 12, "%c", currentRow[idx]);
         }
       } else {
-        strncpy(String, currentSet[idx], 4);
+        strcpy(String, currentSet[idx]);
         String[4] = '\0';
         PrintMedium(xPos + 10, line * 8 + 12, String);
       }

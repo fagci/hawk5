@@ -12,27 +12,6 @@ int ConvertDomain(int aValue, int aMin, int aMax, int bMin, int bMax) {
   return ((aValue - aMin) * bRange + aRange / 2) / aRange + bMin;
 }
 
-uint32_t ClampF(uint32_t v, uint32_t min, uint32_t max) {
-  return v <= min ? min : (v >= max ? max : v);
-}
-
-uint32_t ConvertDomainF(uint32_t aValue, uint32_t aMin, uint32_t aMax,
-                        uint32_t bMin, uint32_t bMax) {
-  if (aMin == aMax) {
-    return bMin;
-  }
-
-  const uint64_t aRange = (uint64_t)aMax - aMin;
-  const uint64_t bRange = (uint64_t)bMax - bMin;
-
-  aValue = ClampF(aValue, aMin, aMax);
-
-  uint64_t scaledValue = (uint64_t)(aValue - aMin) * bRange;
-  uint64_t result = (scaledValue + aRange / 2) / aRange + bMin;
-
-  return (uint32_t)ClampF(result, bMin, bMax);
-}
-
 uint8_t DBm2S(int dbm, bool isUHF) {
   uint8_t i = 0;
   dbm *= -1;
@@ -56,7 +35,7 @@ uint16_t Mid(const uint16_t *array, size_t n) {
   if (array == NULL || n == 0) {
     return 0;
   }
-  int32_t sum = array[0];
+  uint32_t sum = array[0];
   for (size_t i = 1; i < n; ++i) {
     sum += array[i];
   }
@@ -123,24 +102,12 @@ uint16_t Std(const uint16_t *data, size_t n) {
   return Sqrt(sumDev / n);
 }
 
-int32_t AdjustI(int32_t val, int32_t min, int32_t max, int32_t inc) {
-  if (inc > 0) {
-    return val == max - inc ? min : val + inc;
-  } else {
-    return val > min ? val + inc : max + inc;
-  }
-}
-
 uint32_t AdjustU(uint32_t val, uint32_t min, uint32_t max, int32_t inc) {
   if (inc > 0) {
     return val == max - inc ? min : val + inc;
   } else {
     return val > min ? val + inc : max + inc;
   }
-}
-
-int32_t IncDecI(int32_t val, int32_t min, int32_t max, bool inc) {
-  return AdjustI(val, min, max, inc ? 1 : -1);
 }
 
 uint32_t IncDecU(uint32_t val, uint32_t min, uint32_t max, bool inc) {

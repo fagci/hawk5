@@ -1,5 +1,6 @@
 #include "eeprom.h"
 #include "../external/printf/printf.h"
+#include "../scheduler.h"
 #include "i2c.h"
 #include "system.h"
 #include "systick.h"
@@ -18,8 +19,8 @@ void EEPROM_Init(void) {
 }
 
 bool EEPROM_WaitReady(uint8_t device_addr, uint32_t timeout_ms) {
-  uint64_t start = GetUptimeUs();
-  while ((GetUptimeUs() - start) < (timeout_ms * 1000ULL)) {
+  uint32_t start = Now();
+  while ((Now() - start) < timeout_ms) {
     I2C_Start();
     int result = I2C_Write(device_addr);
     I2C_Stop();
@@ -340,59 +341,4 @@ void EEPROM_ScanBus(void) {
     }
     printf("\n");
   }
-}
-
-void EEPROM_TestReadSpeedFast() {
-  static uint8_t buf[1024]; // Буфер 1KB
-  uint32_t total_size = g_eeprom_size;
-
-  printf("Testing I2C raw speed...\n");
-  uint64_t start = GetUptimeUs();
-
-  I2C_Start();
-  I2C_Write(0xA0);
-  I2C_Write(0x00);
-  I2C_Write(0x00);
-  I2C_RepStart();
-  I2C_Write(0xA1);
-
-  for (int i = 0; i < 1000; i++) {
-    I2C_Read(false);
-  }
-  I2C_Read(true);
-  I2C_Stop();
-
-  uint64_t elapsed = GetUptimeUs() - start;
-  printf("1000 bytes in %lu us = %.2f KB/s\n", (uint32_t)elapsed,
-         1000000.0f / elapsed);
-
-  Log("-- EEPROM FAST TEST START --");
-
-  // Читаем по границам чипов (64KB)
-  for (uint32_t base_addr = 0; base_addr < total_size; base_addr += 65536) {
-    uint32_t chip_size =
-        ((base_addr + 65536) > total_size) ? (total_size - base_addr) : 65536;
-
-    uint8_t IIC_ADD = 0xA0 | ((base_addr >> 15) & 0x0E);
-
-    // Один START для всего чипа
-    I2C_Start();
-    I2C_Write(IIC_ADD);
-    I2C_Write((base_addr >> 8) & 0xFF);
-    I2C_Write(base_addr & 0xFF);
-    I2C_RepStart();
-    I2C_Write(IIC_ADD | 0x01);
-
-    // Читаем весь чип последовательно
-    uint32_t remaining = chip_size;
-    while (remaining > 0) {
-      uint16_t chunk = (remaining > sizeof(buf)) ? sizeof(buf) : remaining;
-      I2C_ReadBuffer(buf, chunk);
-      remaining -= chunk;
-    }
-
-    I2C_Stop();
-  }
-
-  Log("-- EEPROM FAST TEST END --");
 }

@@ -108,7 +108,7 @@ void APPS_init(AppType_t app) {
   STATUSLINE_SetText("%s", apps[app].name);
   gRedrawScreen = true;
 
-  // LogC(LOG_C_YELLOW, "[APP] Init %s", apps[gCurrentApp].name);
+  LogC(LOG_C_YELLOW, "[APP] Init %s", apps[gCurrentApp].name);
   if (apps[app].init) {
     apps[app].init();
   }
@@ -128,7 +128,7 @@ void APPS_render(void) {
 }
 
 void APPS_deinit(void) {
-  // LogC(LOG_C_YELLOW, "[APP] Deinit %s", apps[gCurrentApp].name);
+  LogC(LOG_C_YELLOW, "[APP] Deinit %s", apps[gCurrentApp].name);
   MENU_Deinit();
   if (apps[gCurrentApp].deinit) {
     apps[gCurrentApp].deinit();

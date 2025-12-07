@@ -1086,10 +1086,10 @@ uint8_t BK4819_GetSignalPower(void) {
   return (BK4819_ReadRegister(0x7E) >> 6) & 0b111111;
 }
 
-int32_t BK4819_GetAFCValue() {
+int16_t BK4819_GetAFCValue() {
   int16_t signedAfc = (int16_t)BK4819_ReadRegister(0x6D);
   // * 3.3(3)
-  return (int32_t)((((int64_t)signedAfc * 0xAAAAAAABLL) + 0x55555555LL) >> 33);
+  return (signedAfc * 10) / 3;
 }
 
 uint8_t BK4819_GetSNR(void) { return BK4819_ReadRegister(0x61) & 0xFF; }

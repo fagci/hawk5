@@ -212,6 +212,7 @@ static bool handleRelease(KEY_Code_t key, Key_State_t state) {
 }
 
 bool VFO1_key(KEY_Code_t key, Key_State_t state) {
+  // return false;
   if (REGSMENU_Key(key, state)) {
     return true;
   }
@@ -272,13 +273,6 @@ static void renderChannelName(uint8_t y, uint16_t channel) {
     PrintSmallEx(32, y - 9, POS_L, C_FILL, "MR %03u", channel);
     UI_Scanlists(LCD_WIDTH - 25, y - 13, gSettings.currentScanlist);
   }
-}
-
-int32_t afc_to_deviation_hz(uint16_t reg_6d) {
-  // Коэффициент: 1000 Гц / 291 единиц ≈ 3.436 Hz/единица
-  // Используем целочисленную арифметику: (signed_val * 1000) / 291
-  // Для точности используем int64_t
-  return ((int64_t)(int16_t)reg_6d * 1000LL) / 291LL;
 }
 
 static void renderStatusLine(void) {
@@ -367,9 +361,6 @@ static void renderMonitorMode(uint8_t BASE) {
   SPECTRUM_Y = BASE + 2;
   SPECTRUM_H = LCD_HEIGHT - SPECTRUM_Y;
 
-  PrintSmallEx(LCD_WIDTH, 18, POS_R, C_FILL, "%d %u", BK4819_GetAgcIndex(),
-               BK4819_GetAttenuation());
-
   if (false && gSettings.showLevelInVFO) {
     static char *graphMeasurementNames[] = {
         [GRAPH_RSSI] = "RSSI",
@@ -400,6 +391,7 @@ static void renderMonitorMode(uint8_t BASE) {
 }
 
 void VFO1_render(void) {
+  // return;
   const uint8_t BASE = 40;
 
   renderStatusLine();

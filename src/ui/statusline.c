@@ -28,22 +28,9 @@ void STATUSLINE_SetText(const char *pattern, ...) {
   vsnprintf(statuslineTextNew, 31, pattern, args);
   va_end(args);
   if (strcmp(statuslineText, statuslineTextNew)) {
-    strncpy(statuslineText, statuslineTextNew, 31);
+    strcpy(statuslineText, statuslineTextNew);
     gRedrawScreen = true;
   }
-}
-
-void STATUSLINE_SetTickerText(const char *pattern, ...) {
-  char statuslineTextNew[32] = {0};
-  va_list args;
-  va_start(args, pattern);
-  vsnprintf(statuslineTextNew, 31, pattern, args);
-  va_end(args);
-  if (strcmp(statuslineTicker, statuslineTextNew)) {
-    strncpy(statuslineTicker, statuslineTextNew, 31);
-    gRedrawScreen = true;
-  }
-  lastTickerUpdate = Now();
 }
 
 void STATUSLINE_update(void) {
@@ -141,21 +128,15 @@ void STATUSLINE_render(void) {
 void STATUSLINE_RenderRadioSettings() {
   char gain[8];
   char bandwidth[8];
-  // char afc[8];
   char squelch_type[8];
   char squelch_value[8];
   char modulation[8];
 
-  strncpy(gain, RADIO_GetParamValueString(ctx, PARAM_GAIN), sizeof(gain));
-  strncpy(bandwidth, RADIO_GetParamValueString(ctx, PARAM_BANDWIDTH),
-          sizeof(bandwidth));
-  // strncpy(afc, RADIO_GetParamValueString(ctx, PARAM_AFC), sizeof(afc));
-  strncpy(squelch_type, RADIO_GetParamValueString(ctx, PARAM_SQUELCH_TYPE),
-          sizeof(squelch_type));
-  strncpy(squelch_value, RADIO_GetParamValueString(ctx, PARAM_SQUELCH_VALUE),
-          sizeof(squelch_value));
-  strncpy(modulation, RADIO_GetParamValueString(ctx, PARAM_MODULATION),
-          sizeof(modulation));
+  strcpy(gain, RADIO_GetParamValueString(ctx, PARAM_GAIN));
+  strcpy(bandwidth, RADIO_GetParamValueString(ctx, PARAM_BANDWIDTH));
+  strcpy(squelch_type, RADIO_GetParamValueString(ctx, PARAM_SQUELCH_TYPE));
+  strcpy(squelch_value, RADIO_GetParamValueString(ctx, PARAM_SQUELCH_VALUE));
+  strcpy(modulation, RADIO_GetParamValueString(ctx, PARAM_MODULATION));
 
   STATUSLINE_SetText("%s %s %s %s %s", gain, bandwidth, squelch_type,
                      squelch_value, modulation);

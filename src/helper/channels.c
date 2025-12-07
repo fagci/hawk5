@@ -89,7 +89,7 @@ void CHANNELS_LoadCurrentScanlistCH() {
 
 void CHANNELS_Next(bool next) {
   if (gScanlistSize) {
-    chScanlistIndex = IncDecI(chScanlistIndex, 0, gScanlistSize, next);
+    chScanlistIndex = IncDecU(chScanlistIndex, 0, gScanlistSize, next);
     CHANNELS_LoadCurrentScanlistCH();
   }
 }

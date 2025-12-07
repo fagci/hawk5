@@ -64,7 +64,7 @@ bool SI47XX_IsSSB() {
 void waitToSend() {
   uint8_t tmp = 0;
   do {
-    TIMER_Delay250ns(1);
+    TIMER_DelayUs(1);
     SI47XX_ReadBuffer((uint8_t *)&tmp, 1);
   } while (!(tmp & STATUS_CTS));
 }
@@ -292,7 +292,7 @@ void SI47XX_PowerDown() {
 
   waitToSend();
   SI47XX_WriteBuffer(cmd, 1);
-  TIMER_Delay250ns(10);
+  TIMER_DelayUs(10);
   RST_LOW;
   isSi4732On = false;
   siCurrentFreq = 0;
@@ -408,7 +408,7 @@ void SI47XX_SetBFO(int16_t bfo) { SI47XX_SetProperty(PROP_SSB_BFO, bfo); }
 
 void SI47XX_TuneTo(uint32_t f) {
   if (SI47XX_IsSSB()) {
-    int64_t bfo = ((int64_t)(siCurrentFreq * fDiv()) - (int64_t)f) * 10;
+    int32_t bfo = ((int32_t)(siCurrentFreq * fDiv()) - f) * 10;
     if (bfo > -16000 && bfo < 16000) {
       SI47XX_SetBFO(bfo);
       f = siCurrentFreq * fDiv();

@@ -12,7 +12,7 @@
 static uint8_t DEAD_BUF[] = {0xDE, 0xAD};
 
 static void getValS(const MenuItem *item, char *buf, uint8_t buf_size) {
-  snprintf(buf, buf_size, "%s", SETTINGS_GetValueString(item->setting));
+  sprintf(buf, "%s", SETTINGS_GetValueString(item->setting));
 }
 
 static void updateValS(const MenuItem *item, bool up) {

@@ -18,6 +18,5 @@ uint32_t EEPROM_DetectSize(void);
 void EEPROM_Init(void);
 EEPROMType EEPROM_DetectType(void);
 void EEPROM_TestReadSpeed();
-void EEPROM_TestReadSpeedFast();
 
 #endif

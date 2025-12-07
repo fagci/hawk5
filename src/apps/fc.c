@@ -160,7 +160,7 @@ bool FC_key(KEY_Code_t key, Key_State_t state) {
     switch (key) {
     case KEY_1:
     case KEY_7:
-      gSettings.fcTime = IncDecI(gSettings.fcTime, 0, 3 + 1, key == KEY_1);
+      gSettings.fcTime = IncDecU(gSettings.fcTime, 0, 3 + 1, key == KEY_1);
       SETTINGS_DelayedSave();
       FC_init();
       break;

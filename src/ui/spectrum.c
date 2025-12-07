@@ -23,6 +23,24 @@ static uint8_t filledPoints;
 static Band *range;
 static uint16_t step;
 
+static void drawTicks(uint8_t y, uint32_t fs, uint32_t fe, uint32_t div,
+                      uint8_t h) {
+  for (uint32_t f = fs - (fs % div) + div; f < fe; f += div) {
+    DrawVLine(SP_F2X(f), y, h, C_FILL);
+  }
+}
+
+void UI_DrawTicks(uint8_t y, const Band *band) {
+  uint32_t fs = band->rxF, fe = band->txF, bw = fe - fs;
+  for (uint32_t p = 100000000; p >= 10; p /= 10) {
+    if (p < bw) {
+      drawTicks(y, fs, fe, p / 2, 2);
+      drawTicks(y, fs, fe, p, 3);
+      return;
+    }
+  }
+}
+
 void SP_ResetHistory(void) {
   filledPoints = 0;
   for (uint8_t i = 0; i < MAX_POINTS; ++i) {
@@ -43,12 +61,50 @@ void SP_Init(Band *b) {
   SP_Begin();
 }
 
-uint8_t SP_F2X(uint32_t f) {
+/* uint8_t SP_F2X(uint32_t f) {
   return ConvertDomainF(f, range->rxF, range->txF, 0, MAX_POINTS - 1);
+} */
+
+/* uint32_t SP_X2F(uint8_t x) {
+  return ConvertDomainF(x, 0, MAX_POINTS - 1, range->rxF, range->txF);
+} */
+
+uint8_t SP_F2X(uint32_t f) {
+  // 1. Проверка границ (Clamp)
+  if (f <= range->rxF)
+    return 0;
+  if (f >= range->txF)
+    return MAX_POINTS - 1;
+
+  uint32_t delta = f - range->rxF;
+  uint32_t aRange = range->txF - range->rxF;
+
+  // Вместо: (delta * 127) / aRange
+  // Делаем: delta / (aRange / 127)
+
+  // Предварительно считаем делитель (шаг частоты на 1 пиксель)
+  // +1 для округления вверх, чтобы не делить на 0, если диапазон схлопнут
+  uint32_t step = aRange / (MAX_POINTS - 1);
+
+  if (step == 0)
+    return 0; // Защита
+
+  // Результат гарантированно < 128, так как delta < aRange
+  return delta / step;
 }
 
 uint32_t SP_X2F(uint8_t x) {
-  return ConvertDomainF(x, 0, MAX_POINTS - 1, range->rxF, range->txF);
+  // Защита от выхода за массив (хотя uint8_t x вряд ли превысит, если
+  // MAX_POINTS > 255)
+  if (x >= MAX_POINTS)
+    x = MAX_POINTS - 1;
+
+  // Считаем шаг частоты на один пиксель
+  // Лучше вынести расчет step в место, где меняется range, чтобы не делить
+  // каждый раз!
+  uint32_t step = (range->txF - range->rxF) / (MAX_POINTS - 1);
+
+  return range->rxF + (x * step);
 }
 
 void SP_AddPoint(const Measurement *msm) {
@@ -130,7 +186,7 @@ VMinMax SP_GetMinMax() {
   return (VMinMax){.vMin = vMin, .vMax = vMax};
 }
 
-/* void SP_Render(const Band *p, VMinMax v) {
+void SP_Render(const Band *p, VMinMax v) {
   if (p) {
     UI_DrawTicks(S_BOTTOM, p);
   }
@@ -138,10 +194,10 @@ VMinMax SP_GetMinMax() {
   DrawHLine(0, S_BOTTOM, MAX_POINTS, C_FILL);
 
   for (uint8_t i = 0; i < filledPoints; ++i) {
-    uint8_t yVal = ConvertDomainF(rssiHistory[i], v.vMin, v.vMax, 0,
-SPECTRUM_H); DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
+    uint8_t yVal = ConvertDomain(rssiHistory[i], v.vMin, v.vMax, 0, SPECTRUM_H);
+    DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
   }
-} */
+}
 
 /* void SP_Render(const Band *p, VMinMax v) {
   if (p) {
@@ -203,7 +259,7 @@ SPECTRUM_H); DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
   }
 } */
 
-void SP_Render(const Band *p, VMinMax v) {
+/* void SP_Render(const Band *p, VMinMax v) {
   if (p) {
     UI_DrawTicks(S_BOTTOM, p);
   }
@@ -255,7 +311,7 @@ void SP_Render(const Band *p, VMinMax v) {
     uint8_t yVal = ConvertDomain(values[i], v.vMin, v.vMax, 0, SPECTRUM_H);
     DrawVLine(i, S_BOTTOM - yVal, yVal, C_FILL);
   }
-}
+} */
 
 void SP_RenderArrow(uint32_t f) {
   uint8_t cx = SP_F2X(f);

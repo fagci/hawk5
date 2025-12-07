@@ -27,9 +27,6 @@ static const uint8_t rssi2s[2][15] = {
 
 long long Clamp(long long v, long long min, long long max);
 int ConvertDomain(int aValue, int aMin, int aMax, int bMin, int bMax);
-uint32_t ClampF(uint32_t v, uint32_t min, uint32_t max);
-uint32_t ConvertDomainF(uint32_t aValue, uint32_t aMin, uint32_t aMax,
-                        uint32_t bMin, uint32_t bMax);
 uint8_t Rssi2PX(uint16_t rssi, uint8_t pxMin, uint8_t pxMax);
 uint8_t DBm2S(int dbm, bool isUHF);
 int16_t Rssi2DBm(uint16_t rssi);
@@ -40,9 +37,7 @@ uint16_t Max(const uint16_t *array, size_t n);
 uint16_t Mean(const uint16_t *array, size_t n);
 uint16_t Std(const uint16_t *data, size_t n);
 
-int32_t AdjustI(int32_t val, int32_t min, int32_t max, int32_t inc);
 uint32_t AdjustU(uint32_t val, uint32_t min, uint32_t max, int32_t inc);
-int32_t IncDecI(int32_t val, int32_t min, int32_t max, bool inc);
 uint32_t IncDecU(uint32_t val, uint32_t min, uint32_t max, bool inc);
 
 bool IsReadable(char *name);

@@ -310,6 +310,8 @@ void SCAN_Check() {
     RADIO_CheckAndSaveVFO(gRadioState);
     if (Now() - radioTimer >= SQL_DELAY) {
       RADIO_UpdateSquelch(gRadioState);
+      Log("SQL? %u RNG %u %u %u", vfo->msm.open, vfo->msm.rssi, vfo->msm.noise,
+          vfo->msm.glitch);
       SP_ShiftGraph(-1);
       SP_AddGraphPoint(&vfo->msm);
       radioTimer = Now();

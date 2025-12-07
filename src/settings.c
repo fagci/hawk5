@@ -431,10 +431,10 @@ const char *SETTINGS_GetValueString(Setting s) {
 
   case SETTING_SQLOPENTIME:
   case SETTING_SQLCLOSETIME:
-    snprintf(buf, 15, "%ums", v * 5);
+    sprintf(buf, "%ums", v * 5);
     break;
   case SETTING_DEVIATION:
-    snprintf(buf, 15, "%u", v * 10);
+    sprintf(buf, "%u", v * 10);
     break;
   case SETTING_CONTRAST:
     sprintf(buf, "%d", v - 8);
@@ -448,7 +448,7 @@ const char *SETTINGS_GetValueString(Setting s) {
   case SETTING_ACTIVEVFO:
   case SETTING_BRIGHTNESS_L:
   case SETTING_BRIGHTNESS_H:
-    snprintf(buf, 15, "%u", v);
+    sprintf(buf, "%u", v);
     break;
 
   case SETTING_CURRENTSCANLIST:
@@ -512,7 +512,7 @@ void SETTINGS_IncDecValue(Setting s, bool inc) {
       v = appsAvailableToRun[0];
     }
 
-    int8_t next_index = IncDecI(found_index, 0, RUN_APPS_COUNT, inc);
+    uint8_t next_index = IncDecU(found_index, 0, RUN_APPS_COUNT, inc);
     v = appsAvailableToRun[next_index];
     SETTINGS_SetValue(s, v);
     return;
@@ -578,7 +578,7 @@ void SETTINGS_IncDecValue(Setting s, bool inc) {
     break;
   }
 
-  SETTINGS_SetValue(s, IncDecI(v, mi, ma, inc));
+  SETTINGS_SetValue(s, IncDecU(v, mi, ma, inc));
 }
 
 void SETTINGS_UpdateSave() {

@@ -50,6 +50,7 @@ SIZE     := $(TOOLCHAIN_PREFIX)size
 # Common flags for AS and CC
 COMMON_FLAGS := -mcpu=cortex-m0 -mthumb -mabi=aapcs
 OPTIMIZATION := -Os -flto=auto -ffunction-sections -fdata-sections
+# OPTIMIZATION := -Os -ffunction-sections -fdata-sections
 
 # Assembler flags
 ASFLAGS  := $(COMMON_FLAGS) -c

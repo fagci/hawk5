@@ -551,8 +551,6 @@ class QuanshengUVK5Radio(chirp_common.CloneModeRadio):
                     _mem.meta.type = TYPE_CH
             if sname == "gain":
                 _mem.gainIndex = self.GAIN_NAMES.index(svalue)
-                if _mem.gainIndex == 0:
-                    _mem.gainIndex = 21
             if sname == "bw":
                 _mem.bw = self.BW_NAMES.index(svalue)
             if sname == "allowTx":

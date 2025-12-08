@@ -482,8 +482,6 @@ class QuanshengUVK5Radio(chirp_common.CloneModeRadio):
             mem.power = self.get_features().valid_power_levels[int(_mem.power)]
             mem.tuning_step = self.get_features().valid_tuning_steps[int(_mem.step)]
             self._get_tone(mem, _mem)
-            if _mem.gainIndex == 0:
-                _mem.gainIndex = 21
 
 
         mem.extra = RadioSettingGroup(
